@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Prototype (bad: external image)</title>
+</head>
+<body>
+  <div class="toolbar">
+    <!-- VIOLATION: external http resource load; not self-contained -->
+    <img alt="icon" src="http://example.com/icon.png">
+    <!-- a base64 icon is also present, so only the external-src rule should trip -->
+    <img alt="embedded" width="16" height="16"
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+    Dashboard
+  </div>
+  <main><p>Hardcoded demo content.</p></main>
+</body>
+</html>

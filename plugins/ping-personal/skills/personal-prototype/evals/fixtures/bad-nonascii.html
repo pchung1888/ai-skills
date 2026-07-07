@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Prototype (bad: non-ASCII source)</title>
+</head>
+<body>
+  <div class="toolbar">
+    <img alt="icon" width="16" height="16"
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+    Dashboard
+  </div>
+  <!-- VIOLATION: the em-dash below is a non-ASCII byte (Windows cp1252 pitfall) -->
+  <main><p>Hardcoded demo content — note the em-dash here is intentional test data.</p></main>
+</body>
+</html>

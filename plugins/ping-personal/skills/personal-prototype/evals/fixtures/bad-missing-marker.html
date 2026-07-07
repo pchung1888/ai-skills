@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Prototype (clean; used with --marker to force a missing-marker fail)</title>
+</head>
+<body>
+  <div class="toolbar">
+    <img alt="icon" width="16" height="16"
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+    Generic Screen
+  </div>
+  <!-- This file is otherwise self-contained, ASCII, static-flow, has a base64 URI.
+       The calibration grader runs it WITH a --marker token that is NOT present here,
+       so the ONLY failure is the missing marker. -->
+  <main><p>Hardcoded demo content with no special feature label.</p></main>
+</body>
+</html>

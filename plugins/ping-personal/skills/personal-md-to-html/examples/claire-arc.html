@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claire arc</title>
+<style>
+:root {
+  --arc-paper: #FAF6F0;
+  --arc-accent: #B83A20;
+  --arc-ink: #1F1A17;
+  --arc-rule: #D8CFC4;
+  --arc-code-bg: #1C1A16;
+  --arc-code-fg: #EEECE8;
+  --arc-code-path: #B97371;
+  --arc-code-comment: #8A8881;
+  /* Semantic palette — role tokens (spec §4.1) */
+  --arc-good-bg: #E8F2EA;
+  --arc-good-fg: #2A5F2E;
+  --arc-warn-bg: #FCE5DD;
+  --arc-warn-fg: #8A2E14;
+  --arc-muted-bg: #EEE9E0;
+  --arc-muted-fg: #6B635A;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--arc-paper);
+  color: var(--arc-ink);
+  font-family: "Georgia", "Iowan Old Style", "Charter", serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+body {
+  max-width: min(960px, 92vw);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 56px);
+}
+
+h1, h2, h3 {
+  font-family: "Georgia", "Iowan Old Style", "Charter", serif;
+  color: var(--arc-ink);
+}
+
+h1 {
+  font-size: 1.9em;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0 0 0.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--arc-rule);
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 1.35em;
+  line-height: 1.3;
+  margin: 2.2em 0 0.6em;
+}
+h3 {
+  font-size: 1.1em;
+  line-height: 1.35;
+  margin: 1.8em 0 0.4em;
+}
+h1 code,
+h2 code,
+h3 code {
+  font-family: "Georgia", "Iowan Old Style", "Charter", serif;
+  font-style: italic;
+  font-weight: inherit;
+  background: transparent;
+  padding: 0;
+  color: var(--arc-accent);
+  font-size: inherit;
+}
+
+h1 em.accent,
+em.accent {
+  color: var(--arc-accent);
+  font-style: italic;
+}
+
+.eyebrow {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--arc-accent);
+  margin-bottom: 0;
+}
+
+h2 {
+  position: relative;
+  padding-left: 2.5em;
+}
+
+h2::before {
+  content: attr(data-num);
+  position: absolute;
+  left: 0;
+  color: var(--arc-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--arc-rule);
+  margin: 2em 0;
+}
+
+blockquote {
+  border-left: 3px solid var(--arc-accent);
+  background: rgba(184, 58, 32, 0.05);
+  margin: 1.4em 0;
+  padding: 0.8em 1.1em;
+  border-radius: 0 4px 4px 0;
+  color: var(--arc-ink);
+}
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
+blockquote p { margin: 0.4em 0; }
+blockquote ul, blockquote ol { margin: 0.4em 0; padding-left: 1.4em; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5em 0;
+  font-size: 0.92em;
+}
+thead th {
+  text-align: left;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  border-bottom: 2px solid var(--arc-accent);
+  padding: 0.5em 0.75em;
+  font-weight: 600;
+}
+tbody td {
+  padding: 0.5em 0.75em;
+  border-bottom: 1px solid var(--arc-rule);
+  vertical-align: top;
+}
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+tbody td:first-child {
+  color: var(--arc-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+pre, code {
+  font-family: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+}
+
+pre {
+  background: var(--arc-code-bg);
+  color: var(--arc-code-fg);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+pre .code-path { color: var(--arc-code-path); }
+pre .code-comment { color: var(--arc-code-comment); }
+
+
+/* Component-scoped styles for arc theme. Loaded after tokens.css.
+   Rules here MUST NOT redefine base element selectors (h1, pre, blockquote, table) —
+   those live in tokens.css. Each component gets its own banner-separated section. */
+
+/* === timeline === */
+.arc.timeline {
+  list-style: none;
+  padding-left: 2em;
+  position: relative;
+  margin: 2em 0;
+}
+.arc.timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.6em;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--arc-accent);
+}
+.arc.timeline li { position: relative; margin-bottom: 1.5em; }
+.arc.timeline .t {
+  display: inline-block;
+  color: var(--arc-accent);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  margin-right: 0.5em;
+}
+.arc.timeline .dot {
+  position: absolute;
+  left: -1.5em;
+  top: 0.1em;
+  color: var(--arc-accent);
+  font-size: 1.2em;
+}
+.arc.timeline .beat { margin: 0.2em 0; }
+.arc.timeline .quote { color: var(--arc-ink); opacity: 0.85; }
+
+/* === keyrows === */
+.keyrows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4em 1.2em;
+  margin: 1.2em 0;
+}
+.keyrows dt {
+  text-transform: lowercase;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  margin: 0;
+}
+.keyrows dd { margin: 0; }
+
+/* === pill (outlined default + meta-pill float + filled variants) === */
+.pill {
+  display: inline-block;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  border: 1px solid var(--arc-accent);
+  border-radius: 999px;
+  padding: 0 0.5em;
+  font-size: 0.85em;
+}
+.pill-meta { float: right; }
+
+/* Filled pill variants — use Phase 2 semantic tokens (spec §3.2.6). */
+.pill.pill--good {
+  background: var(--arc-good-bg);
+  color: var(--arc-good-fg);
+  border-color: var(--arc-good-fg);
+}
+.pill.pill--warn {
+  background: var(--arc-warn-bg);
+  color: var(--arc-warn-fg);
+  border-color: var(--arc-warn-fg);
+}
+.pill.pill--muted {
+  background: var(--arc-muted-bg);
+  color: var(--arc-muted-fg);
+  border-color: var(--arc-muted-fg);
+}
+
+/* === svg (sketch / chart-line / chart-bar) === */
+svg.sketch,
+svg.chart-line,
+svg.chart-bar {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.4em 0;
+}
+
+/* === callout === */
+.callout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2em;
+  margin: 1.5em 0;
+}
+.callout {
+  border-left: 3px solid var(--arc-rule);
+  padding: 0.4em 0 0.4em 1em;
+}
+.callout header {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  font-weight: 600;
+  font-size: 0.85em;
+  margin-bottom: 0.3em;
+}
+.callout .quote {
+  margin: 0 0 0.3em;
+  color: var(--arc-ink);
+}
+.callout p { margin: 0; }
+
+/* === kpi === */
+.kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  margin: 1.5em 0;
+}
+.kpi-tile {
+  flex: 1 1 140px;
+  min-width: 140px;
+  padding: 0.6em 0.9em;
+  border: 1px solid var(--arc-rule);
+  border-radius: 6px;
+  background: var(--arc-paper);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+.kpi-tile header {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  font-weight: 600;
+  font-size: 0.8em;
+}
+.kpi-tile .value {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: var(--arc-ink);
+  line-height: 1.2;
+}
+.kpi-tile .delta {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+.delta--positive {
+  background: var(--arc-good-bg);
+  color: var(--arc-good-fg);
+}
+.delta--negative {
+  background: var(--arc-warn-bg);
+  color: var(--arc-warn-fg);
+}
+.kpi-tile svg {
+  margin-top: 0.3em;
+}
+
+/* === rules === */
+ol.rules {
+  list-style: none;
+  padding: 0;
+  margin: 1.5em 0;
+  counter-reset: rule-counter;
+}
+ol.rules .rule-card {
+  display: grid;
+  grid-template-columns: 2.5em 1fr;
+  gap: 0.8em;
+  padding: 0.8em 1em;
+  margin: 0.8em 0;
+  border: 1px solid var(--arc-rule);
+  border-radius: 6px;
+  background: var(--arc-paper);
+}
+ol.rules .rule-n {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  border: 1.5px solid var(--arc-accent);
+  color: var(--arc-accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.95em;
+}
+ol.rules .rule-grid {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--rule-cols, 3), 1fr);
+  gap: 0.3em 1em;
+}
+ol.rules .rule-col-header {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  font-size: 0.78em;
+  font-weight: 600;
+}
+ol.rules .rule-col-cell {
+  color: var(--arc-ink);
+  font-size: 0.95em;
+}
+ol.rules .rule-note {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0.3em 0 0;
+  font-style: italic;
+  color: var(--arc-ink);
+  opacity: 0.8;
+  font-size: 0.9em;
+}
+
+/* Mobile collapse: stack rule-grid columns vertically at narrow viewports.
+   Without this, a 3-col grid at 320px viewport gives each cell ~85px and
+   long cell content overflows the parent (critic Phase 4 H-1). */
+@media (max-width: 560px) {
+  ol.rules .rule-grid {
+    grid-template-columns: 1fr;
+  }
+  ol.rules .rule-col-header {
+    margin-top: 0.4em;
+  }
+  ol.rules .rule-col-header:first-child {
+    margin-top: 0;
+  }
+}
+
+/* === demo-brief === */
+.demo-brief {
+  margin: 2em 0;
+  padding: 1.2em 1.4em;
+  background: var(--arc-paper);
+  border: 1px solid var(--arc-rule);
+  border-radius: 8px;
+}
+.demo-brief header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+}
+.demo-brief .demo-n {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--arc-accent);
+  font-size: 1.1em;
+}
+.demo-brief .demo-title {
+  font-weight: 700;
+  font-size: 1.15em;
+  flex: 1;
+}
+.demo-brief .demo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-bottom: 0.8em;
+}
+.demo-brief .demo-body p {
+  margin: 0 0 0.6em;
+}
+.demo-brief .demo-body p:last-child {
+  margin-bottom: 0;
+}
+.demo-brief .demo-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3em 1.2em;
+  margin: 1em 0 0;
+  padding-top: 0.8em;
+  border-top: 1px solid var(--arc-rule);
+}
+.demo-brief .demo-meta dt {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  font-size: 0.82em;
+  margin: 0;
+}
+.demo-brief .demo-meta dd {
+  margin: 0;
+  color: var(--arc-ink);
+}
+@media (max-width: 560px) {
+  .demo-brief .demo-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === code with path eyebrow === */
+.eyebrow.code-eyebrow {
+  font-size: 0.78em;
+  margin-bottom: 0.3em;
+  font-family: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+}
+
+/* === pilcrow editorial paragraph === */
+p.pilcrow {
+  font-style: italic;
+  color: var(--arc-ink);
+  opacity: 0.8;
+  margin: 0.8em 0;
+}
+p.pilcrow::first-letter {
+  color: var(--arc-accent);
+  font-size: 1.05em;
+  margin-right: 0.15em;
+}
+
+</style>
+</head>
+<body>
+<p class="eyebrow">A LAUNCH STORY</p>
+<h1>THE <em class="accent">ARC</em></h1>
+<p>A magazine spread that pitches a launch story end-to-end: cast it, sketch it, project the numbers, walk the timeline. One Markdown file, one HTML page, no JS, no external resources.</p>
+<h2 data-num="01">Casting signal</h2>
+<p>We have a single A-tier signal, then a series of structural questions about visual range and schedule risk. The closing paragraph carries the verdict pill. <span class="pill pill-meta">A-TIER · MOST CINEMATIC</span></p>
+<dl class="keyrows"><dt>why her</dt><dd>She has range — drama, comedy, action</dd><dt>visual</dt><dd>Cinematic palette, restrained color</dd><dt>risk</dt><dd>Schedule pressure in Q3</dd></dl><dl class="keyrows"><dt>hook</dt><dd>One unforgettable image per act</dd><dt>payoff</dt><dd>Closing scene reframes the whole pitch</dd></dl><h2 data-num="02">Numbered demo</h2>
+<p>The numbered demo proves H2 auto-numbering threads across non-adjacent sections.</p>
+<ol>
+<li>First short step</li>
+<li>Second short step</li>
+<li>Third short step</li>
+</ol>
+<svg class="sketch" width="100%" viewBox="0 0 336 248" role="img" aria-label="wireframe sketch"><rect x="8" y="8" width="320" height="40" rx="6" fill="var(--arc-paper)" stroke="var(--arc-rule)"/><text x="20" y="33" font-family="Georgia,serif" font-size="14" fill="var(--arc-ink)">Header</text><line x1="8" y1="56" x2="328" y2="56" stroke="var(--arc-rule)"/><rect x="8" y="68" width="320" height="120" rx="6" fill="var(--arc-paper)" stroke="var(--arc-rule)"/><text x="20" y="133" font-family="Georgia,serif" font-size="14" fill="var(--arc-ink)">Body block</text><rect x="8" y="196" width="120" height="36" rx="18" fill="var(--arc-paper)" stroke="var(--arc-rule)"/><text x="20" y="219" font-family="Georgia,serif" font-size="14" fill="var(--arc-ink)">Submit</text></svg><pre><code class="language-python">import os  <span class="code-comment"># entry point comment</span>
+from <span class="code-path">./scripts/build.py</span> import main
+</code></pre>
+<h2 data-num="03">Revenue shape</h2>
+<p>The sparkline shows monthly recurring revenue ramp, then the bar chart projects the funded path.</p>
+<svg class="chart-line" viewBox="0 0 320 80" role="img" aria-label="line chart"><polyline fill="none" stroke="var(--arc-accent)" stroke-width="1.5" points="24.0,69.1 92.0,58.2 160.0,50.9 228.0,34.5 296.0,10.9"/><circle cx="24.0" cy="69.1" r="2.5" fill="var(--arc-accent)"/><circle cx="92.0" cy="58.2" r="2.5" fill="var(--arc-accent)"/><circle cx="160.0" cy="50.9" r="2.5" fill="var(--arc-accent)"/><circle cx="228.0" cy="34.5" r="2.5" fill="var(--arc-accent)"/><circle cx="296.0" cy="10.9" r="2.5" fill="var(--arc-accent)"/><text x="24.0" y="78" font-size="10" fill="var(--arc-ink)" text-anchor="middle">Jan</text><text x="92.0" y="78" font-size="10" fill="var(--arc-ink)" text-anchor="middle">Feb</text><text x="160.0" y="78" font-size="10" fill="var(--arc-ink)" text-anchor="middle">Mar</text><text x="228.0" y="78" font-size="10" fill="var(--arc-ink)" text-anchor="middle">Apr</text><text x="296.0" y="78" font-size="10" fill="var(--arc-ink)" text-anchor="middle">May</text></svg><svg class="chart-bar" width="100%" viewBox="0 0 389 100" role="img" aria-label="bar chart"><text x="93" y="26" font-size="10" font-family="Georgia,serif"text-anchor="end" fill="var(--arc-ink)">Pilot</text><rect x="101" y="12" width="87.3" height="16" fill="var(--arc-accent)"/><text x="194.3" y="26" font-size="10" font-family="Georgia,serif"fill="var(--arc-accent)">20</text><text x="93" y="54" font-size="10" font-family="Georgia,serif"text-anchor="end" fill="var(--arc-ink)">Creator cut</text><rect x="101" y="40" width="152.7" height="16" fill="var(--arc-accent)"/><text x="259.7" y="54" font-size="10" font-family="Georgia,serif"fill="var(--arc-accent)">35</text><text x="93" y="82" font-size="10" font-family="Georgia,serif"text-anchor="end" fill="var(--arc-ink)">Studio plan</text><rect x="101" y="68" width="240.0" height="16" fill="var(--arc-accent)"/><text x="347.0" y="82" font-size="10" font-family="Georgia,serif"fill="var(--arc-accent)">55</text></svg><h2 data-num="04">Timeline arc</h2>
+<ol class="arc timeline"><li><span class="t">T+0:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Setup — &quot;send me anything&quot;</h3><p class="quote"><em>&quot;You can drop a paragraph or a paste; we&#x27;ll do the rest.&quot;</em></p></li><li><span class="t">T+0:30</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Frame the brief</h3><p class="quote"><em>&quot;Three minutes — here&#x27;s what I heard.&quot;</em></p></li><li><span class="t">T+2:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">First pass</h3><p class="quote"><em>&quot;Rough but readable. Decisions, not options.&quot;</em></p></li><li><span class="t">T+5:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Visual lock</h3><p class="quote"><em>&quot;Charts, sketches, pull-quotes — pick the spine.&quot;</em></p></li><li><span class="t">T+8:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Decision pass</h3><p class="quote"><em>&quot;Three things to cut, two to grow.&quot;</em></p></li><li><span class="t">T+12:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Ship</h3><p class="quote"><em>&quot;Page rendered. Hand it off.&quot;</em></p></li></ol><p>Closing paragraph. The whole arc compresses twelve minutes of brainstorm into one page that a creative director can read top-to-bottom in under two minutes.</p>
+
+</body>
+</html>

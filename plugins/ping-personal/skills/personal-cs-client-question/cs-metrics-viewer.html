@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cs-metrics viewer</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --info: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--bg); color: var(--text);
+  }
+  header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--panel);
+  }
+  header h1 { margin: 0; font-size: 14px; font-weight: 600; color: var(--accent); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type=file] { display: none; }
+  button, label.btn {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 4px; cursor: pointer; font: inherit;
+  }
+  button:hover, label.btn:hover { background: var(--border); }
+  button.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: #7dd3fc; }
+  #unsupported { padding: 10px 16px; background: rgba(251,191,36,0.1); border-bottom: 1px solid var(--warn); color: var(--warn); font-size: 11px; }
+  #drop {
+    margin: 16px; padding: 60px 20px; text-align: center;
+    border: 2px dashed var(--border); border-radius: 8px;
+    color: var(--muted); transition: all .15s;
+  }
+  #drop.hover { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.05); }
+  #drop p { margin: 4px 0; }
+  #drop .hint { font-size: 11px; opacity: 0.7; }
+  #summary {
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px;
+  }
+  #summary .stat { display: flex; flex-direction: column; gap: 2px; }
+  #summary .stat .label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  #summary .stat .value { font-size: 16px; font-weight: 600; }
+  #filters {
+    padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  #search {
+    flex: 1; min-width: 240px;
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 5px 10px; border-radius: 4px; font: inherit;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--panel-2); padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  thead th:hover { color: var(--accent); }
+  thead th .arrow { opacity: 0.4; margin-left: 2px; }
+  thead th.sorted .arrow { opacity: 1; color: var(--accent); }
+  tbody tr { border-bottom: 1px solid var(--panel); cursor: pointer; }
+  tbody tr:hover { background: var(--panel); }
+  tbody tr.expanded { background: var(--panel); }
+  td { padding: 8px 10px; vertical-align: top; }
+  td.q { max-width: 480px; }
+  .pill {
+    display: inline-block; padding: 1px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .pill-ok   { background: rgba(74,222,128,0.15); color: var(--ok); }
+  .pill-warn { background: rgba(251,191,36,0.15); color: var(--warn); }
+  .pill-bad  { background: rgba(248,113,113,0.15); color: var(--bad); }
+  .pill-info { background: rgba(167,139,250,0.15); color: var(--info); }
+  .pill-mute { background: rgba(148,163,184,0.15); color: var(--muted); }
+  .check { color: var(--ok); }
+  .x     { color: var(--bad); opacity: 0.5; }
+  tr.detail td { background: #0a1224; padding: 12px 16px 16px 28px; border-bottom: 2px solid var(--panel-2); }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 16px; }
+  .kv .k { color: var(--muted); font-size: 11px; }
+  .kv .v { word-break: break-word; }
+  .sources li { margin: 2px 0; }
+  .badge-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 3px; color: var(--accent); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>cs-metrics viewer</h1>
+  <div class="controls">
+    <button id="reload" hidden>&#8635; Reload</button>
+    <button id="pickOther">Pick file&#8230;</button>
+  </div>
+</header>
+
+<div id="drop">
+  <p id="dropMsg">Loading <code>cs-metrics.jsonl</code>&#8230;</p>
+  <p class="hint" id="dropHint"></p>
+</div>
+
+<div id="summary" hidden></div>
+<div id="filters" hidden>
+  <input id="search" type="text" placeholder="Search question / notes / sources...">
+  <button data-filter="all" class="active">all</button>
+  <button data-filter="extracted">extracted</button>
+  <button data-filter="inferred">inferred</button>
+  <button data-filter="blank">blank/n.a.</button>
+  <button data-filter="escalated">escalated</button>
+  <button data-filter="retry">retry-used</button>
+  <button data-filter="ticket">ticket-system</button>
+</div>
+
+<div id="tableWrap" hidden>
+<table id="t">
+  <thead>
+    <tr>
+      <th data-key="ts">when (local) <span class="arrow">&#9662;</span></th>
+      <th data-key="skill">skill</th>
+      <th>question</th>
+      <th data-key="confidence">conf</th>
+      <th>graph hit</th>
+      <th>retries</th>
+      <th>ticket system</th>
+      <th>escalated</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+</div>
+
+<div id="empty" class="empty" hidden>No rows match the current filter.</div>
+
+<!-- cs-metrics-data.js is regenerated by cs-metric-write.ps1 after every row write.
+     Chrome can load a same-directory <script src> from file://, unlike fetch(). -->
+<script src="./cs-metrics-data.js" onerror="void 0"></script>
+<script>
+let ROWS = [];
+let SORT = { key: 'ts', dir: -1 };
+let FILTER = 'all';
+let SEARCH = '';
+
+// Configure this for your own setup -- points at the sibling cs-metrics.jsonl
+// this skill's cs-metric-write.ps1 appends to. Left generic here since this
+// is a portfolio demo, not a wired-up production install.
+const METRICS_PATH = '../../../../.claude/score-history/personal-cs-client-question/<your-hostname>/cs-metrics.jsonl';
+// Base URL for linking out to a ticket-system issue key, e.g. 'https://your-org.atlassian.net/browse/'.
+// Left blank in this demo -- ticket keys render as plain text, not a live link.
+const TICKET_SYSTEM_BASE_URL = '';
+
+const drop      = document.getElementById('drop');
+const dropMsg   = document.getElementById('dropMsg');
+const dropHint  = document.getElementById('dropHint');
+const reloadBtn = document.getElementById('reload');
+const summary   = document.getElementById('summary');
+const filters   = document.getElementById('filters');
+const tableWrap = document.getElementById('tableWrap');
+const tbody     = document.querySelector('#t tbody');
+const empty     = document.getElementById('empty');
+const search    = document.getElementById('search');
+
+// Hidden file input kept for drag-drop and manual fallback
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = '.jsonl,.json,.txt';
+fileInput.style.display = 'none';
+document.body.appendChild(fileInput);
+fileInput.addEventListener('change', ev => {
+  const f = ev.target.files[0];
+  if (f) f.text().then(loadText);
+});
+
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('hover'); }));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('hover'); }));
+drop.addEventListener('drop', ev => {
+  const f = ev.dataTransfer.files[0];
+  if (f) f.text().then(loadText);
+});
+
+// Reload re-fetches the page so <script src="./cs-metrics-data.js"> picks up new rows.
+reloadBtn.addEventListener('click', () => window.location.reload());
+
+// Pick file... -- manual override to view older/archived JSONL files.
+document.getElementById('pickOther').addEventListener('click', async () => {
+  if (window.showOpenFilePicker) {
+    try {
+      const [fh] = await window.showOpenFilePicker({
+        types: [{ description: 'JSONL metrics', accept: { 'text/plain': ['.jsonl','.json','.txt'] } }],
+        multiple: false,
+      });
+      loadText(await (await fh.getFile()).text());
+    } catch (_) { /* user canceled */ }
+  } else {
+    fileInput.click();
+  }
+});
+
+async function tryAutoLoad() {
+  dropMsg.innerHTML = `Loading <code>cs-metrics.jsonl</code>&#8230;`;
+  dropHint.textContent = '';
+  drop.hidden = false;
+
+  // Path 1: data inlined by cs-metric-write.ps1 into cs-metrics-data.js.
+  // Base64 chars (A-Za-z0-9+/=) never contain quotes, so the injection is always safe.
+  if (typeof window.__CS_METRICS_B64 === 'string') {
+    try {
+      const bytes = Uint8Array.from(atob(window.__CS_METRICS_B64), c => c.charCodeAt(0));
+      loadText(new TextDecoder().decode(bytes));
+      return;
+    } catch (_) {}
+  }
+
+  // Path 2: fetch (works in Firefox / VS Code Live Server)
+  try {
+    const resp = await fetch(METRICS_PATH);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    loadText(await resp.text());
+    return;
+  } catch (_) {}
+
+  // Path 3: manual fallback (cs-metrics-data.js missing -- not yet generated)
+  dropMsg.innerHTML = `<code>cs-metrics-data.js</code> not found &mdash; it is generated automatically the first time a metric is written.`;
+  dropHint.innerHTML =
+    `Or: <button id="pickBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);` +
+    `padding:4px 10px;border-radius:4px;cursor:pointer;font:inherit">Browse to file&#8230;</button>` +
+    `&nbsp; <small style="color:var(--muted)">or drop .jsonl here</small>`;
+  document.getElementById('pickBtn').addEventListener('click', async () => {
+    if (window.showOpenFilePicker) {
+      try {
+        const [fh] = await window.showOpenFilePicker({
+          types: [{ description: 'JSONL metrics', accept: { 'text/plain': ['.jsonl','.json','.txt'] } }],
+          multiple: false,
+        });
+        loadText(await (await fh.getFile()).text());
+      } catch (_) {}
+    } else {
+      fileInput.click();
+    }
+  });
+}
+
+function loadText(text) {
+  ROWS = text.split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map((l, i) => {
+      try {
+        const obj = JSON.parse(l);
+        obj._idx = i;
+        obj._tsMs = tsToEpoch(obj.ts);
+        return obj;
+      }
+      catch (err) { return { _idx: i, _err: err.message, _raw: l }; }
+    });
+  drop.hidden = true;
+  summary.hidden = false;
+  filters.hidden = false;
+  tableWrap.hidden = false;
+  reloadBtn.hidden = false;
+  renderSummary();
+  render();
+}
+
+tryAutoLoad();
+
+function renderSummary() {
+  const total = ROWS.length;
+  const valid = ROWS.filter(r => !r._err);
+  const hits = valid.filter(r => r.graph_hit).length;
+  const esc  = valid.filter(r => r.escalated).length;
+  const cited = valid.filter(r => r.cited).length;
+  const retries = valid.filter(r => r.budget_retry || r.suffix_retry).length;
+  const ticket = valid.filter(r => r.ticket_system_searched).length;
+  const diag = valid.filter(r => r.diagnostic_select_suggested).length;
+  const fail = ROWS.filter(r => r._err).length;
+  const pct = n => total ? Math.round(100*n/total) + '%' : '-';
+  summary.innerHTML = `
+    <div class="stat"><span class="label">runs</span><span class="value">${total}</span></div>
+    <div class="stat"><span class="label">graph hit</span><span class="value">${hits} <small style="opacity:.6">(${pct(hits)})</small></span></div>
+    <div class="stat"><span class="label">cited</span><span class="value">${cited} <small style="opacity:.6">(${pct(cited)})</small></span></div>
+    <div class="stat"><span class="label">retries used</span><span class="value">${retries} <small style="opacity:.6">(${pct(retries)})</small></span></div>
+    <div class="stat"><span class="label">ticket system searched</span><span class="value">${ticket} <small style="opacity:.6">(${pct(ticket)})</small></span></div>
+    <div class="stat"><span class="label">diag SELECT</span><span class="value">${diag} <small style="opacity:.6">(${pct(diag)})</small></span></div>
+    <div class="stat"><span class="label">escalated</span><span class="value">${esc} <small style="opacity:.6">(${pct(esc)})</small></span></div>
+    ${fail ? `<div class="stat"><span class="label">parse fail</span><span class="value" style="color:var(--bad)">${fail}</span></div>` : ''}
+  `;
+}
+
+function matchFilter(r) {
+  const c = (r.confidence || '').toUpperCase();
+  switch (FILTER) {
+    case 'all': return true;
+    case 'extracted': return c === 'EXTRACTED';
+    case 'inferred':  return c === 'INFERRED';
+    case 'blank':     return c === 'BLANK' || c === 'N/A' || !c;
+    case 'escalated': return !!r.escalated;
+    case 'retry':     return !!(r.budget_retry || r.suffix_retry || r.fallback_grep || r.fallback_doc_read);
+    case 'ticket':    return !!r.ticket_system_searched;
+    default: return true;
+  }
+}
+
+function matchSearch(r) {
+  if (!SEARCH) return true;
+  const s = SEARCH.toLowerCase();
+  const hay = [
+    r.question, r.notes, r.skill, r.confidence,
+    (r.graph_queries || []).join(' '),
+    (r.sources_read || []).join(' '),
+    r.ticket_system_top_ticket, r.select_template,
+    r.suggestion, r.dev_concern, r.trigger, r.upstream_skill
+  ].filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(s);
+}
+
+function pill(text, cls) { return `<span class="pill ${cls}">${text}</span>`; }
+function bool(v, label) { return v ? `<span class="check" title="${label}: yes">&#10003;</span>` : `<span class="x" title="${label}: no">&middot;</span>`; }
+
+function confPill(c) {
+  c = (c || '').toUpperCase();
+  if (c === 'EXTRACTED') return pill('EXTRACTED', 'pill-ok');
+  if (c === 'INFERRED')  return pill('INFERRED', 'pill-warn');
+  if (c === 'BLANK')     return pill('BLANK', 'pill-bad');
+  if (c === 'N/A')       return pill('N/A', 'pill-mute');
+  return pill(c || '-', 'pill-mute');
+}
+
+function tsToEpoch(ts) {
+  if (!ts) return 0;
+  const n = Date.parse(ts);
+  return isNaN(n) ? 0 : n;
+}
+
+function fmtTs(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  return d.toLocaleString();
+}
+
+function shortQ(q) {
+  if (!q) return '';
+  return q.length > 90 ? q.slice(0, 90) + '...' : q;
+}
+
+function render() {
+  let view = ROWS.filter(matchFilter).filter(matchSearch);
+  view.sort((a, b) => {
+    let av, bv;
+    if (SORT.key === 'ts') { av = a._tsMs ?? 0; bv = b._tsMs ?? 0; }
+    else { av = a[SORT.key] ?? ''; bv = b[SORT.key] ?? ''; }
+    if (av < bv) return -1 * SORT.dir;
+    if (av > bv) return  1 * SORT.dir;
+    return 0;
+  });
+
+  tbody.innerHTML = '';
+  if (view.length === 0) { empty.hidden = false; return; }
+  empty.hidden = true;
+
+  for (const r of view) {
+    if (r._err) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="8" style="color:var(--bad)">Parse error on line ${r._idx + 1}: ${r._err}</td>`;
+      tbody.appendChild(tr);
+      continue;
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${fmtTs(r.ts)}</td>
+      <td>${r.skill || '-'}</td>
+      <td class="q">${escapeHTML(shortQ(r.question))}</td>
+      <td>${confPill(r.confidence)}</td>
+      <td>${bool(r.graph_hit, 'graph hit')}</td>
+      <td>
+        ${r.budget_retry      ? pill('budget', 'pill-info')    : ''}
+        ${r.suffix_retry      ? pill('suffix', 'pill-info')    : ''}
+        ${r.fallback_grep     ? pill('grep', 'pill-mute')      : ''}
+        ${r.fallback_doc_read ? pill('doc', 'pill-mute')       : ''}
+      </td>
+      <td>${r.ticket_system_searched ? (r.ticket_system_top_ticket ? pill(r.ticket_system_top_ticket, r.ticket_system_used_resolution ? 'pill-ok' : 'pill-mute') : pill('searched', 'pill-mute')) : ''}</td>
+      <td>${r.escalated ? pill('ESC', 'pill-bad') : ''}</td>
+    `;
+    tr.addEventListener('click', () => toggleDetail(tr, r));
+    tbody.appendChild(tr);
+  }
+}
+
+function toggleDetail(tr, r) {
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains('detail')) {
+    next.remove();
+    tr.classList.remove('expanded');
+    return;
+  }
+  // collapse other open details
+  document.querySelectorAll('tr.detail').forEach(d => d.remove());
+  document.querySelectorAll('tr.expanded').forEach(d => d.classList.remove('expanded'));
+  tr.classList.add('expanded');
+  const det = document.createElement('tr');
+  det.className = 'detail';
+  const td = document.createElement('td');
+  td.colSpan = 8;
+  td.innerHTML = renderDetail(r);
+  det.appendChild(td);
+  tr.parentNode.insertBefore(det, tr.nextSibling);
+}
+
+function renderDetail(r) {
+  const queries = (r.graph_queries || []).map(q => `<code>${escapeHTML(q)}</code>`).join(' ') || '<span style="color:var(--muted)">none</span>';
+  const sidecar = r.answer_path
+    ? `<div class="k">full answer</div><div class="v"><a href="../../../../.claude/${escapeHTML(r.answer_path)}" target="_blank" style="color:var(--accent)">View full answer (.md)</a></div>`
+    : '';
+  const sources = (r.sources_read || []).length
+    ? `<ul class="sources">${r.sources_read.map(s => `<li><code>${escapeHTML(s)}</code></li>`).join('')}</ul>`
+    : '<span style="color:var(--muted)">none</span>';
+  const flags = [
+    ['graph_hit', r.graph_hit],
+    ['cited', r.cited],
+    ['budget_retry', r.budget_retry],
+    ['suffix_retry', r.suffix_retry],
+    ['fallback_grep', r.fallback_grep],
+    ['fallback_doc_read', r.fallback_doc_read],
+    ['ticket_system_searched', r.ticket_system_searched],
+    ['ticket_system_used_resolution', r.ticket_system_used_resolution],
+    ['diagnostic_select_suggested', r.diagnostic_select_suggested],
+    ['escalated', r.escalated],
+  ].map(([k, v]) => v ? pill(k, 'pill-info') : '').filter(Boolean).join(' ');
+  const sel = r.select_template
+    ? `<div class="k">select_template</div><div class="v"><code>${escapeHTML(r.select_template)}</code></div>`
+    : '';
+  const ticketLink = (r.ticket_system_top_ticket && TICKET_SYSTEM_BASE_URL)
+    ? `<a href="${TICKET_SYSTEM_BASE_URL}${encodeURIComponent(r.ticket_system_top_ticket)}" target="_blank" style="color:var(--accent)">${escapeHTML(r.ticket_system_top_ticket)}</a>`
+    : escapeHTML(r.ticket_system_top_ticket || '');
+  const ticket = r.ticket_system_top_ticket
+    ? `<div class="k">ticket system top hit</div><div class="v">${ticketLink} ${r.ticket_system_used_resolution ? pill('used', 'pill-ok') : pill('found, not used', 'pill-mute')}</div>`
+    : '';
+  const trig = r.trigger
+    ? `<div class="k">escalation trigger</div><div class="v">${pill(escapeHTML(r.trigger), 'pill-warn')}${r.upstream_skill ? ' from <code>' + escapeHTML(r.upstream_skill) + '</code>' : ''}${r.upstream_confidence ? ' (upstream conf: ' + confPill(r.upstream_confidence) + ')' : ''}</div>`
+    : '';
+  const sugg = r.suggestion
+    ? `<div class="k">suggestion / actionable</div><div class="v" style="color:var(--ok)">${escapeHTML(r.suggestion)}</div>`
+    : `<div class="k">suggestion / actionable</div><div class="v" style="color:var(--muted);font-style:italic">none recorded</div>`;
+  const concern = r.dev_concern
+    ? `<div class="k">dev concern</div><div class="v" style="color:var(--warn);border-left:3px solid var(--warn);padding-left:8px">${escapeHTML(r.dev_concern)}</div>`
+    : '';
+  return `
+    <div class="kv">
+      <div class="k">question</div><div class="v">${escapeHTML(r.question || '')}</div>
+      ${sugg}
+      ${concern}
+      ${sidecar}
+      ${trig}
+      <div class="k">graph queries</div><div class="v">${queries}</div>
+      <div class="k">sources read</div><div class="v">${sources}</div>
+      ${ticket}
+      ${sel}
+      <div class="k">flags</div><div class="v badge-row">${flags || '<span style="color:var(--muted)">none</span>'}</div>
+      <div class="k">tool_uses_self_count</div><div class="v">${r.tool_uses_self_count ?? '-'}</div>
+      <div class="k">notes</div><div class="v">${escapeHTML(r.notes || '')}</div>
+    </div>
+  `;
+}
+
+function escapeHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// sort header clicks
+document.querySelectorAll('thead th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.key;
+    if (SORT.key === k) SORT.dir *= -1;
+    else { SORT.key = k; SORT.dir = -1; }
+    document.querySelectorAll('thead th').forEach(x => {
+      x.classList.toggle('sorted', x === th);
+      const arr = x.querySelector('.arrow');
+      if (arr) arr.textContent = x === th ? (SORT.dir < 0 ? '▾' : '▴') : '▾';
+    });
+    render();
+  });
+});
+
+// filter button clicks
+document.querySelectorAll('#filters button[data-filter]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#filters button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    FILTER = b.dataset.filter;
+    render();
+  });
+});
+
+search.addEventListener('input', () => { SEARCH = search.value; render(); });
+</script>
+</body>
+</html>

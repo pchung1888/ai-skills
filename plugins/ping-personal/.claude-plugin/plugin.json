@@ -1,0 +1,8 @@
+{
+  "name": "ping-personal",
+  "version": "0.17.0",
+  "description": "Personal cross-project Claude Code skills (/personal-goal, /personal-goal-next, /personal-progress, /personal-critic-gate, /personal-md-to-html, /personal-htsw, /personal-cache-stats, /personal-lesson, /personal-workflow, /personal-loop, /personal-create-eval, /personal-prototype, /personal-understanding, /personal-plugin-release, /personal-pr-briefing, /personal-facts, /personal-fix-decode, /personal-jira-sync, /personal-cs-client-question, /personal-cs-step-by-step, /personal-cs-escalate-to-dev) + 8 maid-persona agents (amanda, iris, bunny, vex, maggie, dora, rhea, ms-mario) + git hooks.",
+  "author": {
+    "name": "pchung1888"
+  }
+}

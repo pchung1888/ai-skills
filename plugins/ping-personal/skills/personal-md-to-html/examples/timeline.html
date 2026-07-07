@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline tracer</title>
+<style>
+:root {
+  --arc-paper: #FAF6F0;
+  --arc-accent: #B83A20;
+  --arc-ink: #1F1A17;
+  --arc-rule: #D8CFC4;
+  --arc-code-bg: #1C1A16;
+  --arc-code-fg: #EEECE8;
+  --arc-code-path: #B97371;
+  --arc-code-comment: #8A8881;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--arc-paper);
+  color: var(--arc-ink);
+  font-family: "Georgia", "Iowan Old Style", "Charter", serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+@media (min-width: 768px) {
+  body { padding: 64px; }
+}
+
+h1, h2, h3 {
+  font-family: "Georgia", "Iowan Old Style", "Charter", serif;
+  color: var(--arc-ink);
+}
+
+h1 em.accent,
+em.accent {
+  color: var(--arc-accent);
+  font-style: italic;
+}
+
+.eyebrow {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--arc-accent);
+  margin-bottom: 0;
+}
+
+h2 {
+  position: relative;
+  padding-left: 2.5em;
+}
+
+h2::before {
+  content: attr(data-num);
+  position: absolute;
+  left: 0;
+  color: var(--arc-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--arc-rule);
+  margin: 2em 0;
+}
+
+pre, code {
+  font-family: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+}
+
+pre {
+  background: var(--arc-code-bg);
+  color: var(--arc-code-fg);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+pre .code-path { color: var(--arc-code-path); }
+pre .code-comment { color: var(--arc-code-comment); }
+
+.arc.timeline {
+  list-style: none;
+  padding-left: 2em;
+  position: relative;
+  margin: 2em 0;
+}
+.arc.timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.6em;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--arc-accent);
+}
+.arc.timeline li { position: relative; margin-bottom: 1.5em; }
+.arc.timeline .t {
+  display: inline-block;
+  color: var(--arc-accent);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  margin-right: 0.5em;
+}
+.arc.timeline .dot {
+  position: absolute;
+  left: -1.5em;
+  top: 0.1em;
+  color: var(--arc-accent);
+  font-size: 1.2em;
+}
+.arc.timeline .beat { margin: 0.2em 0; }
+.arc.timeline .quote { color: var(--arc-ink); opacity: 0.85; }
+
+.keyrows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4em 1.2em;
+  margin: 1.2em 0;
+}
+.keyrows dt {
+  text-transform: lowercase;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  margin: 0;
+}
+.keyrows dd { margin: 0; }
+
+.pill {
+  display: inline-block;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--arc-accent);
+  border: 1px solid var(--arc-accent);
+  border-radius: 999px;
+  padding: 0 0.5em;
+  font-size: 0.85em;
+}
+.pill-meta { float: right; }
+
+</style>
+</head>
+<body>
+
+<h1>Twelve minutes</h1>
+<ol class="arc timeline"><li><span class="t">T+0:00</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Setup — &quot;send me anything&quot;</h3><p class="quote"><em>&quot;You can drop a paragraph or a paste; we&#x27;ll do the rest.&quot;</em></p></li><li><span class="t">T+0:30</span><span class="dot" aria-hidden="true">○</span><h3 class="beat">Frame the brief</h3><p class="quote"><em>&quot;Three minutes — here&#x27;s what I heard.&quot;</em></p></li></ol>
+</body>
+</html>

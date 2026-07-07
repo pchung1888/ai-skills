@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+.env*
+!.env.example
+.DS_Store
+node_modules/
+*.log
+.vscode/
+.idea/
+
+# Per-clone Claude Code permission state; never share
+.claude/settings.local.json
+
+# Local /personal-goal acceptance cache; regenerated per machine
+*.accept-cache

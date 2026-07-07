@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "personal-cs-metric-row",
+  "type": "object",
+  "required": [
+    "id", "ts", "host", "skill", "question",
+    "confidence", "escalated", "cited",
+    "sources_read", "answer_path", "answer_sha256"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}-[a-z0-9]{6}$"
+    },
+    "ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}$"
+    },
+    "host":     { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+    "skill":    { "type": "string", "enum": ["personal-cs-client-question", "personal-cs-step-by-step", "personal-cs-escalate-to-dev"] },
+    "question": { "type": "string", "maxLength": 500 },
+    "confidence": { "type": "string", "enum": ["EXTRACTED", "INFERRED", "BLANK", "N/A"] },
+    "escalated": { "type": "boolean" },
+    "cited":     { "type": "boolean" },
+    "sources_read": { "type": "array", "items": { "type": "string" } },
+    "answer_path":  { "type": "string" },
+    "answer_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "suggestion":  { "type": "string", "maxLength": 300 },
+    "dev_concern": { "type": "string", "maxLength": 500 },
+    "graph_hit": { "type": "boolean" },
+    "budget_retry": { "type": "boolean" },
+    "suffix_retry": { "type": "boolean" },
+    "fallback_grep": { "type": "boolean" },
+    "fallback_doc_read": { "type": "boolean" },
+    "ticket_system_searched": { "type": "boolean" },
+    "ticket_system_top_ticket": { "type": ["string", "null"] },
+    "ticket_system_used_resolution": { "type": "boolean" },
+    "diagnostic_select_suggested": { "type": "boolean" },
+    "select_template": { "type": ["string", "null"] },
+    "graph_queries": { "type": "array", "items": { "type": "string" } },
+    "tool_uses_self_count": { "type": "integer", "minimum": 0 },
+    "notes": { "type": "string" },
+    "cs_client_question_confidence": { "type": "string", "enum": ["EXTRACTED", "INFERRED", "BLANK", "N/A"] },
+    "located_file": { "type": "string" },
+    "branching_workflow": { "type": "boolean" },
+    "watch_out_for_added": { "type": "boolean" },
+    "steps_emitted": { "type": "integer", "minimum": 0 },
+    "trigger": { "type": "string", "enum": ["db_touch", "low_confidence", "out_of_scope", "other"] },
+    "upstream_skill": { "type": ["string", "null"], "enum": ["personal-cs-client-question", "personal-cs-step-by-step", null] },
+    "upstream_confidence": { "type": ["string", "null"] },
+    "msg_path": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if":   { "properties": { "escalated": { "const": false } }, "required": ["escalated"] },
+      "then": { "required": ["suggestion"], "properties": { "suggestion": { "minLength": 1 } } }
+    },
+    {
+      "if":   { "properties": { "confidence": { "const": "INFERRED" } }, "required": ["confidence"] },
+      "then": { "required": ["dev_concern"], "properties": { "dev_concern": { "minLength": 1 } } }
+    }
+  ],
+  "additionalProperties": false
+}

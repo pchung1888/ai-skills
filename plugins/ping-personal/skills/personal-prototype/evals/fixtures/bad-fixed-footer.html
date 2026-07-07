@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Prototype (bad: position:fixed)</title>
+<style>
+  /* VIOLATION: position:fixed overlays mid-content in full-page screenshots */
+  .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #eee; padding: 8px; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <img alt="icon" width="16" height="16"
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+    Dashboard
+  </div>
+  <main><p>Hardcoded demo content.</p></main>
+  <div class="footer">Fixed footer (the overlay bug)</div>
+</body>
+</html>

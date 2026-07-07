@@ -1,0 +1,4 @@
+{"type":"user","message":{"role":"user","content":"no usage block on this line -- must be skipped"}}
+{"type":"assistant","message":{"role":"assistant","usage":{"cache_read_input_tokens":0,"cache_creation_input_tokens":100,"input_tokens":100,"output_tokens":20,"cache_creation":{"ephemeral_1h_input_tokens":100,"ephemeral_5m_input_tokens":0}}}}
+this line is not valid json at all -- must be skipped without crashing
+{"type":"assistant","message":{"role":"assistant","usage":{"cache_read_input_tokens":800,"cache_creation_input_tokens":0,"input_tokens":0,"output_tokens":30,"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0}}}}
