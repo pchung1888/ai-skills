@@ -10,6 +10,14 @@ $SchemaPath = Join-Path $SkillDir '..\personal-cs-client-question\cs-metric-sche
 
 $tests = @(
     @{
+        Name = 'verification_wiring: steps verified under personal-fable-mode gates; multi-fact probes route to personal-facts-check'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'personal-fable-mode') { throw "SKILL.md does not reference personal-fable-mode" }
+            if ($s -notmatch 'personal-facts-check') { throw "SKILL.md does not reference personal-facts-check" }
+        }
+    },
+    @{
         Name = 'skill_frontmatter: SKILL.md declares the right name + a description'
         Run = {
             $s = Get-Content $Skill -Raw

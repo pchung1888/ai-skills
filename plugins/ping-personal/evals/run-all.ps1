@@ -1,6 +1,7 @@
 #requires -Version 7
 # run-all.ps1 -- top-level eval runner for the ping-personal plugin.
-# Discovers every skills/<skill>/evals/eval.ps1, runs each in a child shell, and tallies.
+# Runs the dual-runtime package check, then discovers every
+# skills/<skill>/evals/eval.ps1, runs each in a child shell, and tallies.
 # Prints "ALL EVALS PASS (<n> skills)" and exits 0 only if every skill's grader is green.
 # This is the goal's acceptance command (accept-match "ALL EVALS PASS").
 #
@@ -12,6 +13,27 @@ param([switch]$Detailed)
 
 $ErrorActionPreference = 'Stop'
 $env:PYTHONIOENCODING = 'utf-8'   # cp1252 console guard (CLAUDE.md Windows pitfall)
+
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
+$DualRuntimeCheck = Join-Path $RepoRoot 'scripts\check_dual_runtime.py'
+if (-not (Test-Path $DualRuntimeCheck)) {
+    Write-Host "Missing dual-runtime check: $DualRuntimeCheck" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Running dual-runtime package check..."
+$dualOut = (python $DualRuntimeCheck 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    Write-Host $dualOut
+    Write-Host "DUAL RUNTIME CHECK FAIL" -ForegroundColor Red
+    exit 1
+}
+if ($Detailed) { Write-Host $dualOut }
+else {
+    $dualSummary = (($dualOut -split "`n") | Where-Object { $_ -match 'DUAL RUNTIME CHECK PASS' } | Select-Object -Last 1)
+    Write-Host ("  OK    {0,-26} {1}" -f 'dual-runtime', ($dualSummary.Trim())) -ForegroundColor Green
+}
+Write-Host ""
 
 $SkillsDir = Resolve-Path (Join-Path $PSScriptRoot '..\skills')
 $evals = Get-ChildItem (Join-Path $SkillsDir '*\evals\eval.ps1') | Sort-Object FullName

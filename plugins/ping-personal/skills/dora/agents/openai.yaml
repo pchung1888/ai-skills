@@ -1,0 +1,5 @@
+interface:
+  display_name: "Dora"
+  short_description: "Dora persona: git and PR sentinel"
+policy:
+  allow_implicit_invocation: true

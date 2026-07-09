@@ -13,11 +13,21 @@ $BabysitTest = Join-Path $PSScriptRoot 'test-babysit.ps1'
 
 $tests = @(
     @{
+        Name = 'effort_routing: SKILL.md documents per-dispatch effort tiers (fable-mode effort dial made concrete)'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?i)## Effort routing') { throw "Effort routing section missing" }
+            if ($s -notmatch "effort") { throw "effort dispatch knob not documented" }
+            if ($s -notmatch '(?i)never.*(xhigh|max).*by default|(xhigh|max).*never.*by default') { throw "over-effort guard (never xhigh/max by default) missing" }
+        }
+    },
+    @{
         Name = 'skill_frontmatter: SKILL.md declares name=personal-workflow + a description'
         Run = {
             $s = Get-Content $Skill -Raw
             if ($s -notmatch '(?m)^name:\s*personal-workflow\s*$') { throw "frontmatter name not personal-workflow" }
             if ($s -notmatch '(?m)^description:\s*\S') { throw "frontmatter description missing" }
+            if ($s -notmatch '(?m)^model:\s*inherit\s*$') { throw "model: inherit missing -- conductor runs at the session tier, never pinned" }
         }
     },
     @{

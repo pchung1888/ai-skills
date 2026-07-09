@@ -46,6 +46,11 @@ logic.
 
 ## Mechanism
 
+Run under `personal-fable-mode` gates: every emitted step must trace to source
+read this session (Gate 2/4 -- no steps from memory). If the workflow depends
+on 2+ unverified live-system facts, run `personal-facts-check` to probe and
+label them before enumerating.
+
 1. **Call `personal-cs-client-question` internally** with the user's
    question, unchanged. It applies its own smart-search decision tree
    (graph-query first, budget/suffix retries, doc fallback, ticket-system
@@ -68,7 +73,7 @@ logic.
    branching is unmanageable.
 6. **Self-report metric** (FINAL STEP -- DO NOT SKIP). Invoke the wrapper
    script exactly as documented in `personal-cs-client-question/SKILL.md`
-   Mechanism §4, substituting `-SkillName "personal-cs-step-by-step"`.
+   Mechanism step 4, substituting `-SkillName "personal-cs-step-by-step"`.
 
    **Metric JSON shape (skill must emit):**
    ```json

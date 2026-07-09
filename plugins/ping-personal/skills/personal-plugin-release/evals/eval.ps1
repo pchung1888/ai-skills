@@ -10,11 +10,16 @@ $Skill    = Join-Path $SkillDir 'SKILL.md'
 
 # The load-bearing knowledge this skill exists to carry. If any of these
 # regexes stops matching, the skill has lost the fact that caused the
-# original friction (7 sessions of "is it actually installed?").
+# original friction (7 sessions of "is it actually installed?") or the
+# dual-runtime coupling added for Codex.
 $couplingChecks = @(
     @{ Pat = [regex]::Escape('plugins/ping-personal/.claude-plugin/plugin.json'); Why = 'repo plugin.json path' },
     @{ Pat = [regex]::Escape('.claude-plugin/marketplace.json');                  Why = 'repo marketplace.json path' },
+    @{ Pat = [regex]::Escape('plugins/ping-personal/.codex-plugin/plugin.json');  Why = 'Codex plugin.json path' },
+    @{ Pat = [regex]::Escape('.codex-plugin/marketplace.json');                   Why = 'Codex marketplace.json path' },
     @{ Pat = [regex]::Escape('installed_plugins.json');                          Why = 'user-scope installed_plugins.json' },
+    @{ Pat = [regex]::Escape('codex plugin add ping-personal@ping-personal');     Why = 'Codex install command' },
+    @{ Pat = [regex]::Escape('check_dual_runtime.py');                            Why = 'dual-runtime drift check' },
     @{ Pat = [regex]::Escape('ping-personal@ping-personal');                     Why = 'correct install key (owner@name)' },
     @{ Pat = 'NOT\s+`?ping-personal@personal-plugin';                            Why = 'wrong-key warning' }
 )
@@ -29,7 +34,7 @@ $tests = @(
         }
     },
     @{
-        Name = 'three_file_coupling: all three version files + install-key contract documented'
+        Name = 'manifest_coupling: Claude and Codex manifests + install-key contract documented'
         Run = {
             $s = Get-Content $Skill -Raw
             foreach ($c in $couplingChecks) {
@@ -43,6 +48,7 @@ $tests = @(
             $s = Get-Content $Skill -Raw
             if ($s -notmatch '(?i)VERIFY-LOADED') { throw "verify-loaded gate missing" }
             if ($s -notmatch [regex]::Escape('run-all.ps1')) { throw "eval-suite ship gate missing" }
+            if ($s -notmatch [regex]::Escape('DUAL RUNTIME CHECK PASS')) { throw "dual-runtime ship gate missing" }
             if ($s -notmatch '(?i)never push main') { throw "never-push-main boundary missing" }
             if ($s -notmatch '(?i)reload-plugins') { throw "reload step missing" }
         }

@@ -1,6 +1,6 @@
 ---
 name: personal-goal
-model: opus
+model: inherit
 description: Initialize a long-running multi-phase goal with a crash-recovery beacon. Use when starting a goal that may span sessions or survive a crash. Triggers on /personal-goal <slug>.
 ---
 
@@ -40,9 +40,14 @@ description: Initialize a long-running multi-phase goal with a crash-recovery be
 
 ## After /personal-goal returns
 
-The driving Claude session reads the handoff and runs the per-phase loop:
+The driving Claude session reads the handoff and runs the per-phase loop.
+REQUIRED SUB-SKILL: personal-fable-mode -- the driver runs the five-gate
+discipline; a phase `done` advances only with Gate 4 evidence.
 - For each pending phase: dispatch one-shot Agent using `${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/agent-dispatch-template.md` filled with the phase brief.
-- On return: parse agent's structured payload, call `/personal-goal-next` per its SKILL.md.
+- On return: parse agent's structured payload (including `done_check` +
+  `verification`), call `/personal-goal-next` per its SKILL.md. On a PASS
+  outcome pass the payload's `verification` value as `--verify` (required);
+  on FAIL/BLOCKED put the evidence in `--notes` instead.
 - After last phase: run acceptance command, call `/personal-goal-next ... --finalize`.
 
 ### Forced-amnesia retry rule (REQUIRED)

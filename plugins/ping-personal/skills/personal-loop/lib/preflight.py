@@ -104,16 +104,15 @@ _OBSERVE_REQUEST = re.compile(
     r"show me the (?:result|output|console|log|screen))\b", re.IGNORECASE)
 
 
-# Generic OS-level deploy roots. Add your own org's deploy root(s) via the
-# deploy_roots param below (e.g. a company-name Program Files subfolder) --
-# this default set alone won't catch an org-specific install path.
-_DEPLOY_MARKERS = ("program files", "programdata")
+# Extension point: add your org's vendor install root(s) alongside the OS
+# defaults, e.g. ("program files", "programdata", "acme group").
+_DEPLOY_MARKERS = ("program files", "programdata", "acme group")
 
 
 def is_deployed_config_path(path, deploy_roots=None):
     """True if path is a DEPLOYED (live, outside-repo) config -> must fence.
-    A generic marker set alone can miss an org-specific deployed-app config
-    edit; pass deploy_roots to close that gap for your own environment."""
+    The v0.14.0 fence set + EXCLUSION_KEYWORDS did NOT catch a live
+    <service>.exe.config edit (handoff obs #4); this closes that gap."""
     p = (path or "").replace("\\", "/").lower()
     if any(m in p for m in _DEPLOY_MARKERS):
         return True

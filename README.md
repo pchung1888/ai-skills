@@ -1,7 +1,8 @@
 # ai-skills
 
-**A production Claude Code plugin: 25 skills, 8 role-scoped agents, ~50 Python
-modules, and a deterministic eval gate that blocks every merge.**
+**A production dual-runtime plugin (Claude Code + Codex): 27 skills, 8
+role-scoped agents, ~50 Python modules, and a deterministic eval gate that
+blocks every merge.**
 
 Built and used daily in my own engineering workflow, then curated into this
 public copy: same code, same evals, scrubbed of employer- and client-specific
@@ -11,9 +12,11 @@ as evidence of how I approach agentic systems.
 
 ```
 $ pwsh plugins/ping-personal/evals/run-all.ps1
-  OK  personal-goal ... personal-loop ... personal-critic-gate (37) ...
-  ALL EVALS PASS (25 skills)
+  OK  dual-runtime ... personal-goal ... personal-loop ... personal-critic-gate (38) ...
+  ALL EVALS PASS (35 skills)
 ```
+
+(35 = the 27 skills plus 8 Codex persona-wrapper skills, one per agent.)
 
 ---
 
@@ -32,6 +35,8 @@ to a concrete, inspectable piece of this repo.
 | **Loop engineering** | `personal-loop` | An outer loop that drives inner goals with exactly one authoritative stop-gate per run (never a critic's opinion), an autonomy dial trading gate frequency for unattended duration, and a fail-closed mode that refuses to arm if its own safety primitives are not provably present. |
 | **Evaluation-driven development** | every `skills/*/evals/`, `run-all.ps1` | 25 deterministic red/green graders, one per skill. `run-all.ps1` is the real ship gate: no green, no merge. |
 | **Multi-agent orchestration** | `plugins/ping-personal/agents/` | 8 role-scoped persona agents (plan / research / implement / parse / design / git / audit / critique) dispatched by role, instead of one do-everything agent. |
+| **Dual-runtime portability** | `runtime-compatibility.md`, `scripts/check_dual_runtime.py`, `.codex-plugin/` | One skill tree packaged for both Claude Code and Codex: parallel manifests, per-agent Codex wrapper skills, a Claude-to-Codex model/effort mapping table, and a drift check that fails the build if the two runtimes disagree. |
+| **Model/effort routing** | `model:` frontmatter in every `SKILL.md` | Orchestrators (`personal-loop`, `personal-workflow`, `personal-goal`, `personal-fable-mode`, `personal-online-research`) run `inherit` so the driving session's tier is never silently downgraded; mechanical workers pin `haiku`; judgment-heavy workers pin `sonnet`/`opus`. Enforced by the eval gate, not convention. |
 
 ---
 
@@ -87,18 +92,29 @@ production system: measurable, refusal-first, and safe by construction.
 
 ## Install
 
-```json
-// ~/.claude/settings.json
-"enabledPlugins": { "ping-personal@ping-personal": true }
-```
+Claude Code:
 
 ```
 /plugin marketplace add pchung1888/ai-skills
 /reload-plugins
 ```
 
-Full procedure (including the Codex CLI junction setup for using these skills
-outside Claude Code) is in [`install-instructions.md`](./install-instructions.md).
+```json
+// ~/.claude/settings.json
+"enabledPlugins": { "ping-personal@ping-personal": true }
+```
+
+Codex CLI (the repo ships a parallel `.codex-plugin` manifest):
+
+```
+codex plugin marketplace add pchung1888/ai-skills
+codex plugin add ping-personal@ping-personal
+```
+
+Full procedure (naming contract, Codex model settings, verification) is in
+[`install-instructions.md`](./install-instructions.md); the dual-runtime
+contract is in
+[`plugins/ping-personal/runtime-compatibility.md`](./plugins/ping-personal/runtime-compatibility.md).
 
 ## Run the eval gate
 
@@ -116,6 +132,7 @@ Start with these three to see the range:
 - [`personal-loop`](./plugins/ping-personal/skills/personal-loop/SKILL.md) -- the loop-engineering centerpiece; read "The Gate Law" first.
 - [`personal-critic-gate`](./plugins/ping-personal/skills/personal-critic-gate/SKILL.md) -- a multi-seat adversarial review panel that gates high-risk actions by majority vote.
 - [`personal-cs-client-question`](./plugins/ping-personal/skills/personal-cs-client-question/SKILL.md) -- the refusal-first support copilot described above.
+- [`personal-fable-mode`](./plugins/ping-personal/skills/personal-fable-mode/SKILL.md) -- a method skill: a five-gate working discipline (scope / evidence / adversarial reasoning / verification / calibrated reporting) that upgrades whichever model is already running.
 
 Full skill-by-skill index: [`plugins/ping-personal/README.md`](./plugins/ping-personal/README.md).
 
@@ -127,7 +144,8 @@ This is a curated copy, not a mirror -- and how it was curated is itself part of
 the point.
 
 - **No history to leak.** Rather than flip a private repo public (which exposes
-  every past commit), this is a fresh repo with a single clean commit.
+  every past commit), this is a fresh repo whose history only ever contains
+  curated, scrub-verified snapshots.
 - **No working documents.** Design docs, audit trackers, and job-application
   material never shipped as part of the plugin and were excluded, not scrubbed
   after the fact.

@@ -1,7 +1,7 @@
 ---
 name: personal-pr-briefing
 model: sonnet
-description: Update a PR/MR description with a reviewer briefing -- which files matter most and in what order, what each load-bearing change does, and what is safe to skim. Trigger on /personal-pr-briefing, "pr briefing", "update the PR description for reviewers", "show the reviewer what files to read first", "make the PR description reviewer-friendly". Works with gh (GitHub) and glab (GitLab); portable equivalent of a host repo's own PR-review-briefing skill.
+description: Update a PR/MR description with a reviewer briefing -- which files matter most and in what order, what each load-bearing change does, and what is safe to skim. Trigger on /personal-pr-briefing, "pr briefing", "update the PR description for reviewers", "show the reviewer what files to read first", "make the PR description reviewer-friendly". Works with gh (GitHub) and glab (GitLab); portable equivalent of the start-/sapi-pr-review-briefing host skills.
 ---
 
 # /personal-pr-briefing

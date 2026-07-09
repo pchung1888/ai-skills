@@ -172,6 +172,12 @@ Vote values (diff/plan artifacts):
 - `FIX` = CRITICAL or HIGH findings that must be addressed before ship.
 - `BLOCK` = fundamentally wrong-shape; discard and re-plan. (Legacy alias: `ABORT`)
 
+Automatic-FIX rule (all seats, both modes, including fast-lane): an artifact
+that claims done/PASS without Gate 4 evidence at the layer of the claim (see
+personal-fable-mode) gets a `FIX` vote -- unverified done is a HIGH finding by
+definition. Evidence means the check that was run plus its quoted output, not
+the claim that a check was run.
+
 Canonical parse/tally implementations:
 - `lib/vote_parser.py` -- quote-aware balanced-scan extraction of the LAST
   valid vote JSON from reviewer text. `python lib/vote_parser.py < textfile`

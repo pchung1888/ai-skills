@@ -36,7 +36,7 @@ a field land downstream).
    `--json`, diff tag-by-tag, and present only the differing tags plus any
    tag present on one side only.
 4. **Downstream mapping questions** ("where does tag 448 land in the host
-   app's Trade table?") are host-repo facts, not protocol facts: grep the host
+   OMS Trade table?") are host-repo facts, not protocol facts: grep the host
    repo's FIX engine / stored procedures for the tag number and answer with
    file:line evidence, or say the mapping is not in reach of this repo.
 

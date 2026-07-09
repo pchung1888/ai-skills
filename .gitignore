@@ -14,3 +14,11 @@ node_modules/
 
 # Local /personal-goal acceptance cache; regenerated per machine
 *.accept-cache
+
+# Local working documents and tool state -- not part of the plugin
+docs/
+.gstack/
+
+# Regenerated telemetry data (personal-cs-* skills); never commit real/test run data
+.claude/score-history/
+plugins/ping-personal/skills/personal-cs-client-question/cs-metrics-data.js

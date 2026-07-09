@@ -30,7 +30,7 @@ function Get-ProjectSlugFromPath {
     param([string]$Path)
     # Claude Code's sanitization: replace any non-alphanumeric character with `-`.
     # Real rule may differ slightly per version; this matches observed behavior
-    # for D:/dev/some project -> D--dev-some-project.
+    # for D:/startuser/START gitlab/START -> D--startuser-START-gitlab-START.
     return ($Path -replace '[^A-Za-z0-9]', '-')
 }
 

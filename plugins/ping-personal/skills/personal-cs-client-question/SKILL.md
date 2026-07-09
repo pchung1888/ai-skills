@@ -103,6 +103,12 @@ scope; this skill only covers "how to answer it once you have it."
 
 ## Mechanism
 
+Run under `personal-fable-mode` gates: the `SOURCE:` citation must be a file
+actually opened this session (Gate 4 -- never cite from memory), and when the
+answer depends on 2+ unverified live-system facts (config state, deployment
+layout, data shape), run `personal-facts-check` first to probe and label them;
+its labels feed the `confidence` field.
+
 1. Apply the decision tree above to locate the answer.
 2. **Refuse** if best confidence < 0.80 OR no useful result -> invoke
    `personal-cs-escalate-to-dev`.

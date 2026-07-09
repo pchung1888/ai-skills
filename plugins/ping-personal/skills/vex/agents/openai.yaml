@@ -1,0 +1,5 @@
+interface:
+  display_name: "Vex"
+  short_description: "Vex persona: parser and data-shape specialist"
+policy:
+  allow_implicit_invocation: true

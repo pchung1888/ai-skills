@@ -1,6 +1,6 @@
 ---
 name: personal-loop
-model: sonnet
+model: inherit
 description: Outer loop that drives personal-workflow/personal-goal as an inner loop. Campaign-aware, condition-based autonomy (run until a verifiable stop-condition is true) plus timer cadence. Enforces THE GATE LAW (one gate, co-extensive with the goal), an autonomy dial for tick granularity, a severity-aware critic gate, and fail-closed unattended safety. Sequences a campaign of goals or resumes a single goal across quota windows. Triggers on /personal-loop <goal | --campaign slug | --resume slug | --every <interval> skill:<name>>.
 ---
 
@@ -10,6 +10,11 @@ The OUTER loop. Drives `personal-workflow`/`personal-goal` as the inner loop.
 Does NOT modify them -- it drives them. Each outer tick runs ONE unit of inner
 work as a FRESH beacon-anchored context, gates it, evaluates STOP, checkpoints,
 and either schedules the next tick or halts + reports.
+
+REQUIRED SUB-SKILL: personal-fable-mode -- the driving session and every tick
+run the five-gate discipline. A tick's done-claim needs Gate 4 evidence at the
+layer of the claim; the FAST_CRITIC treats an unverified done as an automatic
+FIX (see personal-critic-gate).
 
 ## The Gate Law
 
@@ -56,7 +61,7 @@ If you internalize nothing else: **multi-artifact goal -> campaign mode ->
 ## Roles block
 
 ```
-BEACON      = personal-goal               # host goal beacon (a differently-named goal skill on other host repos)
+BEACON      = personal-goal               # host goal beacon (host repos may carry a renamed port)
 CONDUCTOR   = personal-workflow            # the inner per-goal conductor
 FAST_CRITIC = <resolved at runtime>        # see Role Resolution
 PANEL       = personal-critic-gate         # full 5-seat escalation
@@ -194,7 +199,7 @@ FAST_CRITIC precedence (portability contract -- never hardcode an agent name):
 4. Inline-judge fallback: fresh generic subagent (claude/Explore) with
    adversarial-review + Honesty-Protocol brief.
 
-ALWAYS announce the resolved tier, e.g. `FAST_CRITIC = your-host-critic-agent (host-discovered)`
+ALWAYS announce the resolved tier, e.g. `FAST_CRITIC = host-critic (host-discovered)`
 or `= inline judge (no critic agent found)`. The inline judge is WEAKER (less
 domain knowledge); both the announcement and the REPORT label the gate strength.
 
@@ -288,7 +293,7 @@ auto-executes.
 **Canonical irreversible-action set (exhaustive for auto-halt purposes):**
 `git push`, any DDL (`DROP` / `TRUNCATE` / `ALTER`), writes to `.env*` or secret
 stores, package publish/deploy, writes to a DEPLOYED config (Program Files /
-ProgramData / a configured org-specific deploy root -- via
+ProgramData / a vendor install root such as C:\Acme Group / a declared deploy root -- via
 preflight.is_deployed_config_path), and anything `flag_excluded` tags.
 NEVER auto-push.
 

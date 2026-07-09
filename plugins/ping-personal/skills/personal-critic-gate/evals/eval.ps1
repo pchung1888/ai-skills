@@ -13,6 +13,14 @@ $Lib      = Join-Path $SkillDir 'lib'
 
 $tests = @(
     @{
+        Name = 'unverified_done_rubric: a done-claim without Gate 4 evidence is an automatic FIX (personal-fable-mode anchor)'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?i)unverified done') { throw "unverified-done rubric wording missing" }
+            if ($s -notmatch 'personal-fable-mode') { throw "SKILL.md does not reference personal-fable-mode (Gate 4 anchor)" }
+        }
+    },
+    @{
         Name = 'skill_frontmatter: SKILL.md declares name=personal-critic-gate + a description'
         Run = {
             $s = Get-Content $Skill -Raw

@@ -25,6 +25,7 @@ beacon mutation lives in `lib/phase_table.py`.
 | F05 | update_row loses the commit/subagent on the advanced row | recovery loses the "last good commit" pointer | code |
 | F06 | a refuse-path accidentally creates a git commit | a rejected advance still mutates history | code |
 | F07 | load-bearing lib (advance/phase_table) missing, or frontmatter corrupt | skill cannot run / stops triggering | code |
+| F08 | advance with outcome=PASS but no `--verify` is allowed (unverified done) | a "Done" with no Gate 4 evidence -- the fable-mode fail-closed contract breaks | code |
 
 ## Eval Cases
 
@@ -36,6 +37,8 @@ beacon mutation lives in `lib/phase_table.py`.
 | E04 | update_row on a fresh phase 1 (fixture) | status flips, commit+subagent recorded | losing the commit (F05) |
 | E05 | update_row on already-Done phase 2 (fixture) | RuntimeError | duplicate advance (F04) |
 | E06 | update_row on undeclared phase 99 | RuntimeError | phantom row (F03) |
+| E07 | advance --outcome PASS --commit, no --verify | exit 2 (refused), no commit | unverified done advancing (F08) |
+| E08 | advance --outcome PASS --verify "UNVERIFIED: <reason>" | guard passes (escape hatch) | escape hatch silently closed (F08) |
 
 ## Graders
 

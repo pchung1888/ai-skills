@@ -1,0 +1,5 @@
+interface:
+  display_name: "Amanda"
+  short_description: "Amanda persona: plan writer and coordinator"
+policy:
+  allow_implicit_invocation: true

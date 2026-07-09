@@ -1,14 +1,21 @@
 ---
-name: personal-facts
+name: personal-facts-check
 model: sonnet
-description: Run a fact-finding session BEFORE spec/plan work -- probe the live system and code, and produce a confidence-labeled facts doc (CONFIRMED-LIVE / EXTRACTED / INFERRED / UNKNOWN, with RESOLVED for closed discrepancies) under docs/<area>/facts/. Trigger on /personal-facts, "fact session", "facts pass", "I need to do a fact thing session", "verify the facts doc", "kill the blanks in the facts". Update mode re-verifies an existing facts doc and marks discrepancies RESOLVED.
+description: Run a fact-finding session BEFORE spec/plan work -- probe the live system and code, and produce a confidence-labeled facts doc (CONFIRMED-LIVE / EXTRACTED / INFERRED / UNKNOWN, with RESOLVED for closed discrepancies) under docs/<area>/facts/. Trigger on /personal-facts-check (formerly /personal-facts), "fact session", "facts pass", "facts check", "I need to do a fact thing session", "verify the facts doc", "kill the blanks in the facts". Update mode re-verifies an existing facts doc and marks discrepancies RESOLVED.
 ---
 
-# /personal-facts
+# /personal-facts-check
 
 Establish what is actually true about a system before anyone plans against
 it. The deliverable is a facts doc where every claim carries a confidence
 label and enough provenance that a later session can re-verify it.
+
+REQUIRED SUB-SKILL: personal-fable-mode -- this skill IS Gate 2 (evidence
+before reasoning) run as a formal deliverable. Run the full gate loop while
+producing the doc: scope the decision the facts serve (Gate 1), probe before
+reasoning (Gate 2), attack your own facts before recording them (Gate 3),
+verify each claim at the layer it makes (Gate 4), and the labels below are
+Gate 5 made durable.
 
 ## Labels (the contract)
 
