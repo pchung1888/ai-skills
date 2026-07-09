@@ -293,7 +293,7 @@ def test_exclusion_destructive_extended():
 
 # --- external-action detector: external-world steps auto-select goal-phase ---
 def test_external_action_start_service():
-    assert "external-action" in pf.detect_external_actions("start the background worker service")
+    assert "external-action" in pf.detect_external_actions("start the TradeSvc service")
 
 def test_external_action_click():
     assert "external-action" in pf.detect_external_actions("click Send TradeReportAck")
@@ -313,10 +313,10 @@ def test_external_action_service_layer_not_flagged():
     assert pf.detect_external_actions("refactor the service layer module") == []
 
 def test_deployed_config_program_files():
-    assert pf.is_deployed_config_path(r"C:\Program Files (x86)\SomeVendor\App_Setup\App.exe.config") is True
+    assert pf.is_deployed_config_path(r"C:\Program Files (x86)\Acme Group\TradeSvc_Setup\TradeSvc.exe.config") is True
 
-def test_deployed_config_programdata():
-    assert pf.is_deployed_config_path(r"C:\ProgramData\SomeApp\config.txt") is True
+def test_deployed_config_vendor_group():
+    assert pf.is_deployed_config_path(r"C:\Acme Group\OrderSimulator\quickfix_config.txt") is True
 
 def test_deployed_config_repo_file_is_not():
     assert pf.is_deployed_config_path("plugins/ping-personal/skills/personal-loop/SKILL.md") is False
@@ -381,7 +381,7 @@ def test_bearer_token_caught():
     assert len(ss.scan("Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" + "x" * 40)) > 0
 
 def test_tsql_connstring_caught():
-    assert len(ss.scan("Data Source=SQLDEV01;Initial Catalog=AppDb;Password=hunter2")) > 0
+    assert len(ss.scan("Data Source=TRADEDEV;Initial Catalog=TRADES;Password=hunter2")) > 0
 
 def test_clean_diff_returns_empty():
     assert ss.scan("def get_token(): return os.environ['API_TOKEN']") == []
@@ -468,7 +468,7 @@ def test_merge_folds_observed_into_slot():
     assert merged["jira"]["server"] == "live" and merged["email"]["server"] == "live"
 
 def test_assert_no_secret_value_ok_on_locations():
-    ds.assert_no_secret_value({"db": {"creds_at": ".env:SAPIDF_CONNECTION"}})  # no raise
+    ds.assert_no_secret_value({"db": {"creds_at": ".env:TRADESVC_CONNECTION"}})  # no raise
 
 def test_assert_no_secret_value_raises_on_value():
     try:
@@ -602,7 +602,7 @@ if __name__ == "__main__":
     test_external_action_run_tests_not_flagged()
     test_external_action_service_layer_not_flagged()
     test_deployed_config_program_files()
-    test_deployed_config_programdata()
+    test_deployed_config_vendor_group()
     test_deployed_config_repo_file_is_not()
     test_deployed_config_declared_root()
     print("preflight: ALL PASS")

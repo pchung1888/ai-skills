@@ -60,7 +60,15 @@ total_tokens: <integer reported by your runtime or -1 if unknown>
 surprises: <free text -- list anything unexpected discovered>
 blocked_vs_done: blocked|done
 commit_sha: <sha of your last commit, or empty if you produced no commit>
+done_check: <one sentence -- what "done" means for this phase and how it was checked>
+verification: <the check you ran + up to 3 quoted output lines proving done, or "UNVERIFIED: <reason>">
 ```
+
+`blocked_vs_done: done` with an empty `verification` field will be REFUSED by the
+driver -- `/personal-goal-next` requires `--verify` (Gate 4 evidence) on every PASS.
+"It ran" is not verification (personal-fable-mode Gate 4): verify at the layer of
+the claim -- if the phase claims the output is correct, quote the output, not the
+exit code.
 
 ## Useful patterns
 

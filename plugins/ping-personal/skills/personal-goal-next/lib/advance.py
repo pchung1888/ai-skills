@@ -230,6 +230,9 @@ def main():
     p.add_argument("--commit")
     p.add_argument("--subagent", required=True)
     p.add_argument("--notes", default="")
+    p.add_argument("--verify", default="",
+                   help="Gate 4 evidence for a PASS: the check that was run plus one quoted "
+                        "output line, or 'UNVERIFIED: <reason>'. Required when --outcome=PASS.")
     p.add_argument("--abort", metavar="REASON",
                    help="Mark current phase BLOCKED with ABORT:<reason> and commit.")
     p.add_argument("--override-budget", dest="override_budget", action="store_true",
@@ -336,6 +339,24 @@ def main():
     if args.outcome == "PASS" and not args.commit:
         print("ERROR: --commit required when --outcome=PASS", file=sys.stderr)
         return 2
+
+    # Fail-closed unverified-done guard (personal-fable-mode Gate 4): a PASS is a
+    # done-claim, and a done-claim without evidence is refused before any beacon
+    # MUTATION (the budget block above only reads).  'UNVERIFIED: <reason>' passes
+    # the guard but is recorded in the Cost Log notes for the critic to see.
+    if args.outcome == "PASS" and not args.verify.strip():
+        print("ERROR: --verify required when --outcome=PASS "
+              "(Gate 4 evidence: the check command + one quoted output line, "
+              "or 'UNVERIFIED: <reason>'). Unverified done is refused.", file=sys.stderr)
+        return 2
+    # Record VERIFY on PASS only: FAIL/BLOCKED notes feed the Jaccard no-progress
+    # detector (_get_last_fail_note), and a near-constant VERIFY string would skew
+    # it in both directions.  Sanitize pipes/newlines -- notes land in markdown
+    # table cells, and a raw '|' splits the cell and truncates read-back.
+    if args.outcome == "PASS" and args.verify.strip():
+        v = re.sub(r"\s*[\r\n]+\s*", " ; ", args.verify.strip()).replace("|", "/")
+        vnote = f"VERIFY: {v}"
+        notes = (notes + " ; " + vnote) if notes else vnote
 
     bp = Path(args.beacon)
     content = bp.read_text(encoding="utf-8")

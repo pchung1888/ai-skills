@@ -1,0 +1,5 @@
+interface:
+  display_name: "Ms.Mario"
+  short_description: "Ms.Mario persona: adversarial critic"
+policy:
+  allow_implicit_invocation: true

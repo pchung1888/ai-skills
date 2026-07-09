@@ -1,0 +1,5 @@
+interface:
+  display_name: "Iris"
+  short_description: "Iris persona: read-only researcher"
+policy:
+  allow_implicit_invocation: true

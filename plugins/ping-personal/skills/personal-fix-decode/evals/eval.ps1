@@ -34,7 +34,7 @@ $tests = @(
             $out = (python $Decoder (Join-Path $Fix 'good-ae-message.txt') 2>&1) -join "`n"
             if ($LASTEXITCODE -ne 0) { throw "decoder failed on good fixture: $out" }
             if ($out -notmatch 'TradeCaptureReport') { throw "MsgType AE not decoded. Output:`n$out" }
-            if ($out -notmatch 'PartyID\s+NORTHBANK') { throw "tag 448 PartyID not decoded. Output:`n$out" }
+            if ($out -notmatch 'PartyID\s+HILLTOP') { throw "tag 448 PartyID not decoded. Output:`n$out" }
             if ($out -notmatch 'ContraFirm') { throw "PartyRole 17 enum not decoded. Output:`n$out" }
         }
     },

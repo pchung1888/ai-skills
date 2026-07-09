@@ -4,14 +4,14 @@
     "name": "pchung1888"
   },
   "metadata": {
-    "description": "Cross-project Claude Code skills: goal orchestration, workflow conductor, critic gate, md-to-html, htsw, eval maker, prototype conductor, understand-anything orchestrator, plugin-release, pr-briefing, facts, fix-decode, jira-sync, cs-copilot triage demo.",
-    "version": "0.17.0"
+    "description": "Cross-project Claude Code and Codex skills: goal orchestration, workflow conductor, critic gate, md-to-html, htsw, eval maker, prototype conductor, understand-anything orchestrator, plugin-release, pr-briefing, facts-check, fix-decode, jira-sync, cs-copilot triage demo, fable-mode, online-research.",
+    "version": "0.20.0"
   },
   "plugins": [
     {
       "name": "ping-personal",
-      "description": "Personal cross-project Claude Code skills (/personal-goal, /personal-goal-next, /personal-progress, /personal-critic-gate, /personal-md-to-html, /personal-htsw, /personal-cache-stats, /personal-lesson, /personal-workflow, /personal-loop, /personal-create-eval, /personal-prototype, /personal-understanding, /personal-plugin-release, /personal-pr-briefing, /personal-facts, /personal-fix-decode, /personal-jira-sync, /personal-cs-client-question, /personal-cs-step-by-step, /personal-cs-escalate-to-dev) + 8 maid-persona agents (amanda, iris, bunny, vex, maggie, dora, rhea, ms-mario) + git hooks.",
-      "version": "0.17.0",
+      "description": "Personal cross-project Claude Code and Codex skills (/personal-goal, /personal-goal-next, /personal-progress, /personal-critic-gate, /personal-md-to-html, /personal-htsw, /personal-cache-stats, /personal-lesson, /personal-workflow, /personal-loop, /personal-create-eval, /personal-prototype, /personal-understanding, /personal-plugin-release, /personal-pr-briefing, /personal-facts-check, /personal-fix-decode, /personal-jira-sync, /personal-cs-client-question, /personal-cs-step-by-step, /personal-cs-escalate-to-dev, /personal-fable-mode, /personal-online-research) + 8 Claude-native maid-persona agents (amanda, iris, bunny, vex, maggie, dora, rhea, ms-mario) + git hooks.",
+      "version": "0.20.0",
       "author": {
         "name": "pchung1888"
       },

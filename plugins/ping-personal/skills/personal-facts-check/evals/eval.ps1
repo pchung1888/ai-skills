@@ -1,5 +1,5 @@
 #requires -Version 7
-# Eval grader for personal-facts. See evals/eval-plan.md for the failure-mode map.
+# Eval grader for personal-facts-check (formerly personal-facts). See evals/eval-plan.md.
 # Deterministic red/green grader. Exit 0 = all checks pass; exit 1 = at least one fails.
 # ASCII only (no em-dashes/smart-quotes -- Windows PowerShell 5.1 cp1252 pitfall).
 $ErrorActionPreference = 'Stop'
@@ -14,10 +14,18 @@ $labels = @('CONFIRMED-LIVE', 'EXTRACTED', 'INFERRED', 'UNKNOWN', 'RESOLVED')
 
 $tests = @(
     @{
+        Name = 'fable_mode_wiring: skill runs under personal-fable-mode gates (Gate 2 as a deliverable)'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'personal-fable-mode') { throw "SKILL.md does not reference personal-fable-mode" }
+            if ($s -notmatch '(?i)Gate 2') { throw "SKILL.md does not anchor itself to Gate 2 (evidence before reasoning)" }
+        }
+    },
+    @{
         Name = 'skill_frontmatter: SKILL.md declares the right name + a description'
         Run = {
             $s = Get-Content $Skill -Raw
-            if ($s -notmatch '(?m)^name:\s*personal-facts\s*$') { throw "frontmatter name not personal-facts" }
+            if ($s -notmatch '(?m)^name:\s*personal-facts-check\s*$') { throw "frontmatter name not personal-facts-check" }
             if ($s -notmatch '(?m)^description:\s*\S') { throw "frontmatter description missing" }
         }
     },
@@ -60,5 +68,5 @@ foreach ($t in $tests) {
     try { & $t.Run; $pass++; Write-Host "PASS $($t.Name)" -ForegroundColor Green }
     catch { $fail++; Write-Host "FAIL $($t.Name): $_" -ForegroundColor Red }
 }
-if ($fail -eq 0) { Write-Host "EVAL PASS personal-facts ($pass)" -ForegroundColor Green; exit 0 }
-else { Write-Host "EVAL FAIL personal-facts ($fail of $($pass+$fail))" -ForegroundColor Red; exit 1 }
+if ($fail -eq 0) { Write-Host "EVAL PASS personal-facts-check ($pass)" -ForegroundColor Green; exit 0 }
+else { Write-Host "EVAL FAIL personal-facts-check ($fail of $($pass+$fail))" -ForegroundColor Red; exit 1 }

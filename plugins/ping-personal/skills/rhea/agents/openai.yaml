@@ -1,0 +1,5 @@
+interface:
+  display_name: "Rhea"
+  short_description: "Rhea persona: quality, security, and governance auditor"
+policy:
+  allow_implicit_invocation: true

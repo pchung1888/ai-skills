@@ -48,6 +48,14 @@ $tests = @(
             if ($noOutcome -eq 0) { throw "advance with NO --outcome was ALLOWED -- F01" }
             $noTokens = Invoke-Advance @('--beacon',$dummy,'--phase','1','--outcome','FAIL','--duration','5','--subagent','driver')
             if ($noTokens -eq 0) { throw "advance with NO --tokens was ALLOWED -- F01" }
+            # F08 unverified done: PASS without --verify must be REFUSED at the guard (exit 2),
+            # not crash later at read_text (exit 1) -- the -ne 2 assert distinguishes the two.
+            $passNoVerify = Invoke-Advance @('--beacon',$dummy,'--phase','1','--outcome','PASS','--tokens','100','--duration','5','--subagent','driver','--commit','abc1234')
+            if ($passNoVerify -ne 2) { throw "outcome=PASS with NO --verify must refuse with exit 2 (got $passNoVerify) -- F08" }
+            # The documented escape hatch must stay open: an explicit UNVERIFIED reason
+            # passes the guard (any later exit here is the nonexistent-beacon crash, not 2).
+            $passUnverified = Invoke-Advance @('--beacon',$dummy,'--phase','1','--outcome','PASS','--tokens','100','--duration','5','--subagent','driver','--commit','abc1234','--verify','UNVERIFIED: driver approved')
+            if ($passUnverified -eq 2) { throw "explicit 'UNVERIFIED: <reason>' was refused -- escape hatch broken -- F08" }
             $head1 = (git rev-parse HEAD).Trim()
             if ($head0 -ne $head1) { throw "a refused advance created a git commit -- F06" }
         }

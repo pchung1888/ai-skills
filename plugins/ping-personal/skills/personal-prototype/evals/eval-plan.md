@@ -38,7 +38,7 @@ F09-F14 extend the structural floor as this revision lands the start-prototype
 portable lessons. F14 adds a deterministic SUBJECT-level layer: the bundled
 `scripts/check_prototype.py` is calibrated against `evals/fixtures/` (a good fixture
 must CHECK-OK; each bad fixture trips exactly one rule and must CHECK-FAIL). We do NOT
-port the START `gold_artifact` grader -- it pinned a START-repo path
+port the host repo's `gold_artifact` grader -- it pinned a host-repo path
 (`docs/prototype-687/prototype.html`) that does not exist in this plugin; the good
 fixture is the positive calibration instead. The headline `--tournament` flow (build
 real variants, vote via `/personal-critic-gate`) is structurally guarded by F12 and

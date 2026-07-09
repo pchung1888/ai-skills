@@ -1,0 +1,5 @@
+interface:
+  display_name: "Maggie"
+  short_description: "Maggie persona: architect and design-system advisor"
+policy:
+  allow_implicit_invocation: true

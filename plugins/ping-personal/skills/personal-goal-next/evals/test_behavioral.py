@@ -181,6 +181,7 @@ def test_a1_round_trip():
             "--duration", "3",
             "--subagent", "driver",
             "--commit", sha,
+            "--verify", "pytest -q: 3 passed",
         ])
         _assert(r.returncode == 0, f"advance exited {r.returncode}; stderr={r.stderr}")
 
@@ -196,6 +197,10 @@ def test_a1_round_trip():
         # Cost Log row appended
         _assert("5000" in after, "Cost Log: token count 5000 not found")
         _assert("driver" in after, "Cost Log: subagent 'driver' not found")
+
+        # VERIFY note (Gate 4 evidence) recorded in the Cost Log notes on PASS
+        _assert("VERIFY: pytest -q: 3 passed" in after,
+                "Cost Log: VERIFY note not recorded on PASS")
 
         # Activity Log row appended
         _assert("| 1 | PASS |" in after or "1 | PASS |" in after,
@@ -237,6 +242,7 @@ def test_a2_crash_recovery():
             "--duration", "3",
             "--subagent", "driver",
             "--commit", sha,
+            "--verify", "pytest -q: 3 passed",
         ], env={"KILL_AFTER_WRITE": "1"})
 
         # advance must exit 99 (crash signal)
@@ -697,6 +703,7 @@ def test_c2_budget_override():
             "--duration", "5",
             "--subagent", "driver",
             "--commit", sha,
+            "--verify", "pytest -q: 3 passed",
             "--override-budget",
         ])
         _assert(r.returncode == 0,
@@ -737,6 +744,7 @@ def test_c3_legacy_no_budget():
             "--duration", "5",
             "--subagent", "driver",
             "--commit", sha,
+            "--verify", "pytest -q: 3 passed",
         ])
         _assert(r.returncode == 0,
                 f"C3: legacy beacon should exit 0 regardless of token count; got {r.returncode}; stderr={r.stderr}")
@@ -766,6 +774,7 @@ def test_c4_rollup_updates():
             "--duration", "5",
             "--subagent", "driver",
             "--commit", sha,
+            "--verify", "pytest -q: 3 passed",
         ])
         _assert(r1.returncode == 0,
                 f"C4: first advance should exit 0; got {r1.returncode}; stderr={r1.stderr}")
@@ -784,6 +793,7 @@ def test_c4_rollup_updates():
             "--duration", "8",
             "--subagent", "driver",
             "--commit", sha2,
+            "--verify", "pytest -q: 3 passed",
         ])
         _assert(r2.returncode == 0,
                 f"C4: second advance should exit 0; got {r2.returncode}; stderr={r2.stderr}")

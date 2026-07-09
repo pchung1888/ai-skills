@@ -36,7 +36,7 @@ plausible-but-wrong root cause), so the gate matters most after a fan-out phase.
 | "Test passes / fix works" | Re-run the test command; quote the result (do NOT trust the subagent's say-so) |
 | Anything else | Cannot name evidence -> UNVERIFIED |
 
-> Illustrative incident (2026-05-28): a researcher subagent returned a `CBool(Null) -> HTTP 500`
+> Illustrative incident (host repo, 2026-05-28): a researcher subagent returned a `CBool(Null) -> HTTP 500`
 > defect at HIGH confidence -- schema-valid and WRONG (the driving setting was absent, and 83 sibling
 > pages using the identical line passed). The claim's SHAPE was fine; its TRUTH was not. The gate exists
 > to re-check the evidence before such a claim hits the durable beacon.

@@ -39,7 +39,7 @@ PAUSE_ALWAYS = [
     r"\bgit\s+clean\b[^\n]*(--force|-[a-z]*f)",      # -f / -fd / -xf AND long-form --force (gate finding)
     r"\bgit\s+rebase\b",                             # shared-ness is not regex-detectable -> over-pause
     r"\bgit\s+filter-branch\b",
-    # --- generic destructive filesystem (restored after a prior gate regression) ---
+    # --- generic destructive filesystem (RESTORED from the host-repo corpus; gate finding H1) ---
     r"\brm\s+-[rf]",                                 # rm -r / -f / -rf
     r"Remove-Item[^\n]*-(Recurse|Force)\b",          # recursive / forced delete
     # --- generic Windows-destructive (host-conditional; never matches on non-Windows hosts) ---

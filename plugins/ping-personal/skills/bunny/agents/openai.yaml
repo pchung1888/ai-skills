@@ -1,0 +1,5 @@
+interface:
+  display_name: "Bunny"
+  short_description: "Bunny persona: implementation engineer"
+policy:
+  allow_implicit_invocation: true

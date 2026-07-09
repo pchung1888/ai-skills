@@ -1,7 +1,8 @@
 # Install -- ai-skills
 
-This plugin ships as a self-contained marketplace. To use it on any machine
-with Claude Code:
+This plugin ships as a self-contained marketplace for both Claude Code and
+Codex. Both runtimes load the same `plugins/ping-personal/skills/` tree.
+Claude Code first:
 
 ## 1. Add the marketplace (this is the load-bearing step)
 
@@ -57,7 +58,7 @@ Run this in any active Claude Code session:
 
 Or just restart Claude Code.
 
-## 3. Verify
+## 4. Verify
 
 Type `/` in the Claude Code prompt and confirm these skills appear in the
 list:
@@ -70,6 +71,8 @@ list:
 - `/personal-htsw`
 - `/personal-cache-stats`
 - `/personal-lesson`
+- `/personal-fable-mode`
+- `/personal-online-research`
 
 Then dogfood-test one:
 
@@ -98,87 +101,93 @@ To install the `codex` plugin separately, see:
 3.11** on your PATH. If `python --version` reports < 3.11, install a
 newer Python first.
 
-## Use these skills from Codex CLI
+## Codex install
 
 This is separate from the optional Codex *plugin* dependency above. Here the
 goal is the reverse: making the **ping-personal skills** themselves usable
 inside **Codex CLI** sessions.
 
-Codex does not read Claude Code's plugin install. It discovers skills from its
-own global skill root, `~/.agents/skills/`. The cleanest way to share without
-duplicating files is an NTFS **junction** per skill folder -- one source of
-truth (this repo), zero config edits. This mirrors how `superpowers` and
-`claude-official` are already linked into that root.
+Codex does not read Claude Code's plugin install. This repo ships a Codex
+marketplace manifest at `.codex-plugin/marketplace.json` and a Codex plugin
+manifest at `plugins/ping-personal/.codex-plugin/plugin.json`, both pointing
+at the same `skills/` tree the Claude plugin uses -- one source of truth, two
+runtimes.
 
-### Why junctions, not a Codex plugin manifest
-
-Codex *can* consume a `.codex-plugin/plugin.json` registered as a local
-marketplace in `~/.codex/config.toml`. We deliberately do NOT do that here:
-
-- Junctions keep a single source of truth -- no second `version` field to keep
-  in sync, no repackaging on every skill edit.
-- A marketplace entry adds skill/plugin context noise to every Codex session
-  and is harder to back out cleanly.
-
-### Steps (Windows / PowerShell)
+From GitHub:
 
 ```powershell
-$root = "$env:USERPROFILE\.agents\skills"
-$src  = "<path-to-this-repo>\plugins\ping-personal\skills"
-$skills = "personal-goal","personal-goal-next","personal-progress",
-          "personal-critic-gate","personal-md-to-html","personal-htsw",
-          "personal-cache-stats","personal-lesson","personal-lesson-ui",
-          "personal-lesson-parser","personal-lesson-data","personal-lesson-tooling"
-foreach ($s in $skills) {
-  $link = Join-Path $root $s
-  if (Test-Path $link) { Write-Host "SKIP (exists): $s"; continue }
-  New-Item -ItemType Junction -Path $link -Target (Join-Path $src $s) | Out-Null
-  Write-Host "LINKED: $s"
-}
+codex plugin marketplace add pchung1888/ai-skills
+codex plugin add ping-personal@ping-personal
 ```
 
-On macOS / Linux, use a symlink instead of a junction:
+From a local checkout:
 
-```bash
-root="$HOME/.agents/skills"
-src="<path-to-this-repo>/plugins/ping-personal/skills"
-for s in personal-goal personal-goal-next personal-progress \
-         personal-critic-gate personal-md-to-html personal-htsw \
-         personal-cache-stats personal-lesson personal-lesson-ui \
-         personal-lesson-parser personal-lesson-data personal-lesson-tooling; do
-  ln -s "$src/$s" "$root/$s"
-done
+```powershell
+codex plugin marketplace add <path-to-this-repo>
+codex plugin add ping-personal@ping-personal
 ```
 
-### Then
+Then start a **fresh Codex session**. Skills load at session start, so the
+session you ran the command from will not see them.
 
-Start a **fresh Codex session**. Skills load at session start, so the session
-you ran the command from will not see them. Verify by asking Codex to list its
-available skills, or invoke `/personal-goal`.
+### Persona agents on Codex
 
-### Parity caveat -- not every skill fully works on Codex
+Codex does not load the top-level `agents/` directory, so each of the 8
+persona agents also ships as a lightweight wrapper skill (`amanda`, `bunny`,
+`dora`, `iris`, `maggie`, `ms-mario`, `rhea`, `vex`). Each wrapper reads the
+canonical `agents/<name>.md` before acting, so Claude and Codex behavior stay
+aligned when a persona changes. Verify by asking Codex:
 
-The junction exposes the `skills/` folder only. Skills that reach into the
-plugin's `agents/` directory or call Claude built-in skills will load but not
-fully function on Codex:
+```text
+Use Iris to research where the auth flow lives.
+Ask Ms.Mario to critique this plan.
+```
 
-- `/personal-critic-gate` -- dispatches the maid agents (`ms-mario`) and
-  `/codex:rescue`, which live in `agents/`, not `skills/`.
-- `/personal-htsw` pr mode -- calls the built-in `/review` skill.
+### Codex model settings
 
-The other ten (`personal-goal`, `personal-goal-next`, `personal-progress`,
-`personal-md-to-html`, `personal-cache-stats`, `personal-lesson`,
-`personal-lesson-ui`, `personal-lesson-parser`, `personal-lesson-data`,
-`personal-lesson-tooling`) are self-contained and behave normally.
+Claude skill frontmatter keeps `model: haiku|sonnet|opus|inherit` for Claude
+Code. Codex ignores those as model names -- configure Codex itself in
+`~/.codex/config.toml`:
+
+```toml
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+```
+
+Rule of thumb: Claude `haiku` -> Codex `medium` effort; `sonnet`/`opus` ->
+`high` (or `extra-high` when available and worth it); `inherit` -> keep the
+current Codex session setting. See
+[`plugins/ping-personal/runtime-compatibility.md`](./plugins/ping-personal/runtime-compatibility.md)
+for the full runtime contract.
+
+### Parity caveat
+
+A few behaviors remain Claude-only: `/personal-htsw` pr mode calls Claude
+Code's built-in `/review` skill, and `/personal-critic-gate` Vote 3 routes
+through `/codex:rescue`. Both degrade gracefully (documented fallbacks, no
+errors).
+
+## Release verification
+
+Before publishing a version for either runtime:
+
+```powershell
+python scripts/check_dual_runtime.py
+pwsh plugins/ping-personal/evals/run-all.ps1
+```
+
+The first proves the Claude and Codex manifests point at the same plugin and
+agree on version. The second proves every skill eval is green -- it must print
+`ALL EVALS PASS (35 skills)`.
 
 ## Troubleshooting
 
 If `/reload-plugins` doesn't pick up the new plugin:
 
 1. Check that the marketplace clone landed at
-   `~/.claude/plugins/marketplaces/ai-skills/`. If the directory
-   doesn't exist, the `extraKnownMarketplaces` entry is malformed --
-   diff against your existing `openai-codex` entry to verify shape.
+   `~/.claude/plugins/marketplaces/ping-personal/` (the directory is named
+   after the MARKETPLACE, not the GitHub repo). If it doesn't exist, re-run
+   `/plugin marketplace add pchung1888/ai-skills` and watch for errors.
 2. Check that `plugins/ping-personal/.claude-plugin/plugin.json` is valid
    JSON. A parse error there silently hides the plugin.
 3. Check that the skills directories exist under
@@ -188,7 +197,7 @@ If `/reload-plugins` doesn't pick up the new plugin:
 
 If the plugin clones but skills don't appear in `/`:
 
-- Open `~/.claude/plugins/marketplaces/ai-skills/plugins/ping-personal/.claude-plugin/plugin.json`
+- Open `~/.claude/plugins/marketplaces/ping-personal/plugins/ping-personal/.claude-plugin/plugin.json`
   and confirm `"name": "ping-personal"` matches the `<plugin-name>` half
   of your `enabledPlugins` entry.
 
@@ -200,7 +209,7 @@ markdown specs. To use it in another repo:
 
 ```bash
 mkdir -p .githooks
-cp ~/.claude/plugins/marketplaces/ai-skills/plugins/ping-personal/hooks/pre-commit-backtick-guard.sh .githooks/
+cp ~/.claude/plugins/marketplaces/ping-personal/plugins/ping-personal/hooks/pre-commit-backtick-guard.sh .githooks/
 chmod +x .githooks/pre-commit-backtick-guard.sh
 git config core.hooksPath .githooks
 ```

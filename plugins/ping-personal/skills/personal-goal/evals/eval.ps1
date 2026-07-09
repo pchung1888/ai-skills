@@ -18,11 +18,23 @@ function Invoke-Gate([string[]]$gateArgs) {
 
 $tests = @(
     @{
+        Name = 'dispatch_evidence_contract: return contract requires done_check + verification; SKILL.md wires personal-fable-mode'
+        Run = {
+            $tpl = Get-Content (Join-Path $SkillDir 'agent-dispatch-template.md') -Raw
+            if ($tpl -notmatch '(?m)^done_check:') { throw "return contract missing done_check field" }
+            if ($tpl -notmatch '(?m)^verification:') { throw "return contract missing verification field" }
+            if ($tpl -notmatch 'UNVERIFIED:') { throw "verification field must document the UNVERIFIED:<reason> escape hatch" }
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'personal-fable-mode') { throw "SKILL.md does not cross-reference personal-fable-mode" }
+        }
+    },
+    @{
         Name = 'skill_frontmatter: SKILL.md declares name=personal-goal + a description'
         Run = {
             $s = Get-Content $Skill -Raw
             if ($s -notmatch '(?m)^name:\s*personal-goal\s*$') { throw "frontmatter name not personal-goal" }
             if ($s -notmatch '(?m)^description:\s*\S') { throw "frontmatter description missing" }
+            if ($s -notmatch '(?m)^model:\s*inherit\s*$') { throw "model: inherit missing -- goal driver runs at the session tier, never pinned" }
         }
     },
     @{

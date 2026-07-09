@@ -1,4 +1,4 @@
-# Eval plan: personal-facts
+# Eval plan: personal-facts-check (formerly personal-facts)
 
 ## Target behavior (the contract)
 Given a fact-finding request, the skill probes read-only and produces
@@ -16,6 +16,7 @@ unlabeled claims.
 | 4 | No-unlabeled-claims or 3x-worse honesty rule lost | code: output_contract |
 | 5 | Read-only probe boundary lost | code: output_contract |
 | 6 | Grader goes dead | code: calibration (copy without RESOLVED must FAIL) |
+| 7 | fable-mode wiring lost (skill no longer runs the gate loop) | code: fable_mode_wiring |
 
 ## Eval cases
 - Baseline green; calibration mutation fails.

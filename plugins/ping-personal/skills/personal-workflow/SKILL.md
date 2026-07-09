@@ -1,6 +1,6 @@
 ---
 name: personal-workflow
-model: sonnet
+model: inherit
 description: Autopilot conductor over the personal-goal beacon. Hand it one goal, plan, or TODO-list; it discovers the host project's skills+agents, routes each phase to the best one, fans out via /workflows when safe, pauses at the hard-rule fence, verifies high-stakes claims, and records real token costs. Triggers on /personal-workflow <goal | --plan path | --list>.
 ---
 
@@ -8,8 +8,8 @@ description: Autopilot conductor over the personal-goal beacon. Hand it one goal
 
 A thin **conductor**. It is the *driving session* `personal-goal` always required (see
 `personal-goal` SKILL "After /personal-goal returns") -- it does NOT modify `personal-goal`; it
-drives it with a richer loop. Ports the same conductor pattern from another
-host repo's equivalent workflow skill.
+drives it with a richer loop. Ported from a production host repo's workflow
+conductor.
 
 ## Roles block (the main LOGIC port-time edit)
 ```
@@ -73,7 +73,9 @@ For each pending phase:
    to "unverified" if it does not hold; never write an unverified claim as fact. For high-stakes
    ship/merge decisions, route through the CRITIC role (`/personal-critic-gate`).
 5. **RECORD** -- invoke `/personal-goal-next <slug> --phase N --outcome PASS --tokens <T>
-   --commit <SHA> --subagent <A>` (the slash command). For a fan-out phase, `<T>` = the `/workflows`
+   --commit <SHA> --subagent <A> --verify "<Gate 4 evidence: check run + one quoted
+   output line>"` (the slash command). `--verify` is REQUIRED on PASS (advance.py
+   refuses an unverified done, exit 2); reuse the evidence from step 4's VERIFY. For a fan-out phase, `<T>` = the `/workflows`
    completion `<usage>.subagent_tokens` (aggregate; record agent count + run-id too, and say it is
    aggregate). For inline driver work, record an honest inline estimate labelled as such. The DRIVER
    commits + timestamps (the workflow script cannot run git / Date.now()).
@@ -104,6 +106,26 @@ This ensures that a goal-level token budget set via `beacon_writer.py
 Workflow dispatch boundary, and `advance.py` enforces it at the
 `/personal-goal-next` record boundary (exit 5 on overage; pass
 `--override-budget` to proceed with a logged note).
+
+## Effort routing
+
+Reasoning effort is a per-dispatch knob, separate from the model tier: the
+Workflow tool's `agent()` accepts `opts.effort` ('low' | 'medium' | 'high' |
+'xhigh' | 'max'), while SKILL.md frontmatter only sets `model:`. Route effort
+the way personal-fable-mode's effort dial prescribes -- deep reasoning at plan /
+attack / verify, mechanical effort for mechanical steps:
+
+| Phase type | effort |
+|---|---|
+| Mechanical fan-out (scan, list, rename, format, port) | `low` |
+| Implementation / research phases | omit (inherit session effort) |
+| Verify / judge / adversarial-critic seats | `high` |
+
+Never dispatch `xhigh` or `max` by default: an over-budgeted pass second-guesses
+a good answer into a worse one (the fable-mode dial). Reach for them only on the
+single hardest verify/judge stage, named and justified in the tracker. The plain
+Agent tool has no effort parameter, so for Agent-tool dispatches the only
+routing knob is `model`; effort routing applies to Workflow dispatches.
 
 See spec: `docs/personal-workflow/2026-05-29-personal-workflow-port-design.md`.
 
