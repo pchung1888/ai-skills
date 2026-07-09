@@ -19,7 +19,7 @@ def render(slug, owner, branch, accept_cmd, accept_shell, accept_match,
     _tz_label = "EDT" if _off_h == -4 else "EST" if _off_h == -5 else f"UTC{int(_off_h):+d}"
     subst = {
         "{{slug}}": slug,
-        "{{owner}}": owner or "Ping Chung",
+        "{{owner}}": owner or "owner",
         "{{timestamp_est}}": _now.strftime("%Y-%m-%d %H:%M:%S") + " " + _tz_label,
         "{{branch}}": branch,
         "{{spec_path}}": spec_path or "",
