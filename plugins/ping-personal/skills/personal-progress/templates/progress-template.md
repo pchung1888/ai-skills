@@ -23,6 +23,23 @@
 
 ---
 
+## Quota at Handoff
+
+Real usage when this handoff was written (from `personal-quota/quota.ps1 -Json`; write
+`UNKNOWN` if the sensor could not read it -- never guess a number):
+
+| Meter | Used | Resets |
+|---|---|---|
+| 5h session | `<N>%` | `<local time>` |
+| Weekly | `<N>%` | `<local time>` |
+| Context | `<N>%` | -- |
+
+- **Band:** `<PROCEED / CONSERVE / LIGHT_ONLY / STOP>` (from `plan.ps1`).
+- **Deferred work + resume:** `<task>` deferred until `<deferUntil>`; wake via
+  `<schedulewakeup | task-scheduler>`. Omit this line if nothing was deferred.
+
+---
+
 ## Next Steps (resume here)
 
 1. [Exact next action -- file, command, or step from plan]
