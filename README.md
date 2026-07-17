@@ -1,6 +1,6 @@
 # ai-skills
 
-**A production dual-runtime plugin (Claude Code + Codex): 27 skills, 8
+**A production dual-runtime plugin (Claude Code + Codex): 28 skills, 8
 role-scoped agents, ~50 Python modules, and a deterministic eval gate that
 blocks every merge.**
 
@@ -13,10 +13,10 @@ as evidence of how I approach agentic systems.
 ```
 $ pwsh plugins/ping-personal/evals/run-all.ps1
   OK  dual-runtime ... personal-goal ... personal-loop ... personal-critic-gate (38) ...
-  ALL EVALS PASS (35 skills)
+  ALL EVALS PASS (36 skills)
 ```
 
-(35 = the 27 skills plus 8 Codex persona-wrapper skills, one per agent.)
+(36 = the 28 skills plus 8 Codex persona-wrapper skills, one per agent.)
 
 ---
 

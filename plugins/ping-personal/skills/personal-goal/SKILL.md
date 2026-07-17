@@ -33,6 +33,12 @@ description: Initialize a long-running multi-phase goal with a crash-recovery be
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/area_resolver.py --slug <s> [--area <a>]`
 6. Write beacon:
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/beacon_writer.py <args> --out docs/<area>/<slug>-audit-tracker.md`
+6a. Stamp starting quota: run
+   `pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/quota.ps1" -Json` and append
+   a "Quota at arm" line (session/weekly %, resets, and the band via
+   `${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/plan.ps1`) to the beacon, so a goal resumed in a
+   later session knows its starting runway. If quota is UNKNOWN/stale, record that honestly rather
+   than guessing a number.
 7. Mutate .claude/TODO.md:
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/todo_mutator.py --add --slug <s> --beacon <p> --acceptance <a> --todo .claude/TODO.md`
 8. git add + git commit covering BOTH files in ONE commit.
@@ -43,6 +49,9 @@ description: Initialize a long-running multi-phase goal with a crash-recovery be
 The driving Claude session reads the handoff and runs the per-phase loop.
 REQUIRED SUB-SKILL: personal-fable-mode -- the driver runs the five-gate
 discipline; a phase `done` advances only with Gate 4 evidence.
+Each phase records the live quota reading (`personal-quota/quota.ps1 -Json`) alongside
+`/personal-goal-next --tokens`, so the beacon's cost log shows real headroom over time, not only
+token estimates.
 - For each pending phase: dispatch one-shot Agent using `${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/agent-dispatch-template.md` filled with the phase brief.
 - On return: parse agent's structured payload (including `done_check` +
   `verification`), call `/personal-goal-next` per its SKILL.md. On a PASS

@@ -46,6 +46,16 @@ Re-explain code, a PR diff, a spec, a plan, or current conversation for one of f
 - `qa` -- QA testing brief
 - `boss` -- pitch-it-to-my-boss summary
 
+### `/personal-quota`
+
+Report your REAL Claude usage: 5h (session) %, weekly %, per-model scoped %,
+and context-window %, each with its reset time in local EST/EDT. Reads
+ccstatusline's cache when fresh, otherwise fetches the same `/api/oauth/usage`
+endpoint directly with your subscription OAuth token -- so it never depends on
+ccstatusline being installed or alive. Context % is captured by an opt-in,
+self-owned statusline shim (`ctx-sidecar`) that chains to ccstatusline so your
+visible statusline is unchanged. The access token is never printed or logged.
+
 ## Agents — the maid line-up
 
 Eight project-agnostic persona-overlay agents. Each speaks HK Cantonese + English, starts every response with `<Name>: `, follows a consistent response-block format, and reads your project's `CLAUDE.md` / `.claude/rules/*.md` for project-specific constraints. Dispatch by `@-mention` or natural language (e.g. "dispatch Iris on src/auth.ts"), or as `subagent_type: <name>` via the Agent tool.

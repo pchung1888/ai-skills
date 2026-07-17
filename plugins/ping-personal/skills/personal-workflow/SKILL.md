@@ -66,6 +66,12 @@ For each pending phase:
    `/workflows` available -> `parallel([...units])`; else sequential one-shot Agent. Codex /
    no-workflows -> always sequential. Cap fan-out <= 8 concurrent (process-budget discipline);
    fan-out units MUST be idempotent.
+   **Quota-scale before fanning out:** read the real band with
+   `pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/plan.ps1" -Tasks "fanout:heavy" -Json`
+   (a fan-out is heavy) and size the dispatch to it: PROCEED -> full fan-out (<= 8); CONSERVE ->
+   halve concurrency + prefer the mid model tier; LIGHT_ONLY -> sequential + haiku workers;
+   STOP -> do NOT fan out -- invoke `personal-progress` and hand off. This real-quota band
+   OVERRIDES the static `token_budget_total` whenever it is the tighter limit.
 3. **FENCE** -- run the proposed action through `fence.py`. Exit 2 -> PAUSE, ask, wait. Exit 3 ->
    ask once per run, then allow. Exit 0 -> proceed. Also apply the contextual rules by judgment.
 4. **VERIFY** -- before recording any "PASS / genuine-defect / works" claim, re-check it against the
@@ -106,6 +112,11 @@ This ensures that a goal-level token budget set via `beacon_writer.py
 Workflow dispatch boundary, and `advance.py` enforces it at the
 `/personal-goal-next` record boundary (exit 5 on overage; pass
 `--override-budget` to proceed with a logged note).
+
+`token_budget_total` is a STATIC per-goal cap you set at arm time; the REAL-quota band from
+`personal-quota/plan.ps1` (see MODE) is the LIVE gate and wins whenever it is tighter. Read both
+and apply the smaller headroom -- a fresh static budget does not license a fan-out when the live
+5h/weekly window is nearly exhausted.
 
 ## Effort routing
 

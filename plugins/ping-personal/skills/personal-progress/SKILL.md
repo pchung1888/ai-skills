@@ -22,6 +22,7 @@ output file.
 | Item | Where to find it |
 |---|---|
 | Current branch | `git branch --show-current` |
+| Real quota | `pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/quota.ps1" -Json` -- session/weekly %, resets, context %; band via `plan.ps1` |
 | Plan file path | Check `docs/plans/` for the active plan |
 | Issue tracker ID | Branch name usually contains it (e.g. `topic/123-...`, `feature/JIRA-456-...`) |
 | Active PR/MR number | `gh pr view --json number,url` (GitHub) or `glab mr view` (GitLab), or ask user |
@@ -71,6 +72,12 @@ Key rules:
   production bugs found.
 - **Environment State:** Honest snapshot. If you don't know, write
   "Unknown -- verify before resuming".
+- **Quota at Handoff:** fill the quota table from
+  `pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/quota.ps1" -Json` and the band
+  from `${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/plan.ps1`. If the sensor returns UNKNOWN/stale,
+  say so -- never invent a percentage. When this handoff was triggered by a deferred task (a
+  personal-loop marginal band), record the `deferUntil` + `wakeMechanism` so resume timing is
+  explicit for next-session.
 
 ### Provenance footer (fill it -- do not delete it)
 

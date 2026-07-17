@@ -206,7 +206,10 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
 ## Tick lifecycle
 
 1. READ STATE: beacon + VISION + CLAUDE.md + loop-contract (anchor files only; no
-   chat history). Compile the `--state` JSON for `stop_eval.py` from these anchors
+   chat history). Also read REAL quota (`personal-quota/quota.ps1 -Json`) and band the tick's
+   candidate work with `personal-quota/plan.ps1` (see Quota-aware planning) -- this decides which
+   task the tick runs and whether to hand off + schedule a reset resume.
+   Compile the `--state` JSON for `stop_eval.py` from these anchors
    (THE GATE LAW invariant 3) -- set `goals_total`/`goals_done`/`next_pending` from
    the campaign beacon, `accept_exit` from the per-unit gate, and fold a MONOTONE
    progress marker (goals_done, or an in-scope artifact count) into the tick
@@ -302,6 +305,38 @@ NEVER auto-push.
 driver MUST invoke `fence.py` directly before any durable action; if `fence.py` is
 unreachable, `--unattended` REFUSES to proceed (fail closed).
 
+## Quota-aware planning
+
+Every tick plans against REAL usage, not a guess. At tick step 1, read the sensor and band the
+tick's candidate work with the shared planner:
+
+```
+pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/plan.ps1" -Tasks "<name>:<light|medium|heavy>,..." -Json
+```
+
+`plan.ps1` returns the binding meter (the more-consumed of 5h/weekly), the band
+(PROCEED / CONSERVE / LIGHT_ONLY / STOP), a FITS_NOW/DEFER verdict per task, the `deferUntil`
+reset, and a `wakeMechanism`. Apply it:
+
+- **PROCEED** -> run the largest candidate that FITS_NOW (heavy allowed).
+- **CONSERVE** -> run light/medium now; a heavy task DEFERs.
+- **LIGHT_ONLY** -> run a light task now if one exists; medium/heavy DEFER.
+- **STOP** -> do not start new work; hand off.
+
+**When the intended task DEFERs** (or band is LIGHT_ONLY/STOP with nothing light to do):
+1. Do an available lighter task first if the plan says one FITS_NOW -- make cheap progress.
+2. Auto-invoke `personal-progress` to write the handoff + record the deferred task, the binding
+   meter, and `deferUntil` into `outer-loop-tracker.md` (next-you inherits real runway, not a vibe).
+3. Schedule resume by `wakeMechanism`:
+   - `schedulewakeup` (binding reset <= 55 min away): `ScheduleWakeup` with the returned
+     `wakeDelaySeconds` (fits the 1h clamp), prompt `/personal-loop --resume <slug>`.
+   - `task-scheduler` (reset further out -- the usual 5h/weekly case): the `--unattended`
+     relauncher fires AT `deferUntil` (see Survival), not on a blind interval.
+
+Quota informs PLANNING and SCHEDULING only. It is NEVER a safety gate -- the counted limits
+(depth / width / iters / deadline / run-ceiling) remain the sole safety boundary and the token
+budget stays a reporting hint. A low reading defers or hands off; it never silently kills a run.
+
 ## Survival
 
 Default cadence: `/loop` (attended runs within a quota window).
@@ -311,6 +346,10 @@ For unattended cross-reset runs, arm `--unattended`:
 - A Windows Task Scheduler task fires `claude -p "/personal-loop --resume <slug>"`.
 - Each fire reads the campaign beacon and advances one inner goal.
 - Blocked by quota -> exits clean; next scheduled fire retries.
+- QUOTA-TIMED (preferred): set the task trigger to the binding reset that
+  `personal-quota/plan.ps1` returns as `deferUntil`, instead of a blind fixed interval -- so it
+  wakes when a fresh 5h/weekly window is actually available, not before (wasted fire) or long
+  after (wasted runway).
 - Beacon guarantees no lost work (committed every phase).
 
 **Timer-cadence ceilings.** A `--every` chore has no `all-goals-done`, so it needs
