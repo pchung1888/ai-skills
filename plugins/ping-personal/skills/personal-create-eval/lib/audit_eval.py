@@ -73,6 +73,34 @@ JOINPATH_LITERAL_RE = re.compile(
     r"""Join-Path\s+(?:\$\w+|\([^)]*\))\s+['"]([^'"]+)['"]""")
 
 
+# Optional skills: no OTHER skill's eval may call them. An eval that does would make run-all
+# need that skill's API key and network, so the whole suite breaks on a machine where the
+# optional skill is not set up. The owning skill may test itself. Markers are plain substrings.
+OPTIONAL_SKILLS = {
+    "personal-jev": ("jev.ps1", "api.typesafe.ai", "TYPESAFE_API_KEY"),
+}
+EVAL_CODE_EXTS = (".ps1", ".py")
+
+
+def _optional_dependency_hits(skill_name, evals_dir):
+    """Return [(optional_skill, file_name, marker)] for eval code that calls an optional skill."""
+    hits = []
+    for owner, markers in OPTIONAL_SKILLS.items():
+        if skill_name == owner:
+            continue
+        for p in sorted(evals_dir.rglob("*")):
+            if not p.is_file() or p.suffix.lower() not in EVAL_CODE_EXTS:
+                continue
+            if "fixtures" in p.relative_to(evals_dir).parts:
+                continue  # test data, never executed by run-all
+            text = _read_text(p)
+            for m in markers:
+                if m in text:
+                    hits.append((owner, p.relative_to(evals_dir).as_posix(), m))
+                    break
+    return hits
+
+
 class Finding:
     """One eval-health finding for a single skill."""
 
@@ -174,6 +202,13 @@ def audit_skill(skill_dir):
                 "MED", "placeholder",
                 "leftover template placeholder(s) in {0}: {1}".format(
                     fname, ", ".join(hits))))
+
+    # HIGH: eval code calls an optional skill (it must work without it).
+    for owner, fname, marker in _optional_dependency_hits(skill_name, evals_dir):
+        findings.append(Finding(
+            "HIGH", "optional_dependency",
+            "evals/{0} calls optional skill {1} ('{2}') -- evals must pass without it "
+            "(no key, no network)".format(fname, owner, marker)))
 
     # LOW: fixtures/ with good-* files but NO bad-* files (uncalibrated grader).
     fixtures_dir = evals_dir / "fixtures"

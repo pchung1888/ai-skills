@@ -66,6 +66,112 @@ $tests = @(
             python $PhaseChk *> $null
             if ($LASTEXITCODE -ne 0) { throw "phase_table guard regression -- run check_phase_table.py to see which" }
         }
+    },
+    @{
+        # F-SCOPE-6: the repair-loop shape. A phase produced by a plan or a findings pass
+        # carries no owner warrant, and marking it done is what turned an inventory
+        # into a shipped six-phase plan one defensible step at a time.
+        Name = 'unwarranted_phase_refused: PASS on a PROPOSAL phase exits 6, no commit'
+        Run = {
+            $t = Join-Path ([System.IO.Path]::GetTempPath()) ("scope-" + [guid]::NewGuid())
+            New-Item -ItemType Directory -Path $t | Out-Null
+            Push-Location $t
+            try {
+                git init -q .; git config user.email t@t; git config user.name t
+                $b = Join-Path $t 'b.md'
+                python (Join-Path $SkillDir '../personal-goal/lib/beacon_writer.py') `
+                    --slug scope --area test --branch main --accept-cmd 'pwsh x.ps1' `
+                    --accept-match 'OK' --requirement 'ship the export button' --text-reviewed 'eval fixture reviewed 2026-09-18' --out $b *> $null
+                # beacon_writer with no --plan-path renders one placeholder row; give it
+                # an explicit PROPOSAL row so the guard has something to judge.
+                (Get-Content $b -Raw) -replace '\| 1 \| -- \|', '| 1 | PROPOSAL |' |
+                    Set-Content $b -Encoding utf8
+                git add -A; git commit -qm init
+                $head0 = (git rev-parse HEAD).Trim()
+                python $Advance --beacon $b --phase 1 --outcome PASS --tokens 100 `
+                    --duration 5 --commit abc1234 --subagent bunny --verify 'ran it; OK' *> $null
+                if ($LASTEXITCODE -ne 6) { throw "PROPOSAL phase advanced; exit $LASTEXITCODE, expected 6" }
+                if ((git rev-parse HEAD).Trim() -ne $head0) { throw "a refused advance created a commit" }
+                # A warranted phase must still advance -- the guard must not be a wall.
+                (Get-Content $b -Raw) -replace '\| 1 \| PROPOSAL \|', '| 1 | ASK:the export button |' |
+                    Set-Content $b -Encoding utf8
+                python $Advance --beacon $b --phase 1 --outcome PASS --tokens 100 `
+                    --duration 5 --commit abc1234 --subagent bunny --verify 'ran it; OK' *> $null
+                if ($LASTEXITCODE -ne 0) { throw "warranted phase refused; exit $LASTEXITCODE" }
+            } finally { Pop-Location; Remove-Item $t -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+    },
+    @{
+        # F-SCOPE-7: before this, Decisions/Detours could only ever be empty headings --
+        # the same defect the Source column already had.
+        Name = 'decision_and_detour_writers: rows land in their own tables; guards fire'
+        Run = {
+            $b = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.md'
+            try {
+                python (Join-Path $SkillDir '../personal-goal/lib/beacon_writer.py') `
+                    --slug d --area test --branch main --accept-cmd 'pwsh x.ps1' `
+                    --accept-match 'OK' --requirement 'ship the thing' --text-reviewed 'eval fixture reviewed 2026-09-18' --out $b *> $null
+                # A detour with no origin cannot be classified as detour-or-drift.
+                python $Advance --beacon $b --detour-open 'test FAILS' --detour-checked 'x' *> $null
+                if ($LASTEXITCODE -eq 0) { throw "detour opened without --detour-origin" }
+                # Skipping the already-checked question is how new machinery gets built
+                # beside a system that already does the job.
+                python $Advance --beacon $b --detour-open 'test FAILS' --detour-origin 'pre-existing' *> $null
+                if ($LASTEXITCODE -eq 0) { throw "detour opened without --detour-checked" }
+                python $Advance --beacon $b --detour-open 'test FAILS' --detour-origin 'pre-existing' `
+                    --detour-blocks 'phase 1' --detour-checked 'existing helper reviewed' *> $null
+                if ($LASTEXITCODE -ne 0) { throw "valid detour refused" }
+                python $Advance --beacon $b --decision 'do it this way' --decision-why 'because' *> $null
+                if ($LASTEXITCODE -ne 0) { throw "decision write refused" }
+                $c = Get-Content $b -Raw
+                # Each row must be inside its own section, not appended to whichever
+                # table happened to precede it.
+                $dec = [regex]::Match($c, '(?ms)^## Decisions.*?(?=^## )').Value
+                $det = [regex]::Match($c, '(?ms)^## Detours.*?(?=^## )').Value
+                $chk = [regex]::Match($c, '(?ms)^## Last Known Good.*?(?=^## )').Value
+                if ($dec -notmatch 'DEC-1') { throw "DEC-1 not in the Decisions section" }
+                if ($det -notmatch 'DET-1') { throw "DET-1 not in the Detours section" }
+                if ($chk -match 'DEC-|DET-') { throw "rows leaked into the checkpoint table" }
+            } finally { Remove-Item $b -ErrorAction SilentlyContinue }
+        }
+    },
+    @{
+        # F-PIPE-1/2: mutation-proven gap. The writers escaped pipes and no reader
+        # unescaped them, so one '|' in a detour Proof -- routine in shell output,
+        # which is exactly what PROOF is documented to hold -- put Status one column
+        # right of where close_detour_row wrote. The detour stayed open forever and
+        # finalize returned exit 7 permanently. Removing the escaping left all 38
+        # suites green, so this case exists to make that impossible again.
+        Name = 'pipe_round_trip: pipes survive write/read/close in all three tables'
+        Run = {
+            python (Join-Path $PSScriptRoot 'check_pipe_round_trip.py') *> $null
+            if ($LASTEXITCODE -ne 0) {
+                throw "pipe round trip corrupted -- run evals/check_pipe_round_trip.py to see which"
+            }
+        }
+    },
+    @{
+        # F-SCOPE-8: the return path. Closing a goal with a detour still open is how a
+        # two-hour fix quietly becomes the project.
+        Name = 'finalize_refuses_open_detour: acceptance blocked until the detour closes'
+        Run = {
+            $t = Join-Path ([System.IO.Path]::GetTempPath()) ("det-" + [guid]::NewGuid())
+            New-Item -ItemType Directory -Path $t | Out-Null
+            try {
+                $b = Join-Path $t 'b.md'; $todo = Join-Path $t 'TODO.md'
+                Set-Content $todo "## In Progress`n- **[GOAL 2026-09-18 d]** x" -Encoding utf8
+                python (Join-Path $SkillDir '../personal-goal/lib/beacon_writer.py') `
+                    --slug d --area test --branch main --accept-cmd 'pwsh -c "echo OK"' `
+                    --accept-match 'OK' --requirement 'ship the thing' --text-reviewed 'eval fixture reviewed 2026-09-18' --out $b *> $null
+                python $Advance --beacon $b --detour-open 'test FAILS' --detour-origin 'pre-existing' `
+                    --detour-blocks 'phase 1' --detour-checked 'existing helper reviewed' *> $null
+                python (Join-Path $Lib 'finalize.py') --beacon $b --todo $todo --slug d *> $null
+                if ($LASTEXITCODE -ne 7) { throw "finalize allowed an open detour; exit $LASTEXITCODE, expected 7" }
+                python $Advance --beacon $b --detour-close 'DET-1' *> $null
+                python (Join-Path $Lib 'finalize.py') --beacon $b --todo $todo --slug d *> $null
+                if ($LASTEXITCODE -ne 0) { throw "finalize refused after the detour closed; exit $LASTEXITCODE" }
+            } finally { Remove-Item $t -Recurse -Force -ErrorAction SilentlyContinue }
+        }
     }
 )
 

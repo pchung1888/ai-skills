@@ -112,7 +112,7 @@ _DEPLOY_MARKERS = ("program files", "programdata", "acme group")
 def is_deployed_config_path(path, deploy_roots=None):
     """True if path is a DEPLOYED (live, outside-repo) config -> must fence.
     The v0.14.0 fence set + EXCLUSION_KEYWORDS did NOT catch a live
-    <service>.exe.config edit (handoff obs #4); this closes that gap."""
+    edit (handoff obs #4); this closes that gap."""
     p = (path or "").replace("\\", "/").lower()
     if any(m in p for m in _DEPLOY_MARKERS):
         return True

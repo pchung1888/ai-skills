@@ -169,7 +169,7 @@ Next step:    Run /personal-understanding onboard to create the knowledge graph.
 ## Disk space warning (AD-5)
 
 The plugin cache and pnpm store both land on C:. Measured on a comparable
-project: ~431 MB combined.
+project (DART): ~431 MB combined.
 
 Before building, check free space on C::
 

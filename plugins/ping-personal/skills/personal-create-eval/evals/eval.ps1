@@ -68,6 +68,32 @@ $tests = @(
             $bad = Invoke-Py 'audit_eval.py' @('--skill', $BadFix)
             if ($bad -eq 0) { throw "auditor PASSED the broken bad-skill fixture (no eval.ps1) -- F06 (auditor measures nothing)" }
         }
+    },
+    @{
+        Name = 'optional_dependency_calibration: an eval calling an optional skill is HIGH; healthy is not [F07]'
+        Run = {
+            $j = python (Join-Path $Lib 'audit_eval.py') --json --skill (Join-Path $PSScriptRoot 'fixtures/bad-jev-dependent-skill') | Out-String | ConvertFrom-Json
+            if (-not @($j | Where-Object { $_.code -eq 'optional_dependency' -and $_.severity -eq 'HIGH' })) { throw "auditor missed an eval that calls the optional Jev skill -- F07" }
+            $g = python (Join-Path $Lib 'audit_eval.py') --json --skill $GoodFix | Out-String | ConvertFrom-Json
+            if (@($g | Where-Object { $_.code -eq 'optional_dependency' })) { throw "auditor flagged the healthy good-skill as dependent -- F07 false positive" }
+        }
+    },
+    @{
+        Name = 'optional_skills_stay_optional: no real skill eval calls an optional skill (run-all needs no key) [F07]'
+        Run = {
+            $j = python (Join-Path $Lib 'audit_eval.py') --json | Out-String | ConvertFrom-Json
+            $hits = @($j | Where-Object { $_.code -eq 'optional_dependency' })
+            if ($hits) { throw ("eval(s) depend on an optional skill: " + (($hits | ForEach-Object { "$($_.skill): $($_.message)" }) -join '; ')) }
+        }
+    },
+    @{
+        Name = 'guide_covers_external_services: field guide has the outside-service recipe + optional Jev judge note [F08]'
+        Run = {
+            $g = Get-Content (Join-Path $Refs 'how-to-create-an-eval.md') -Raw
+            foreach ($t in @('Skills that call an outside service', 'dead local port', 'Optional: Jev as a cheap judge')) {
+                if ($g -notmatch [regex]::Escape($t)) { throw "field guide lacks '$t'" }
+            }
+        }
     }
 )
 

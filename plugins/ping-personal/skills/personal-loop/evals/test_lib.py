@@ -381,7 +381,7 @@ def test_bearer_token_caught():
     assert len(ss.scan("Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" + "x" * 40)) > 0
 
 def test_tsql_connstring_caught():
-    assert len(ss.scan("Data Source=TRADEDEV;Initial Catalog=TRADES;Password=hunter2")) > 0
+    assert len(ss.scan("Data Source=DEVHOST;Initial Catalog=APPDB;Password=hunter2")) > 0
 
 def test_clean_diff_returns_empty():
     assert ss.scan("def get_token(): return os.environ['API_TOKEN']") == []

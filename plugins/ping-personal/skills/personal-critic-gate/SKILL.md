@@ -33,8 +33,7 @@ Right before you would otherwise commit, push, or hand off a deliverable:
 - "/personal-critic-gate current diff" (review the staged changes)
 - In autonomous mode (T3): a subagent returned BLOCKED with 2+ recovery
   paths -- vote on which path to take.
-- In autonomous mode (T5): at each `/personal-goal` phase boundary, vote on whether
-  the prior phase delivered before dispatching the next phase.
+  (T5, a panel at every phase boundary, was STRUCK on 2026-09-18 -- see Trigger Set.)
 
 ---
 
@@ -265,8 +264,22 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
 8. **Dispatch Seat 2 (amanda)** via the Agent tool with
    `subagent_type: "amanda"`. Brief:
    - The artifact text.
-   - "Intent-match review: does this artifact match the original plan / user intent?
-     Read the plan/spec referenced by the beacon if available."
+   - "Intent-match review. Your ground truth is the OWNER'S REQUIREMENT, not the plan.
+     Read the beacon's `## Requirement` section and judge the artifact against those
+     words. The plan is a derived document and may itself be the thing that drifted --
+     measuring the work against it would find a drifted plan faithfully implemented."
+   - Requirement conditional (REQUIRED -- do not skip):
+     - If the beacon has a `## Requirement` section and `requirement_status: provided`:
+       judge every phase and deliverable against a quoted line of it. **A phase the
+       requirement does not ask for is a BLOCK finding, not a FIX** -- FIX implies the
+       work should be repaired, and unrequested work should be deleted, not repaired.
+     - If `requirement_status:` starts with `none --`: the goal was armed without an
+       ask, for the recorded reason. Judge against plan + Purpose as before, and say
+       "no verbatim requirement" in your vote's `why` so the tally records the absence.
+       Downgrade any scope judgement to "Could Not Assess" rather than guessing.
+   - "Check the `## Detours` table. A detour whose `Origin` is `phase-<n>` means an
+     earlier phase of this same goal created the blocker. That is drift, not a detour:
+     the remedy is reverting that phase's mechanism, not building on top of it."
    - Vision-path conditional (REQUIRED -- do not skip):
      - If the discovered beacon has a non-empty `vision_path:` frontmatter field:
        amanda MUST read that vision doc and judge intent against the WHY (the goal's
@@ -325,6 +338,19 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
     of PASS/FIX/BLOCK)
     Do NOT fix. Do NOT edit any files. Review-only.
     ```
+
+    **Cross-vendor text strip (REQUIRED -- do this before building the prompt).**
+    Seat 5 runs on OpenAI's Codex CLI, a DIFFERENT VENDOR from every other seat. The
+    artifact text is interpolated into its prompt unfiltered, and beacons are in-scope
+    artifacts -- so a beacon's `## Requirement` section, which holds the owner's
+    unedited words and may quote client names or account identifiers, would leave the
+    vendor boundary. Before emitting the prompt: remove any `## Requirement` section
+    and replace any `ASK:<fragment>` Source cell with `ASK:[withheld]`, substituting
+    `[requirement withheld from cross-vendor seat]` where the section was.
+    This is a capability cut, not a filter, and it has NO escape hatch -- it does not
+    depend on a pattern matching correctly. Seat 5 is the fresh-eyes seat looking for
+    unexamined assumptions; it does not need the owner's words to do that, and amanda
+    (in-vendor, Seat 2) already owns requirement-matching.
 
     **Read-only guard (IMPORTANT -- residual risk).** The `codex:codex-rescue`
     forwarder DEFAULTS to a write-capable Codex run (`--write`) and only
@@ -494,7 +520,7 @@ surface.
 
 ---
 
-## Trigger Set (T3 + T5; T1 DEFERRED)
+## Trigger Set (T3 only; T5 STRUCK, T1 DEFERRED)
 
 In autonomous mode, the gate self-fires at:
 
@@ -503,10 +529,17 @@ In autonomous mode, the gate self-fires at:
   path to take. The artifact is a planning-time recommendation block listing
   the recovery paths as OPTIONS.
 
-- **T5 -- Phase-Boundary.** At each `/personal-goal` phase transition (before
-  dispatching the next phase), fire `/personal-critic-gate` to vote on whether
-  the prior phase delivered and whether to proceed. The artifact is a summary
-  of the prior phase's output + acceptance evidence.
+- **T5 -- Phase-Boundary. STRUCK 2026-09-18.** It was declared here and never
+  routed to: `personal-workflow` sends only ship/merge decisions to this gate, so
+  T5 had never once fired. A gate that exists only on paper is worse than no gate,
+  because it earns credit in the operator's model of the harness while catching
+  nothing. Wiring it instead was costed and rejected: one panel is ~150-400K
+  tokens, so a six-phase goal would be 0.9-2.4M tokens in review alone -- the same
+  order of magnitude as T2, which was already rejected for exactly that reason.
+  What replaces it: per-phase scope is enforced in code, not by a panel.
+  `advance.py` refuses to mark a phase done whose Source records no owner warrant
+  (exit 6), and `finalize.py` refuses while any detour is open (exit 7). Those cost
+  nothing per phase and cannot be skipped under deadline.
 
 - **T1 -- AskQuestion-Swap. DEFERRED.** T1 (replace any `AskUserQuestion`
   call in autonomous mode with a `/personal-critic-gate` vote) cannot be
@@ -518,7 +551,7 @@ Do NOT add T2 (every option-set) or T4 (prior-critic-carryover) to the
 trigger set. Both were explicitly rejected:
 
 - T2: cost runaway (~1.5-4.5M tokens per goal, LARGE bucket).
-- T4: redundant with T5's phase-boundary check.
+- T4: redundant -- phase-boundary scope is now enforced in code by advance.py, not by a panel.
 
 ---
 

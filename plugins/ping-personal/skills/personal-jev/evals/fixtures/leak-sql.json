@@ -1,0 +1,1 @@
+{ "state": "It runs SELECT * FROM trades", "questions": { "q": { "type": "noul", "instructions": "Is this fine?" } } }

@@ -3,7 +3,7 @@
 # Turns the real quota (from quota.ps1, the sensor) + a list of candidate tasks sized
 # light/medium/heavy into a schedule decision: which tasks can START now, which must wait for a
 # reset, which reset, and how to wake for them. This is the shared brain that personal-loop,
-# personal-workflow, personal-goal, and personal-progress call so none of them re-encode budget
+# personal-workflow, personal-goal, and personal-handoff call so none of them re-encode budget
 # policy. It NEVER touches the token (delegates to quota.ps1) and never decides safety -- the
 # loop's counted limits remain the safety boundary; this only informs planning + scheduling.
 #

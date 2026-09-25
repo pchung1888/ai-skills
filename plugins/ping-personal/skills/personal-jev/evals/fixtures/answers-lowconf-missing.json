@@ -1,0 +1,5 @@
+{ "model": "jev-fake", "answers": {
+  "pick": { "type": "choice", "choice": "wait_for_qa", "probabilities": { "deploy_now": 0.15, "wait_for_qa": 0.81, "other": 0.04 }, "confidence": 0.81 },
+  "deploy_now__safety": { "type": "score", "score": 2, "probabilities": [0.1, 0.3, 0.4, 0.2], "confidence": 0.3, "legend": { "0": "a", "1": "b", "2": "c", "3": "d" } },
+  "reversible": { "type": "noul", "noul": 0.93 }
+} }

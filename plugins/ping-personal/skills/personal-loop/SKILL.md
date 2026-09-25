@@ -61,7 +61,7 @@ If you internalize nothing else: **multi-artifact goal -> campaign mode ->
 ## Roles block
 
 ```
-BEACON      = personal-goal               # host goal beacon (host repos may carry a renamed port)
+BEACON      = personal-goal               # host goal beacon (dart-goal / start-goal on remotes)
 CONDUCTOR   = personal-workflow            # the inner per-goal conductor
 FAST_CRITIC = <resolved at runtime>        # see Role Resolution
 PANEL       = personal-critic-gate         # full 5-seat escalation
@@ -199,7 +199,7 @@ FAST_CRITIC precedence (portability contract -- never hardcode an agent name):
 4. Inline-judge fallback: fresh generic subagent (claude/Explore) with
    adversarial-review + Honesty-Protocol brief.
 
-ALWAYS announce the resolved tier, e.g. `FAST_CRITIC = host-critic (host-discovered)`
+ALWAYS announce the resolved tier, e.g. `FAST_CRITIC = dart-critic (host-discovered)`
 or `= inline judge (no critic agent found)`. The inline judge is WEAKER (less
 domain knowledge); both the announcement and the REPORT label the gate strength.
 
@@ -325,7 +325,7 @@ reset, and a `wakeMechanism`. Apply it:
 
 **When the intended task DEFERs** (or band is LIGHT_ONLY/STOP with nothing light to do):
 1. Do an available lighter task first if the plan says one FITS_NOW -- make cheap progress.
-2. Auto-invoke `personal-progress` to write the handoff + record the deferred task, the binding
+2. Auto-invoke `personal-handoff` to write the handoff + record the deferred task, the binding
    meter, and `deferUntil` into `outer-loop-tracker.md` (next-you inherits real runway, not a vibe).
 3. Schedule resume by `wakeMechanism`:
    - `schedulewakeup` (binding reset <= 55 min away): `ScheduleWakeup` with the returned
