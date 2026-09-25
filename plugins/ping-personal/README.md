@@ -70,22 +70,22 @@ name, GUIDs, SQL, stored-proc names, keys), previews by default, and only sends 
 
 Measures harness drift: parses Claude Code JSONL transcripts and reports evidence share, skill-attribution share, and the decay curve across a session or a cohort of past sessions.
 
-## Agents — the maid line-up
+## Agents -- the role line-up
 
-Eight project-agnostic persona-overlay agents. Each speaks HK Cantonese + English, starts every response with `<Name>: `, follows a consistent response-block format, and reads your project's `CLAUDE.md` / `.claude/rules/*.md` for project-specific constraints. Dispatch by `@-mention` or natural language (e.g. "dispatch Iris on src/auth.ts"), or as `subagent_type: <name>` via the Agent tool.
+Eight project-agnostic role agents. Each follows a consistent response format and reads your project's `CLAUDE.md` / `.claude/rules/*.md` for project-specific constraints. Dispatch by `@-mention` or natural language (e.g. "dispatch iris on src/auth.ts"), or as `subagent_type: <name>` via the Agent tool.
 
-| Agent | Persona | Role |
+| Agent | Role | What it does |
 |---|---|---|
-| `amanda` | 🕊️ 艾曼達 (COO · Plan Writer) | Turns clarified intent into an executable plan with persona-routed dispatch sequence. Never dispatches or writes production code -- writes the plan and returns. |
-| `iris` | 🦉 鳶鳶 (Lead Researcher) | Read-only investigator. Produces EXTRACTED / INFERRED / BLANK-tagged findings under `.claude/tmp/`. Never writes source files. |
-| `bunny` | 🐰 繽繽 (Full-Stack Implementer) | Writes and edits code surgically per the plan. Verifies via the project's test/dev command. Diagnose workflow for hard bugs. |
-| `vex` | 🖤 薇絲 (Parser Specialist · Warlock) | Owns parsers, data-shape contracts, CSV/PDF/JSON ingestion, knowledge-graph adapters. Goth-style loyalty. Strict variable-naming discipline. Closes reports with `Done.` / `Fixed.` |
-| `maggie` | 🔮 瑪姬 (CTO · Design System + Chart Designer) | Owns design tokens and chart decisions. Uses `grill-me` to surface decision branches. TL;DR Decision Briefs with recommendation. Pre-impl gate for Bunny. |
-| `dora` | 🐗 多拉 (Git Sentinel · DevOps) | All git/PR ops. Sibling-only worktrees. Backup before destructive ops. PR-hygiene gate (TODO + progress + lessons) before push. Never bypasses hooks. |
-| `rhea` | 🛡️ 莉雅 (CISO + CQO · Sacred Auditor) | Post-impl audit + governance hardening. Binary verdict: ✅ SANCTIFIED or ❌ REJECTED. Owns TDD/BDD decisions, secrets scan, maid-scope check, persona integrity. |
-| `ms-mario` | 🎓 瑪莉奧夫人 (Chief Critic) | Adversarial GAN-style reviewer. Severity-tagged findings (🔴/🟠/🟡/🟢). Code-Reading Pre-Flight. Vote 2 of `/personal-critic-gate`. |
+| `amanda` | Plan writer | Turns clarified intent into an executable plan with an owner-routed dispatch sequence. Never dispatches or writes production code -- writes the plan and returns. |
+| `iris` | Researcher | Read-only investigator. Produces EXTRACTED / INFERRED / BLANK-tagged findings under `.claude/tmp/`. Never writes source files. |
+| `bunny` | Implementer | Writes and edits code surgically per the plan. Verifies via the project's test/dev command. Diagnose workflow for hard bugs. |
+| `vex` | Parser and data-contract specialist | Owns parsers, data-shape contracts, CSV/PDF/JSON ingestion, knowledge-graph adapters. Strict variable-naming discipline. |
+| `maggie` | Architect and design-system owner | Owns design tokens and chart decisions. Uses `grill-me` to surface decision branches. TL;DR Decision Briefs with recommendation. Pre-implementation gate for bunny. |
+| `dora` | Git and PR operations | All git/PR ops. Sibling-only worktrees. Backup before destructive ops. PR-hygiene gate (TODO + progress + lessons) before push. Never bypasses hooks. |
+| `rhea` | Quality, security, and governance auditor | Post-implementation audit + governance hardening. Binary verdict: APPROVED or REJECTED. Owns TDD/BDD decisions, secrets scan, agent-scope check, token-cost gate. |
+| `ms-mario` | Critic | Adversarial GAN-style reviewer. Severity-tagged findings (Critical / High / Medium / Low). Code-Reading Pre-Flight. Vote 2 of `/personal-critic-gate`. |
 
-The line-up assumes a "single dispatcher + multiple maids" workflow. In the personal-dashboard repo, the dispatcher is **Foxy** (a Cantonese-speaking main-session persona defined in that repo's CLAUDE.md). The maids are designed to work with Foxy but also work fine when the orchestrating session is plain Claude -- they only need to be invoked correctly.
+The line-up assumes a "single dispatcher + multiple role agents" workflow. The dispatcher is the orchestrating main session; the agents only need to be invoked correctly.
 
 ## Hooks
 
