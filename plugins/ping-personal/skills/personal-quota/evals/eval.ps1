@@ -252,7 +252,7 @@ $tests = @(
                 'personal-loop/SKILL.md'     = 'plan\.ps1'
                 'personal-workflow/SKILL.md' = 'plan\.ps1'
                 'personal-goal/SKILL.md'     = 'personal-quota'
-                'personal-progress/SKILL.md' = 'quota\.ps1'
+                'personal-handoff/SKILL.md' = 'quota\.ps1'
             }
             foreach ($rel in $checks.Keys) {
                 $f = Join-Path $skillsDir $rel

@@ -65,7 +65,7 @@ list:
 
 - `/personal-goal`
 - `/personal-goal-next`
-- `/personal-progress`
+- `/personal-handoff`
 - `/personal-critic-gate`
 - `/personal-md-to-html`
 - `/personal-htsw`
@@ -178,7 +178,7 @@ pwsh plugins/ping-personal/evals/run-all.ps1
 
 The first proves the Claude and Codex manifests point at the same plugin and
 agree on version. The second proves every skill eval is green -- it must print
-`ALL EVALS PASS (36 skills)`.
+`ALL EVALS PASS (38 skills)`.
 
 ## Troubleshooting
 

@@ -202,6 +202,30 @@ $tests = @(
                 }
             }
         }
+    },
+    @{
+        # amanda measured the work against the plan. If the plan is what drifted, she
+        # finds a drifted plan faithfully implemented and votes PASS.
+        Name = 'amanda_ground_truth_is_the_requirement: not the plan'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'ground truth is the OWNER''S REQUIREMENT') {
+                throw "amanda's brief does not name the requirement as ground truth"
+            }
+            if ($s -notmatch 'BLOCK finding, not a FIX') {
+                throw "unrequested work is not classified as BLOCK"
+            }
+            if ($s -notmatch 'requirement_status') { throw "no fallback when the ask is absent" }
+        }
+    },
+    @{
+        # A gate declared but never routed to earns credit while catching nothing.
+        Name = 't5_struck: no phase-boundary panel is claimed'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            if ($s -match '(?m)^## Trigger Set \(T3 \+ T5') { throw "T5 still advertised in the trigger set" }
+            if ($s -notmatch 'STRUCK') { throw "T5 removal is not recorded" }
+        }
     }
 )
 

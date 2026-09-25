@@ -1,18 +1,18 @@
 #requires -Version 7
-# Eval grader for personal-progress (instruction-only). See evals/eval-plan.md.
+# Eval grader for personal-handoff (instruction-only). See evals/eval-plan.md.
 # Structural grader: the capture steps, output path, progress-vs-handoff contract, and
 # the templates scaffold must all be intact.
 $ErrorActionPreference = 'Stop'
 
-$SkillDir = Resolve-Path (Join-Path $PSScriptRoot '..')          # personal-progress/
+$SkillDir = Resolve-Path (Join-Path $PSScriptRoot '..')          # personal-handoff/
 $Skill    = Join-Path $SkillDir 'SKILL.md'
 
 $tests = @(
     @{
-        Name = 'skill_frontmatter: SKILL.md declares name=personal-progress + a description'
+        Name = 'skill_frontmatter: SKILL.md declares name=personal-handoff + a description'
         Run = {
             $s = Get-Content $Skill -Raw
-            if ($s -notmatch '(?m)^name:\s*personal-progress\s*$') { throw "frontmatter name not personal-progress" }
+            if ($s -notmatch '(?m)^name:\s*personal-handoff\s*$') { throw "frontmatter name not personal-handoff" }
             if ($s -notmatch '(?m)^description:\s*\S') { throw "frontmatter description missing" }
         }
     },
@@ -60,6 +60,22 @@ $tests = @(
             if ($t -notmatch '(?i)freshness')    { throw "Provenance footer missing freshness line" }
             if ($t -notmatch [regex]::Escape('Honesty Protocol')) { throw "Provenance footer missing Honesty Protocol trust note" }
         }
+    },
+    @{
+        # A handoff that carries only conclusions hands the next session maximum
+        # confidence and minimum context. These three sections are what carry the ask,
+        # the doubts, and the way back.
+        Name = 'antidrift_sections: template requires the ask, the doubts, and open detours'
+        Run  = {
+            $t = Get-Content (Join-Path $SkillDir 'templates/progress-template.md') -Raw
+            if ($t -notmatch '(?m)^## The ask \(verbatim\)') { throw "template has no verbatim ask section" }
+            if ($t -notmatch '(?m)^## What I am unsure about') { throw "template has no uncertainty section" }
+            if ($t -notmatch '(?m)^## Open detours') { throw "template has no open-detours section" }
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'What I am unsure about') { throw "SKILL.md does not require the uncertainty section" }
+            if ($s -notmatch 'Never paraphrase') { throw "SKILL.md does not forbid paraphrasing the ask" }
+            if ($s -notmatch '(?i)link, do not restate') { throw "SKILL.md does not carry the link-not-restate rule" }
+        }
     }
 )
 
@@ -68,5 +84,5 @@ foreach ($t in $tests) {
     try { & $t.Run; $pass++; Write-Host "PASS $($t.Name)" -ForegroundColor Green }
     catch { $fail++; Write-Host "FAIL $($t.Name): $_" -ForegroundColor Red }
 }
-if ($fail -eq 0) { Write-Host "EVAL PASS personal-progress ($pass)" -ForegroundColor Green; exit 0 }
-else { Write-Host "EVAL FAIL personal-progress ($fail of $($pass+$fail))" -ForegroundColor Red; exit 1 }
+if ($fail -eq 0) { Write-Host "EVAL PASS personal-handoff ($pass)" -ForegroundColor Green; exit 0 }
+else { Write-Host "EVAL FAIL personal-handoff ($fail of $($pass+$fail))" -ForegroundColor Red; exit 1 }

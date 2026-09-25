@@ -9,7 +9,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from atomic_write import atomic_write
-from log_appender import append_failure_row
+from log_appender import append_failure_row, open_detours
+
+def _git_add_beacon(bp):
+    """Stage the beacon, even when it sits under an ignored directory.
+
+    The beacon is a file this tool creates and owns, and it is the only
+    cross-session safety net; it must reach git.  Plain `git add` on a path under
+    an ignore rule exits 1 EVEN WHEN THE FILE IS ALREADY TRACKED and even when it
+    successfully stages the change -- so a `check=True` call raised on a command
+    that had actually worked, and the commit below it never ran.  That is how a
+    beacon could be silently left uncommitted for a whole goal.
+    """
+    subprocess.run(["git", "add", "-f", str(bp)], check=True)
+
+
 
 
 def parse_header(beacon_text):
@@ -88,12 +102,46 @@ def main():
                    help="Override accept_shell from beacon (pwsh or bash).")
     p.add_argument("--skip-if-cached", action="store_true",
                    help="Skip re-running acceptance if cache exists and accept_cmd unchanged.")
+    p.add_argument("--allow-open-detours", dest="allow_open_detours", action="store_true",
+                   help="Close the goal even with detours still open; the open ids are recorded.")
     p.add_argument("--force", action="store_true",
                    help="Ignore cache and always run acceptance command.")
     args = p.parse_args()
 
     bp = Path(args.beacon)
     content = bp.read_text(encoding="utf-8")
+
+    # The return path, enforced.  A detour is a side quest opened to unblock the goal;
+    # closing the goal while one is still open is how a two-hour fix quietly becomes
+    # the project and the original aim is never resumed.
+    _open = open_detours(content)
+    if _open and args.allow_open_detours:
+        # The help text and the design doc both said the open ids are recorded. They
+        # were not: the override fell straight through to acceptance and never touched
+        # the beacon. A bypass that leaves no trace is worse than no gate, because the
+        # terminal tells the operator a record exists.
+        content = append_failure_row(
+            content, "finalize", "finalize",
+            f"closed with detours still open: {', '.join(_open)}",
+            "Reopen the goal or justify each open detour", "")
+        atomic_write(args.beacon, content)
+        try:
+            _git_add_beacon(bp)
+            subprocess.run(["git", "commit", "-q", "-m",
+                            f"chore({bp.stem.replace('-audit-tracker','')}): finalize with "
+                            f"open detours {', '.join(_open)}"], check=True)
+        except subprocess.CalledProcessError:
+            print("WARNING: override recorded in the beacon but the commit failed",
+                  file=sys.stderr)
+        print(f"NOTE: finalizing with open detours: {', '.join(_open)} (recorded)",
+              file=sys.stderr)
+    if _open and not args.allow_open_detours:
+        print(f"ERROR: cannot finalize -- detours still open: {', '.join(_open)}.\n"
+              f"  Close each with: /personal-goal-next --detour-close <id>\n"
+              f"  or pass --allow-open-detours to close the goal anyway (recorded).",
+              file=sys.stderr)
+        return 7
+
     h = parse_header(content)
     cmd = h.get("accept_cmd", "")
     if not cmd:
@@ -189,7 +237,7 @@ def main():
                                      "Acceptance criterion needs refinement")
         atomic_write(args.beacon, content)
         # No cwd= -- use process cwd (repo root) with absolute beacon path.
-        subprocess.run(["git", "add", str(bp)], check=True)
+        _git_add_beacon(bp)
         subprocess.run(["git", "commit", "-q", "-m",
                         f"chore({args.slug}): finalize FAILED -- acceptance not met"], check=True)
         print("FINALIZE FAIL: acceptance command output did not match.", file=sys.stderr)

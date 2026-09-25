@@ -234,6 +234,25 @@ different policies:
 **The deeper rule (Section 11): decouple "is the thing present" (a code grader) from "is the thing
 good IF present" (a judge).** Never make one judge answer both.
 
+### 5.5 Optional: Jev as a cheap judge (hand-run only)
+
+Only if the `personal-jev` skill is installed and its key is set up. Nothing else in this guide
+needs it, and every eval must pass without it.
+
+- **What fits.** A Jev `score` question with four levels maps straight onto the 0/1/3/5 anchors
+  (put each anchor text in as one level, worst first). Jev also returns how sure it is, so
+  `needs_review` can be driven by low sureness instead of the judge grading itself. A batch of
+  `noul` yes/no questions fits a checklist-style rubric. Many questions go in one cheap call.
+- **What does not fit.** Jev only accepts abstracted text: no code, SQL, client names, emails or
+  secrets. Most skill outputs contain those, so only judge artifacts you can describe generically.
+  Every send is previewed and needs the owner's OK - that rules it out of anything automatic.
+- **Where it may run.** As a manual calibration spot check next to the normal judge (for example
+  "does Jev agree with the model judge on the good and bad fixtures?"). **Never inside
+  `eval.ps1`**: that would make `run-all.ps1` need a key and the network. `audit_eval.py` flags
+  it as HIGH `optional_dependency`.
+- **How to read it.** A Jev score is a second opinion with odds, not truth. Treat anything Jev
+  marks YOUR CALL as `needs_review`, and never stack it on a safety boundary as verification.
+
 ---
 
 ## 6. The failure curriculum -- the demo's instructive defects (the real gold)
@@ -456,4 +475,37 @@ between the tidy playbook and the messy reality is the most valuable thing in th
 > **If you cannot explain what a score means, the score is not ready to optimize.**
 > And the test that outranks all others: *if the agent does exactly what this round asks, will this
 > number move?* If not, fix the grader before you touch the agent.
+
+---
+
+## 14. Skills that call an outside service (network, API key)
+
+A skill that sends data to an outside API needs tests that **never reach the real service**,
+never need the real key, and still prove the send path works. Learned building the
+`personal-jev` eval; the recipe is general. Worked example:
+`skills/personal-jev/evals/eval.ps1`.
+
+1. **Canned answers, not live calls.** Give the script a switch (e.g. `-Fake answers.json`) that
+   loads a saved response instead of calling the API. Keep a confident fixture and an unsure or
+   broken one, so every grader has something to pass and something to fail.
+2. **Default every test run to a dead local port.** The test helper passes an endpoint such as
+   `http://127.0.0.1:9/...` on EVERY call unless a test overrides it. Then even a mutated,
+   broken script cannot reach the real API from the eval. (Found the hard way: a mutation run
+   reached the real endpoint before this default existed.)
+3. **Prove "no send" with a local listener.** Open a `TcpListener` on a free loopback port, point
+   the script at it, and check `Pending()` afterwards. Pair every "nothing was sent" test with a
+   **control** test where a send is expected and the listener DOES see it - otherwise the "no
+   send" test could pass because the listener never works.
+4. **Sentinel key, asserted absent.** Set the key env var to a fake value like
+   `SENTINELKEY0123...` and fail any test whose output (text, JSON, error, saved files) contains
+   it. Test the error paths too - leaks hide in error messages.
+5. **Key lookup from fixed places only.** If the script reads a key file, give it an override
+   (e.g. `-KeyFile`) so a test can supply a fake file in a temp folder with the env var cleared.
+   Never search parent folders for a key.
+6. **Mutation-prove the safety checks.** Break each safety check on purpose (replace its condition
+   with `$false`), run the eval, confirm RED, restore, confirm GREEN. Record it in the plan's
+   Baseline Run. A safety test that stays green when the check is gone measures nothing.
+7. **Another skill's outside service is off limits.** An eval may exercise its OWN skill's
+   service through the steps above, but must never call a different, optional skill's service
+   (see 5.5). `audit_eval.py` enforces this for known optional skills.
 </content>

@@ -12,11 +12,11 @@ as evidence of how I approach agentic systems.
 
 ```
 $ pwsh plugins/ping-personal/evals/run-all.ps1
-  OK  dual-runtime ... personal-goal ... personal-loop ... personal-critic-gate (38) ...
-  ALL EVALS PASS (36 skills)
+  OK  dual-runtime ... personal-goal ... personal-loop ... personal-critic-gate (40) ...
+  ALL EVALS PASS (38 skills)
 ```
 
-(36 = the 28 skills plus 8 Codex persona-wrapper skills, one per agent.)
+(38 = the 30 skills plus 8 Codex persona-wrapper skills, one per agent.)
 
 ---
 
@@ -30,7 +30,7 @@ to a concrete, inspectable piece of this repo.
 
 | Competency | Where to look | What it does |
 |---|---|---|
-| **Context engineering** | `personal-goal` beacons, `personal-progress` handoffs | Skills that write and re-read their own structured memory across sessions, so work survives a crash or a context reset instead of living only in a chat log. |
+| **Context engineering** | `personal-goal` beacons, `personal-handoff` handoffs | Skills that write and re-read their own structured memory across sessions, so work survives a crash or a context reset instead of living only in a chat log. |
 | **Harness engineering** | `personal-workflow/lib/fence.py`, `personal-loop/lib/preflight.py`, `secrets_scan.py` | Deterministic guardrails *around* the model: irreversible-action detection, readiness/scope/exclusion gates before an unattended run, pre-commit secret scanning. The model proposes; code disposes. |
 | **Loop engineering** | `personal-loop` | An outer loop that drives inner goals with exactly one authoritative stop-gate per run (never a critic's opinion), an autonomy dial trading gate frequency for unattended duration, and a fail-closed mode that refuses to arm if its own safety primitives are not provably present. |
 | **Evaluation-driven development** | every `skills/*/evals/`, `run-all.ps1` | 25 deterministic red/green graders, one per skill. `run-all.ps1` is the real ship gate: no green, no merge. |

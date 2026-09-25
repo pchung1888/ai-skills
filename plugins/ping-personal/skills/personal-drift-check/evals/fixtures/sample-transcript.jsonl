@@ -1,0 +1,14 @@
+{"type":"user","isSidechain":false,"message":{"content":[{"type":"tool_result","name":"tool_use decoy"}]}}
+{"type":"assistant","isSidechain":false,"attributionSkill":"ping-personal:demo","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"a.txt"}}]}}
+{"type":"assistant","isSidechain":false,"attributionSkill":"ping-personal:demo","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"b.txt"}}]}}
+{"type":"assistant","isSidechain":false,"attributionSkill":"ping-personal:demo","message":{"content":[{"type":"tool_use","name":"Grep","input":{"pattern":"foo"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Glob","input":{"pattern":"*.md"}}]}}
+{"type":"assistant","isSidechain":false,"attributionSkill":"ping-personal:demo","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"grep -n needle haystack.txt"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"git commit -m wip"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"npm install left-pad"}}]}}
+{"type":"assistant","isSidechain":false,"attributionSkill":"ping-personal:demo","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"a.txt"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Write","input":{"file_path":"c.txt"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"ToolSearch","input":{"query":"meta tool must be excluded"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Agent","input":{"prompt":"delegated work"}}]}}
+{"type":"assistant","isSidechain":true,"message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"subagent-should-be-excluded.txt"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"tool_use","name":"Read", MALFORMED JSON

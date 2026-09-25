@@ -58,6 +58,10 @@ every step here). Templates live in `references/templates/`.
    **guardrails as code** (enforce after the judge returns; decide whether a missing modality is
    neutral or a mandatory zero -- it depends on whether the modality is required). Decouple
    "is X present" (code grader) from "is X good IF present" (judge).
+   *Optional:* if `personal-jev` is set up, Jev can be a cheap hand-run second judge for
+   abstracted artifacts (field guide 5.5). Never put it in `eval.ps1`; nothing here needs it.
+   **If the target calls an outside service** (network / API key), follow field guide section 14:
+   canned answers, dead local port by default, listener control test, sentinel key, mutation proof.
 8. **Calibrate every grader.** Bundle a **known-good** fixture (`fixtures/good-*`) that must PASS
    and **known-bad** fixtures (`fixtures/bad-*`) that must FAIL. Run the grader and confirm both.
    *A grader that passes everything measures nothing.* Confirm each metric SPLITS your examples
@@ -82,8 +86,9 @@ every step here). Templates live in `references/templates/`.
    ```
    It reports, per skill: missing `evals/`, missing `eval-plan.md`/`eval.ps1`, an `eval.ps1` that
    `run-all.ps1` cannot discover, leftover `<...>`/TODO placeholders, a grader with **no `throw`**
-   (cannot fail -> measures nothing), and **no `bad-*` fixture** (uncalibrated). Exit 1 if any
-   high-severity issue is found.
+   (cannot fail -> measures nothing), **no `bad-*` fixture** (uncalibrated), and an eval that
+   **calls an optional skill** such as `personal-jev` (HIGH: run-all would need its key and the
+   network). Exit 1 if any high-severity issue is found.
 2. **Walk the failure curriculum** (the demo's instructive defects -- see the field guide section 6):
 
    | Check | The defect it catches |

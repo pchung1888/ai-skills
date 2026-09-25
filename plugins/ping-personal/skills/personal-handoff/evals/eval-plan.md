@@ -1,4 +1,4 @@
-# Eval Plan: personal-progress
+# Eval Plan: personal-handoff
 
 > Follows the agent-evals-playbook. Mirrors the approved shape from `personal-htsw/evals/`.
 > Instruction-only skill (no scripts), so the grader checks STRUCTURE: the documented
@@ -6,7 +6,7 @@
 
 ## Target Behavior
 
-personal-progress captures session state as a structured handoff document at
+personal-handoff captures session state as a structured handoff document at
 `docs/progress/YYYY-MM-DD-<task>-progress.md` (and, when open decisions exist, a sibling
 `-handoff.md`). Progress = WHAT happened; Handoff = WHAT NEXT-YOU NEEDS TO DECIDE. It fires
 preparatively when a limit approaches or the user signals an imminent stop.
@@ -25,7 +25,7 @@ preparatively when a limit approaches or the user signals an imminent stop.
 
 | ID | Input | Expected Behavior | Must Not Happen |
 | --- | --- | --- | --- |
-| E01 | SKILL.md frontmatter | name=personal-progress + description present | name/desc corruption |
+| E01 | SKILL.md frontmatter | name=personal-handoff + description present | name/desc corruption |
 | E02 | SKILL.md body | references `docs/progress/` AND documents progress-vs-handoff | path/contract drift |
 | E03 | SKILL.md headings | Step 0 / Step 2 Write Progress / Step 2.5 Sibling Handoff / Safety Rules present | a step dropped |
 | E04 | skill dir | `templates/` directory exists | scaffold missing (F05) |
@@ -34,7 +34,7 @@ preparatively when a limit approaches or the user signals an imminent stop.
 
 ### Code Graders (`eval.ps1`)
 
-- `skill_frontmatter`: name=personal-progress + a description.
+- `skill_frontmatter`: name=personal-handoff + a description.
 - `output_path_documented`: body references `docs/progress/`.
 - `progress_vs_handoff_documented`: both "progress" and "handoff" appear, with the
   WHAT-happened vs WHAT-next distinction.

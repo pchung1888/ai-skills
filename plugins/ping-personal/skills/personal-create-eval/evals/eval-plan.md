@@ -22,6 +22,8 @@ dogfood: the eval-maker has an eval, and that eval runs its own scaffold + audit
 | F04 | a lib script (scaffold/audit) goes missing | CREATE/ENHANCE cannot run | code |
 | F05 | scaffold_eval.py stops producing a valid eval skeleton | CREATE silently emits nothing usable | code (functional) |
 | F06 | audit_eval.py stops discriminating healthy vs unhealthy skills | ENHANCE rubber-stamps a broken eval (the dead-grader trap, on the auditor itself) | code (calibration) |
+| F07 | some skill's eval starts calling an optional skill (personal-jev) | run-all breaks on any machine without that key / network; the optional skill becomes mandatory | code (calibration + real-tree scan) |
+| F08 | the outside-service recipe or the optional Jev judge note is lost from the field guide | CREATE has no recipe for API-calling skills | code |
 
 ## Eval Cases
 
@@ -44,6 +46,11 @@ dogfood: the eval-maker has an eval, and that eval runs its own scaffold + audit
 - `references_present`: field guide + eval-plan / eval-grader / judge-rubric templates exist (F03).
 - `lib_scripts_present`: scaffold_eval.py + audit_eval.py exist (F04).
 - `scaffold_smoke`: `scaffold_eval.py --dry-run` on the good-skill fixture exits 0 + plans actions (F05).
+- `optional_dependency_calibration`: the `bad-jev-dependent-skill` fixture gets a HIGH
+  `optional_dependency`; good-skill gets none (F07).
+- `optional_skills_stay_optional`: auditing the REAL skills tree finds zero `optional_dependency`
+  (F07) -- this is what keeps personal-jev optional on every run-all.
+- `guide_covers_external_services`: field guide sections 5.5 and 14 present (F08).
 - `audit_calibration`: `audit_eval.py` on the good-skill fixture exits 0 (healthy) AND on the
   bad-skill fixture exits 1 (HIGH). This calibrates the auditor itself -- a grader that passes
   everything measures nothing (F06).
@@ -71,3 +78,4 @@ dogfood: the eval-maker has an eval, and that eval runs its own scaffold + audit
   time (it scaffolded this skill's own evals/). A future regression in the write path would not
   be caught by this grader; expanding the test would add write+cleanup side-effects to the grader
   for little gain, so it is recorded here as a known gap rather than tested.
+- 2026-09-23 @ plugin 0.25.0: + F07/F08 (optional-skill guard, outside-service recipe).

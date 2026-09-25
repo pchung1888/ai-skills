@@ -40,6 +40,44 @@ Real usage when this handoff was written (from `personal-quota/quota.ps1 -Json`;
 
 ---
 
+## The ask (verbatim)
+
+> [The owner's own words. Copy from the beacon's `## Requirement` section, or from
+>  what they actually said. Never paraphrase -- next-session will plan against
+>  whatever is written here, so a summary becomes the new requirement.]
+
+---
+
+## What I am unsure about
+
+REQUIRED -- do not delete this section, and do not write "nothing".
+
+A handoff that carries only conclusions hands the next session maximum confidence
+and minimum context, which is backwards. Doubts are exactly what does not survive a
+handoff document unless they are written down on purpose.
+
+- **Least confident claim:** [what I asserted that I would check first if I were starting fresh]
+- **What I would challenge:** [the load-bearing assumption in this work that deserves a second look]
+- **What I did not verify:** [claims made from reading rather than running]
+- **Where I might be wrong about scope:** [anything I built that the ask above may not actually cover]
+
+---
+
+## Open detours
+
+Work opened to unblock the goal that has not closed yet. Copy from the beacon's
+`## Detours` table. If there are none, write "none".
+
+| id | Origin | Blocks | Proof | Resume at |
+|---|---|---|---|---|
+| DET-n | pre-existing / external / phase-N | phase N | [failing test or error] | phase N |
+
+**If any row's Origin is `phase-N`,** an earlier phase of this goal created that
+blocker. That is drift, not a detour, and the remedy is to revert that phase's
+mechanism rather than build further on it. Say so here explicitly.
+
+---
+
 ## Next Steps (resume here)
 
 1. [Exact next action -- file, command, or step from plan]
@@ -74,4 +112,7 @@ Real usage when this handoff was written (from `personal-quota/quota.ps1 -Json`;
 
 - **Source tier:** <what this doc was generated from -- e.g. live git state + plan file + this session's tool output>
 - **Freshness:** Generated YYYY-MM-DD | reflects `<branch-name>` @ commit `<hash>`
+- **Read-back:** <who confirmed the verbatim ask and open-detour proofs are safe to
+  commit, and when -- or `not reviewed: <why>`. This file lands in docs/progress/,
+  which is tracked in some host repos.>
 - **Trust:** Factual claims follow the Honesty Protocol -- `EXTRACTED` = observed in code/tool output, `INFERRED` = reasoned from context.

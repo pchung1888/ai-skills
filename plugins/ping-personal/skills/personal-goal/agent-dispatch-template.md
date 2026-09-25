@@ -2,6 +2,29 @@
 
 Fill in each `{{placeholder}}` before dispatching. The return-contract block at the bottom is REQUIRED verbatim -- do not trim it.
 
+## What the owner actually asked for
+
+<!-- REQUIRED. Copy the beacon's "## Requirement" section verbatim. Do not
+     paraphrase and do not substitute the plan. A worker that has only a phase
+     title cannot tell that its task stopped serving the goal three phases ago. -->
+
+{{requirement_verbatim}}
+
+**This phase serves:** {{phase_source}}
+<!-- the phase's Source cell: ASK:<quoted fragment> | DEC-<n> | UNBLOCK:DET-<n> -->
+
+**Out of scope for this phase:** {{ruled_out}}
+<!-- decisions already closed, from the beacon's ## Decisions "Ruled out" column.
+     Reopening a settled question is drift; this is how you know it is settled. -->
+
+If you cannot see how your task serves the requirement above, STOP and return
+BLOCKED saying so. Do not widen the task to make it fit. A phase that no longer
+traces to the ask is the finding, not an obstacle to route around.
+
+If you hit a blocker and are tempted to build new machinery to get past it:
+first check whether the system already contains something with the same property.
+Most drift is a second mechanism built beside one that already did the job.
+
 ## Context
 
 - Goal: {{slug}}
@@ -9,17 +32,18 @@ Fill in each `{{placeholder}}` before dispatching. The return-contract block at 
 - Beacon: {{beacon_path}}
 - Soft budget: {{soft_budget_tokens}} tokens (surface to driver if exceeded; default 100K per preflight rule 8)
 - Operating mode: {{phase_n_mode}} (interactive|autonomous -- from beacon frontmatter)
-- Trigger set: {{auto_mode_triggers}} (default: [T3, T5]; T1 is deferred)
+- Trigger set: {{auto_mode_triggers}} (default: [T3]; T5 struck, T1 deferred)
 
 If operating mode is autonomous and you encounter any of the following, invoke
 /personal-critic-gate BEFORE taking the next action:
 - T3: you are about to return BLOCKED with 2 or more visible recovery paths.
   Pass a planning-time recommendation block listing the recovery paths as OPTIONS.
-- T5: you are at a phase-boundary decision (prior phase delivered; proceed or abort?).
-  Pass a summary of the prior phase output + acceptance evidence as the artifact.
 
-Do NOT invoke /personal-critic-gate for every option set (T2 rejected -- cost runaway) or
-for prior-critic-carryover checks (T4 rejected -- redundant with T5).
+Do NOT invoke /personal-critic-gate for every option set (T2 rejected -- cost runaway)
+or at phase boundaries (T5 struck 2026-09-18 -- it was declared but never routed to,
+and wiring it would cost 0.9-2.4M tokens per goal in review alone; phase-boundary scope
+is now enforced in code by advance.py exit 6 instead) or for prior-critic-carryover
+checks (T4 rejected -- redundant with that same code guard).
 
 If operating mode is interactive: proceed normally; the driving session handles
 /personal-critic-gate invocations when needed.

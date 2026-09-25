@@ -1,0 +1,9 @@
+{
+  "state": "A developer must decide whether to deploy a small UI fix now or wait one day for QA. The fix is reversible by redeploying the old files. Users are traders who notice downtime.",
+  "questions": {
+    "pick": { "type": "choice", "instructions": "Which option is the better decision?", "criteria": { "deploy_now": "Ship the fix today", "wait_for_qa": "Wait one day for QA sign-off", "other": "Neither option fits" } },
+    "deploy_now__safety": { "type": "score", "instructions": "How safe is deploying now?", "criteria": ["Likely to break trading", "Some risk", "Low risk", "No realistic risk"] },
+    "wait_for_qa__safety": { "type": "score", "instructions": "How safe is waiting for QA?", "criteria": ["Likely to break trading", "Some risk", "Low risk", "No realistic risk"] },
+    "reversible": { "type": "noul", "instructions": "Can the change be undone quickly?", "criteria": { "true": "Rollback is fast", "false": "Rollback is slow or impossible" } }
+  }
+}

@@ -160,4 +160,4 @@ Owner: lines and acceptance criteria.
 
 ## Session Handoff
 
-If stopping mid-task, invoke `/personal-progress` before stopping.
+If stopping mid-task, invoke `/personal-handoff` before stopping.

@@ -8,8 +8,8 @@ description: Autopilot conductor over the personal-goal beacon. Hand it one goal
 
 A thin **conductor**. It is the *driving session* `personal-goal` always required (see
 `personal-goal` SKILL "After /personal-goal returns") -- it does NOT modify `personal-goal`; it
-drives it with a richer loop. Ported from a production host repo's workflow
-conductor.
+drives it with a richer loop. Ports DART's `/dart-workflow` (see
+`docs/personal-workflow/2026-05-29-personal-workflow-port-design.md`).
 
 ## Roles block (the main LOGIC port-time edit)
 ```
@@ -50,7 +50,20 @@ logic changes; `discover.py` / `fence.py` are project-agnostic and read the host
 
 ## Brainstorm gate
 - Goal underspecified/creative -> invoke the BRAINSTORM role; ask until understood.
-- Concrete plan/list -> skip to phasing.
+- Concrete plan/list -> **do not skip to phasing.** A document that merely *looks*
+  like a plan is not a warrant: a findings inventory, a previous session's phase
+  table, and a review output all look exactly like a plan. That shape-equals-
+  authority assumption is how a past ticket turned research output into six phases without
+  the owner ever seeing them.
+  Run THE ONE QUESTION instead (personal-goal SKILL.md step 6b): print the
+  requirement, print the phase titles, ask "which of these neither serves the ask
+  nor unblocks it?", delete what the owner names, then phase.
+  The ONLY skip is a phase list the owner approved **in this conversation** -- the
+  test is owner participation, never who typed it. A plan the conductor authored
+  itself is the highest-risk case, not an exempt one.
+  Re-run this whenever the phase list GROWS: a `--list` backlog ingest, a detour, a
+  FAIL/retry re-scope. A check that fires only at arm time never sees the drift,
+  because drift arrives mid-flight.
 
 ## Spine (personal-goal, UNCHANGED)
 Invoke `/personal-goal` (the slash command -- NOT a hardcoded lib path; that keeps the conductor
@@ -66,11 +79,22 @@ For each pending phase:
    `/workflows` available -> `parallel([...units])`; else sequential one-shot Agent. Codex /
    no-workflows -> always sequential. Cap fan-out <= 8 concurrent (process-budget discipline);
    fan-out units MUST be idempotent.
+   **Every unit brief is built from `personal-goal/agent-dispatch-template.md`**, the same
+   template the sequential path uses, with the per-unit slice in `{{phase_brief}}` and one
+   extra line naming what is out of scope for THAT unit. Until this was written down the
+   parallel path referenced the template nowhere, so N agents ran with strictly less context
+   than the single agent doing the same work -- the dispatch mode with the highest multiplier
+   was the one mode that shipped a brief with no requirement attached. Cost: the quoted ask plus the fixed
+   prose this adds to every brief is ~250-400 tokens per unit, so ~2-3K per 8-unit
+   phase against a measured 230-789K phase -- under 0.5%. (An earlier version of this
+   line said ~400 tokens per PHASE by counting only the quoted ask and ignoring the
+   prose around it; a cost line in a governance doc should not be off by 8x.)
+   A unit that cannot trace its task to the requirement returns BLOCKED; it does not widen.
    **Quota-scale before fanning out:** read the real band with
    `pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/plan.ps1" -Tasks "fanout:heavy" -Json`
    (a fan-out is heavy) and size the dispatch to it: PROCEED -> full fan-out (<= 8); CONSERVE ->
    halve concurrency + prefer the mid model tier; LIGHT_ONLY -> sequential + haiku workers;
-   STOP -> do NOT fan out -- invoke `personal-progress` and hand off. This real-quota band
+   STOP -> do NOT fan out -- invoke `personal-handoff` and hand off. This real-quota band
    OVERRIDES the static `token_budget_total` whenever it is the tighter limit.
 3. **FENCE** -- run the proposed action through `fence.py`. Exit 2 -> PAUSE, ask, wait. Exit 3 ->
    ask once per run, then allow. Exit 0 -> proceed. Also apply the contextual rules by judgment.
@@ -92,6 +116,21 @@ After the last phase: run the acceptance command -> `/personal-goal-next ... --f
 The beacon (git-committed by `/personal-goal-next` per phase) is the only cross-session safety net;
 `/workflows` runId journals die on `/clear`. The loop is interruptible at any phase boundary --
 re-invoke on the slug to resume from the last committed phase.
+
+**On resume, before re-entering the loop, read in this order:**
+
+1. the beacon's `## Requirement` section -- the owner's words, first, before any plan;
+2. `## Decisions` -- what is already settled, so you do not reopen it;
+3. `## Detours` -- any row still `open`. An open detour means the goal is parked on a
+   side quest; resume at the phase its `Blocks` column names, not at whatever was most
+   recently in motion. That is the difference between coming back to the goal and
+   letting the detour become the project.
+
+Then re-run the justification check over every remaining pending phase rather than
+trusting a verdict a previous session recorded. A phase row is evidence of what a
+session decided, not evidence that the owner agreed. A fresh session inherits the
+previous session's conclusions with all their supporting evidence and none of their
+doubts -- maximum confidence, minimum context -- and re-deriving is the only cure.
 
 ## Budget inheritance
 
@@ -129,14 +168,20 @@ attack / verify, mechanical effort for mechanical steps:
 | Phase type | effort |
 |---|---|
 | Mechanical fan-out (scan, list, rename, format, port) | `low` |
-| Implementation / research phases | omit (inherit session effort) |
-| Verify / judge / adversarial-critic seats | `high` |
+| Implementation / research phases | `low` |
+| Verify / judge / adversarial-critic seats | `low` (default); `medium` only when the operator asks for a deeper pass on a named stage |
 
-Never dispatch `xhigh` or `max` by default: an over-budgeted pass second-guesses
-a good answer into a worse one (the fable-mode dial). Reach for them only on the
-single hardest verify/judge stage, named and justified in the tracker. The plain
-Agent tool has no effort parameter, so for Agent-tool dispatches the only
-routing knob is `model`; effort routing applies to Workflow dispatches.
+**Default is `low` for EVERY Workflow agent, including ultracode runs** (owner
+decision 2026-09-09). Measured on a past ticket: a 5-agent review/verify fan-out at
+`effort: 'high'` on the session model cost 789K subagent tokens and pushed the 5h
+quota from 31% to 80% in one phase; the 2-agent pass before it cost 230K. Effort
+multiplies quota burn per agent, so pass `effort: 'low'` explicitly in every
+`agent()` call (do not omit it -- omitted means "inherit the session effort",
+which on a Fable session is high). Never dispatch `high`, `xhigh` or `max`
+unless the operator names the stage and accepts the cost in the same turn.
+State the planned effort tier and agent count in the cost line before launching.
+The plain Agent tool has no effort parameter, so for Agent-tool dispatches the
+only routing knob is `model`; effort routing applies to Workflow dispatches.
 
 See spec: `docs/personal-workflow/2026-05-29-personal-workflow-port-design.md`.
 

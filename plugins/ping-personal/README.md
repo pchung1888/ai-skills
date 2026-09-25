@@ -13,9 +13,9 @@ Multi-phase goal orchestration with crash-recovery beacons. Use when starting wo
 
 Beacons land under `docs/<slug>/` by default. Override paths via the skill's preflight.
 
-### `/personal-progress`
+### `/personal-handoff`
 
-Session handoff writer. Writes `docs/progress/YYYY-MM-DD-<task>-progress.md` (and optionally a sibling `*-handoff.md` for open decisions) so the next session can resume without losing context. Triggers preparatively on phrases like "save progress", "wrap up the session", "stopping soon", "context limit". Uses the bundled template under `skills/personal-progress/templates/`.
+Session handoff writer. Writes `docs/progress/YYYY-MM-DD-<task>-progress.md` (and optionally a sibling `*-handoff.md` for open decisions) so the next session can resume without losing context. Triggers preparatively on phrases like "save progress", "wrap up the session", "stopping soon", "context limit". Uses the bundled template under `skills/personal-handoff/templates/`.
 
 ### `/personal-cache-stats`
 
@@ -55,6 +55,20 @@ endpoint directly with your subscription OAuth token -- so it never depends on
 ccstatusline being installed or alive. Context % is captured by an opt-in,
 self-owned statusline shim (`ctx-sidecar`) that chains to ccstatusline so your
 visible statusline is unchanged. The access token is never printed or logged.
+
+### `/personal-jev`
+
+A second opinion with a confidence meter from TypeSafe Jev. Four on-demand modes:
+Decide (pick among options, with per-option composite scores), Which-tool (Noul vs
+Choice vs Score), Checklist (batch yes/no checks), and Claim check. `jev.ps1` rejects
+malformed questions, refuses payloads that look like client data (emails, company
+name, GUIDs, SQL, stored-proc names, keys), previews by default, and only sends with
+`-Send` after approval. It prints `YOUR CALL` when Jev is split. Needs
+`TYPESAFE_API_KEY` (env var or `.env.local`); the key is never printed.
+
+### `/personal-drift-check`
+
+Measures harness drift: parses Claude Code JSONL transcripts and reports evidence share, skill-attribution share, and the decay curve across a session or a cohort of past sessions.
 
 ## Agents — the maid line-up
 

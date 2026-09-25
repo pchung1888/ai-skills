@@ -1,11 +1,11 @@
 ---
-name: personal-progress
+name: personal-handoff
 model: haiku
-description: Capture current session state as a structured handoff document in docs/progress/YYYY-MM-DD-<task>-progress.md. TRIGGER when (1) agent or user is about to stop mid-task, (2) any limit is approaching (context, session, weekly, daily, or token), (3) user uses preparative phrasing like "I'll need X soon", "going to need", "before we stop", "wrap up", "stopping for today", "stopping soon", or (4) user says "save progress", "handoff", "capture state", "create progress", "create handoff", "write progress", "write handoff", or "/personal-progress". Trigger PREPARATIVELY -- fire NOW even when the user says "soon" or "once we hit a good stopping point" so the artifacts are ready. If the user also asks to park open questions for the next session, ALSO write a sibling docs/progress/YYYY-MM-DD-<task>-handoff.md. Progress = WHAT happened. Handoff = WHAT NEXT-YOU NEEDS TO DECIDE. Do NOT trigger for final commits on complete tasks -- use TODO.md instead.
+description: Capture current session state as a structured handoff document in docs/progress/YYYY-MM-DD-<task>-progress.md. TRIGGER when (1) agent or user is about to stop mid-task, (2) any limit is approaching (context, session, weekly, daily, or token), (3) user uses preparative phrasing like "I'll need X soon", "going to need", "before we stop", "wrap up", "stopping for today", "stopping soon", or (4) user says "save progress", "handoff", "capture state", "create progress", "create handoff", "write progress", "write handoff", "/personal-handoff", or "/personal-progress" (the former name of this skill). Trigger PREPARATIVELY -- fire NOW even when the user says "soon" or "once we hit a good stopping point" so the artifacts are ready. If the user also asks to park open questions for the next session, ALSO write a sibling docs/progress/YYYY-MM-DD-<task>-handoff.md. Progress = WHAT happened. Handoff = WHAT NEXT-YOU NEEDS TO DECIDE. Do NOT trigger for final commits on complete tasks -- use TODO.md instead.
 user_invocable: true
 ---
 
-# /personal-progress -- Session Handoff Skill
+# /personal-handoff -- Session Handoff Skill
 
 Capture the current session state as a structured progress file so the next
 session (or agent) can resume without losing context.
@@ -58,11 +58,30 @@ Determine the output filename:
 - The sibling handoff file (Step 2.5) is `-handoff.md` on the same base.
 
 Use the bundled template at
-`${CLAUDE_PLUGIN_ROOT}/skills/personal-progress/templates/progress-template.md`
+`${CLAUDE_PLUGIN_ROOT}/skills/personal-handoff/templates/progress-template.md`
 as the structure. Fill in ALL sections -- no blanks, no "TBD".
 
 Key rules:
 
+- **The ask (verbatim):** copy the owner's own words -- from the beacon's
+  `## Requirement` section if a goal is armed, otherwise from what they actually
+  said. Never paraphrase. Next-session plans against whatever is written here, so a
+  summary quietly becomes the new requirement, and the aim moves one handoff at a
+  time.
+- **What I am unsure about:** REQUIRED. Never "nothing". A handoff that carries only
+  conclusions hands the next session maximum confidence and minimum context -- the
+  intermediate doubts are precisely what does not survive a handoff unless written
+  down on purpose. Name the least confident claim, the assumption worth challenging,
+  what was asserted from reading rather than running, and where scope may have crept.
+- **Open detours:** copy any row still `open` from the beacon's `## Detours` table,
+  with the phase each one blocks. Resume at the phase named there, not at whatever
+  was most recently in motion -- that is the difference between returning to the goal
+  and letting the detour become the project. A detour whose Origin is `phase-N` is
+  drift, not a detour; say so.
+- **Link, do not restate.** Reference the plan, spec and beacon by path. Keep the
+  status table (that is live state the plan does not hold) but not the task prose --
+  a restated copy diverges from its source, and the daily overwrite then destroys the
+  only artifact that would have shown the divergence.
 - **Blocker / Stopping Reason:** Be specific. "Context limit hit at Task 3
   Step 2" is good. "Session ended" is bad.
 - **Next Steps:** Must be actionable. "Run `npm test -- auth.spec.ts`" is
@@ -126,8 +145,19 @@ for one), skip this step entirely.
 After writing the file:
 
 1. Show the user the path: `docs/progress/<filename>.md`
-2. Ask: "Commit this progress file now, or leave it unstaged?"
-   - If commit: `git add docs/progress/<filename>.md && git commit -m "progress: capture state for <task-slug>"`
+2. **Before offering to commit, read the verbatim ask back.** This file now carries
+   the owner's own words, and `docs/progress/` is tracked in some host repos. Show the
+   "The ask (verbatim)" section and the open-detour proofs, and ask whether anything
+   should be removed before it enters company-repo history. `/personal-goal` enforces
+   the equivalent gate in code (`beacon_writer.py` exit 8); this skill has no CLI of
+   its own, so the read-back is a required step, not an optional courtesy. Record the
+   answer in the Provenance footer.
+3. Ask: "Commit this progress file now, or leave it unstaged?"
+   - If commit: `git add -f docs/progress/<filename>.md && git commit -m "progress: capture state for <task-slug>"`
+   - The `-f` is load-bearing: `git add` on a path under an ignore rule exits 1
+     EVEN WHEN it stages successfully, so a plain `&&` chain short-circuits and
+     the handoff silently never commits. This file is the cross-session carrier;
+     whether it reaches git must not depend on the host repo's ignore posture.
    - If no commit: leave unstaged (it will not be lost -- just not in history)
 
 ---

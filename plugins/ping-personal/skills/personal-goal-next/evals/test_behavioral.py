@@ -68,6 +68,7 @@ def _run_advance(beacon_path: Path, extra_args: list, env=None) -> subprocess.Co
 BEACON_TEMPLATE = """\
 ---
 goal_slug: test-goal
+started: 2026-05-01 09:00:00 EDT
 accept_cmd: pwsh -NoProfile -Command "Write-Host 'ALL EVALS PASS'"
 accept_match: ALL EVALS PASS
 accept_shell: pwsh
@@ -110,6 +111,7 @@ accept_shell: pwsh
 BEACON_TEMPLATE_RETRIES = """\
 ---
 goal_slug: test-goal
+started: 2026-05-01 09:00:00 EDT
 accept_cmd: pwsh -NoProfile -Command "Write-Host 'ALL EVALS PASS'"
 accept_match: ALL EVALS PASS
 accept_shell: pwsh
@@ -598,6 +600,7 @@ def test_b3_legacy_no_cap():
 BEACON_TEMPLATE_BUDGET = """\
 ---
 goal_slug: test-goal
+started: 2026-05-01 09:00:00 EDT
 accept_cmd: pwsh -NoProfile -Command "Write-Host 'ALL EVALS PASS'"
 accept_match: ALL EVALS PASS
 accept_shell: pwsh
