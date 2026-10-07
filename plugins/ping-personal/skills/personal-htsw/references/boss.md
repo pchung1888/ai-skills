@@ -1,5 +1,20 @@
 # boss playbook — sponsor pitch (also the "clean" mode)
 
+## Contents
+
+- What this is for
+- Goal in one sentence
+- Voice rules
+- Required structure -- feature-pitch variant
+- Required structure -- plan-walkthrough variant
+- Variant detection
+- Length target
+- Presentation tables -- when they earn their place
+- Calibration mini-example (read this first, then go to the full examples)
+- Full examples reference
+- When the source is short
+- When the source has no clear business outcome
+
 ## What this is for
 
 Two situations:

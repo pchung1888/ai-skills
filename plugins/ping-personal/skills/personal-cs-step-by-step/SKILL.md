@@ -18,7 +18,7 @@ inbox/chat wiring).
 
 Procedural how-to skill. Calls `personal-cs-client-question` first to locate
 the relevant page or setting, then reads the source or docs to enumerate the
-workflow as numbered imperative steps. Does NOT duplicate page-location
+workflow as numbered imperative steps. It does not duplicate page-location
 logic.
 
 ## When to use
@@ -71,7 +71,8 @@ label them before enumerating.
    choices vary in ways the code-location tool can't predict, list the most
    common path + add a `WATCH OUT FOR:` caveat -- or escalate if the
    branching is unmanageable.
-6. **Self-report metric** (FINAL STEP -- DO NOT SKIP). Invoke the wrapper
+6. **Self-report metric** (final step on every answer, because the metric
+   line is the audit trail). Invoke the wrapper
    script exactly as documented in `personal-cs-client-question/SKILL.md`
    Mechanism step 4, substituting `-SkillName "personal-cs-step-by-step"`.
 
@@ -97,8 +98,8 @@ label them before enumerating.
    ```
 
    Even when this skill escalates via `personal-cs-escalate-to-dev`, invoke
-   the wrapper FIRST (with `escalated:true`, `cited:false`, empty
-   `sources_read`, and `suggestion`/`dev_concern` describing why), THEN
+   the wrapper first (with `escalated:true`, `cited:false`, empty
+   `sources_read`, and `suggestion`/`dev_concern` describing why), then
    invoke escalation.
 
 ## Output contract

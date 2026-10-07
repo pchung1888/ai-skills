@@ -1,6 +1,18 @@
 # pr-examples — four quality tiers with icons, tables, annotated diffs, and HOW-THIS-WORKS sections
 
-Same base scenario across all four tiers: a PR adds a rate-limit middleware against `ST-9999`. Implementation quality changes; voice, icon density, and tier title icon track it.
+## Contents
+
+- Tier 1 -- GOOD (🌮)
+- 🌮 Whoever wrote this knew what they were doing
+- Tier 2 -- PASS (🟢)
+- 🟢 Works as advertised
+- Tier 3 -- WARNING (⚠)
+- ⚠ Solid bones, three things to fix
+- Tier 4 -- BAD (🔴)
+- 🔴 This shit ain't gonna work
+- How to read these
+
+Same base scenario across all four tiers: a PR adds a rate-limit middleware against `PROJ-9999`. Implementation quality changes; voice, icon density, and tier title icon track it.
 
 **Icon legend:**
 - 🌮 GOOD — genuinely well-crafted, deserves a celebration line
@@ -16,7 +28,7 @@ Same base scenario across all four tiers: a PR adds a rate-limit middleware agai
 
 ## Tier 1 — GOOD (🌮)
 
-**The Jira ticket (ST-9999):**
+**The Jira ticket (PROJ-9999):**
 > AC #1: Rate-limit at 100 req/min per IP. Return 429 with Retry-After header.
 > AC #2: Document the new 429 in `docs/api.md`.
 > AC #3: Tests cover the rate-limit boundary.

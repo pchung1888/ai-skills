@@ -1,5 +1,21 @@
 # pr — review-a-PR playbook
 
+## Contents
+
+- What this is for
+- What the skill does behind the scenes
+- Source isolation -- anti-leakage rule (PR mode is uniquely vulnerable)
+- The voice -- three modes
+- Honest protocol (plain English)
+- Evidence-and-suggestion contract -- EVERY ⚠ AND 🔴 CLAIM
+- The signature element -- tier title
+- Reviewer discipline -- the four karpathy pillars (in plain English)
+- Plan-mode input -- when the source is a plan doc, not a diff
+- Required structure
+- Length
+- Examples
+- Validator
+
 ## What this is for
 
 You're about to review someone else's code. You don't know the codebase well. You want to figure out fast: what changed, what's risky, where to look first, and whether the PR delivers what the ticket asked for.
@@ -62,10 +78,10 @@ How loud you get is a function of how many 🔴 / ⚠ icons land in the body. Th
 | 🔴 count in body | Required voice load |
 |---|---|
 | **0-2** | Mode 1 (baseline) is fine. One Mode-2 phrase allowed but not required. |
-| **3-4** | Mode 2 MUST appear in: (a) TL;DR action verb — pick the strongest available (`send it back`, `hard nope`, `block — and re-do`), (b) the HOW-THIS-WORKS paragraph (or What-actually-happened in QA), AND (c) at least one body-section bullet. |
+| **3-4** | Mode 2 must appear in: (a) TL;DR action verb — pick the strongest available (`send it back`, `hard nope`, `block — and re-do`), (b) the HOW-THIS-WORKS paragraph (or What-actually-happened in QA), AND (c) at least one body-section bullet. |
 | **5+** | Mode 2 carries the **entire HOW-THIS-WORKS paragraph**, plus **3+ body bullets**. TL;DR opens with the strongest action verb available (`yeah no, ain't shipping`, `block this — needs a real pass`, `revert and re-do`). |
 
-**Warning-heavy variant** (5+ ⚠ AND 0 🔴): Mode 2 stays muted, but cumulative tone shifts — TL;DR can use `address these and merge`, but the body should NOT read cheerful. Pile of warnings is its own signal even without a hard block.
+**Warning-heavy variant** (5+ ⚠ AND 0 🔴): Mode 2 stays muted, but cumulative tone shifts — TL;DR can use `address these and merge`, but the body should not read cheerful. Pile of warnings is its own signal even without a hard block.
 
 **The point: a reviewer who finds 6 broken things shouldn't write like they found a typo.** The 🔴 icons signal urgency; the prose must match. Symptom of failing this rule: a rendering that uses six 🔴 markers and one "hot garbage" surrounded by neutral prose. That reads as a confused brief — the icons say BAD, the words say NEUTRAL, and the reader gets mixed signals.
 
@@ -95,7 +111,7 @@ The claim must be backed by at least ONE of these forms of evidence — and the 
 |---|---|
 | File + line reference | `` `middleware/rate-limit.ts:42` `` or `middleware/rate-limit.ts L42-L51` |
 | Direct quote from the source | `> the spec says: "all sessions for this user"` (the source line in a blockquote) |
-| RFC / standard / spec citation | `RFC 6585 §4`, `MDN: Retry-After`, `MSRB Rule G-14` |
+| RFC / standard / spec citation | `RFC 6585 §4`, `MDN: Retry-After`, `OWASP ASVS 2.1.1` |
 | Diff hunk reference | "the diff at lines 47-52 shows…" or pointing to a `← 🔴` annotation in the rendered diff block |
 | Negative observation | `searched tests/ for the new file — no test file exists` (an explicit "I looked and didn't find it") |
 | Source-doesn't-say qualifier | "the ticket doesn't mention X" — admitting a claim is bounded by what's actually in the source |
@@ -263,7 +279,7 @@ Example (BAD tier):
 - 🔴 **Unrelated auth test deleted** as "flaky" — scope creep + lost coverage.
 ```
 
-The whole point: if the PR reviewer reads ONLY the tier title + TL;DR, they should be able to make a merge/block call. Everything below is for the developer who has to act on it.
+The whole point: if the PR reviewer reads only the tier title + TL;DR, they should be able to make a merge/block call. Everything below is for the developer who has to act on it.
 
 ### 3. Ticket-vs-PR alignment (required when the Jira ticket was fetched)
 
@@ -293,7 +309,7 @@ Keep it ≤ 6 rows. If the PR touches more than 6 files, pick the 6 that matter 
 
 **Trigger:** the diff touches ≥ 5 files, OR any single file changed ≥ 100 lines, OR the diff includes a binary/generated file (`.dll`, `.cache`, `.pdb`, `.exe`).
 
-When the trigger fires, the rendering MUST include this section to point the reviewer at the 1-3 load-bearing files. Without it, the reviewer either drowns in the catalog (Impact-at-a-glance treats every file equally) or skims past the file that swings the review.
+When the trigger fires, the rendering must include this section to point the reviewer at the 1-3 load-bearing files. Without it, the reviewer either drowns in the catalog (Impact-at-a-glance treats every file equally) or skims past the file that swings the review.
 
 **Section-header library — pick one:**
 
@@ -364,7 +380,7 @@ Pick ONE heading from the library below per rendering. Vary across renderings.
 
 The HOW THIS SHIT WORKS section is the **bridge from raw diff to actionable comments**. Without it, the reviewer has to reconstruct the design from the code; with it, the reviewer starts review with the design already in their head.
 
-**Hedge rule for causal claims:** if a sentence in this section describes a cause-effect chain that isn't directly observable from the diff (a "because", "causes", "triggers", "due to"), it MUST be qualified with `most likely`, `appears to`, `seems to`, `probably`, or `looks like`. Direct observations of the diff don't need hedging — only inferred mechanisms do.
+**Hedge rule for causal claims:** if a sentence in this section describes a cause-effect chain that isn't directly observable from the diff (a "because", "causes", "triggers", "due to"), it must be qualified with `most likely`, `appears to`, `seems to`, `probably`, or `looks like`. Direct observations of the diff don't need hedging — only inferred mechanisms do.
 
 | Phrasing | OK? |
 |---|---|
@@ -393,7 +409,7 @@ Under 600 words total. If you're over, cut the prose risks (the diff annotations
 Three quality tiers (good / fair / bad) with all-icons + tables + diff annotations:
 **`.claude/skills/personal-htsw/references/examples/pr-examples.md`**
 
-Each tier uses the same base scenario (a rate-limit middleware PR against ST-9999) so you can see the voice and icon density change with the implementation quality.
+Each tier uses the same base scenario (a rate-limit middleware PR against PROJ-9999) so you can see the voice and icon density change with the implementation quality.
 
 ## Validator
 

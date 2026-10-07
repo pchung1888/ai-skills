@@ -1,5 +1,15 @@
 # install mode -- full bootstrap procedure
 
+## Contents
+
+- Step 1 -- Prerequisite checks
+- Step 2 -- Layered install detection
+- Step 3 -- Install the plugin (USER must type these)
+- Step 4 -- Build @understand-anything/core
+- Step 5 -- Verify
+- Disk space warning (AD-5)
+- Platform notes (AD-5)
+
 This playbook covers everything install mode does. Follow the steps in order.
 The skill runs the Bash steps; the USER runs the `/plugin` lines.
 
@@ -43,7 +53,7 @@ If git is missing, print:
 git is required. Install from https://git-scm.com/
 ```
 
-Do NOT proceed past this step until all four pass.
+Do not proceed past this step until all four pass, because the later steps depend on each tool.
 
 ---
 
@@ -169,7 +179,7 @@ Next step:    Run /personal-understanding onboard to create the knowledge graph.
 ## Disk space warning (AD-5)
 
 The plugin cache and pnpm store both land on C:. Measured on a comparable
-project (DART): ~431 MB combined.
+project (a production host repo): ~431 MB combined.
 
 Before building, check free space on C::
 
@@ -193,7 +203,7 @@ This is advisory -- do not block the install on low disk space, just warn.
 All commands above are written for Git Bash (the Bash tool on Windows). They
 work on macOS and Linux without modification.
 
-On Windows, the Claude Code Bash tool runs in Git Bash / MINGW64. Do NOT use
+On Windows, the Claude Code Bash tool runs in Git Bash / MINGW64. Do not use
 PowerShell syntax (backtick continuation, `$env:VAR`, `Get-ChildItem`) in the
 Bash blocks above -- they will fail in the Bash tool context.
 

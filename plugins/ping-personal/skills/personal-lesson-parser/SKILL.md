@@ -1,7 +1,7 @@
 ---
 name: personal-lesson-parser
 model: haiku
-description: Parser / ingestion lessons -- PDF extraction, CSV ingest, HTML scraping, staging pipelines, idempotency, confidence tracking, tax-year handling. Invoked by personal-lesson master router when classification matches parser keywords, or directly via /personal-lesson-parser or natural phrases like "lessons about parsing", "lessons about PDF", "lessons about CSV", "lessons about ingest". Appends new lessons to ~/.claude/lessons/personal-lesson-parser.md and reads from there for browse mode.
+description: Parser / ingestion lessons -- PDF extraction, CSV ingest, HTML scraping, staging pipelines, idempotency, confidence tracking, tax-year handling. Use when the personal-lesson router classifies a lesson as matching parser keywords, or when the user types /personal-lesson-parser or natural phrases like "lessons about parsing", "lessons about PDF", "lessons about CSV", "lessons about ingest". Appends new lessons to ~/.claude/lessons/personal-lesson-parser.md and reads from there for browse mode.
 user_invocable: true
 ---
 
@@ -19,27 +19,27 @@ pipeline. Not specific to any single project or data source.
 
 If invoked directly (not via the master router), check CLAUDE.md and
 .claude/rules/*.md for hard rules that the incoming lesson would duplicate. If
-the lesson IS a duplicate of a hard rule, reply:
+the lesson is a duplicate of a hard rule, reply:
 
 > This is already a hard rule in CLAUDE.md / .claude/rules/. Nothing appended.
 
-Then STOP. If invoked via the master router, skip Step 0 (the router already
+Then stop, because hard rules live in rules files, not lessons files. If invoked via the master router, skip Step 0 (the router already
 ran it).
 
 ### Step 1 -- Duplicate check
 
-Grep BOTH sources for a distinctive phrase from the incoming lesson (a file
+Grep both sources for a distinctive phrase from the incoming lesson (a file
 format name, an error string, a 5-word snippet of the Rule):
 
 1. `~/.claude/lessons/personal-lesson-parser.md` (user-scope appends, skip if absent)
-2. The `## Seed Lessons` section of THIS file (`personal-lesson-parser/SKILL.md`)
+2. The `## Seed Lessons` section of this file (`personal-lesson-parser/SKILL.md`)
 
 If either matches, reply:
 
 > Duplicate: already recorded as "<existing title>" in personal-lesson-parser.
 > Nothing appended.
 
-Then STOP.
+Then stop.
 
 ### Step 2 -- Append
 

@@ -1,7 +1,7 @@
 ---
 name: personal-fable-mode
 model: inherit
-description: Use PROACTIVELY the moment a task shows layers - multiple dependent steps, load-bearing unknowns that could change the approach, debugging where the first theory might be wrong, or anything that needs verification before handoff. Also use when a task keeps failing or stalling, or when Ping says "fable mode", "think like Fable", "fable method", "work like Fable", "run the gates", "slow down and do this right", or "think this through first". Trigger on /personal-fable-mode. Makes any session - especially one running on Opus 4.8 or Sonnet - work with Fable 5's judgment, planning, verification, and reasoning habits.
+description: Use PROACTIVELY the moment a task shows layers - multiple dependent steps, load-bearing unknowns that could change the approach, debugging where the first theory might be wrong, or anything that needs verification before handoff. Also use when a task keeps failing or stalling, or when Ping says "fable mode", "think like Fable", "fable method", "work like Fable", "run the gates", "slow down and do this right", or "think this through first". Trigger on /personal-fable-mode. Makes any session work with Fable 5's judgment, planning, verification, and reasoning habits.
 ---
 
 # /personal-fable-mode - The Fable Method
@@ -9,8 +9,7 @@ description: Use PROACTIVELY the moment a task shows layers - multiple dependent
 Fable 5's working discipline, written down so any model can run it. A skill
 file cannot transfer raw intelligence; it transfers how Fable works - how it
 scopes, gathers evidence, attacks its own answers, verifies, and reports.
-Run this loop on Opus 4.8 or Sonnet and the output gets noticeably more
-Fable-like on planning, debugging, and review.
+It applies to whatever model is running.
 
 A hard task is anything where the first idea might be wrong: multi-step
 builds, debugging, research with claims, anything touching data you have not
@@ -56,8 +55,8 @@ like. Open it.
   30-second read of the real data beats an hour of building on a guess.
 - Prefer a thin end-to-end pass over a complete first stage: one item
   through the whole pipeline, verified, before scaling to all items.
-- Keep a live plan for anything with 3+ steps. Slice by dependency, not by
-  category. The plan is a hypothesis, not a contract.
+- When you plan, slice by dependency, not by category. The plan is a
+  hypothesis, not a contract.
 
 ### Gate 3 - Reason adversarially
 

@@ -1,7 +1,7 @@
 ---
 name: personal-facts-check
 model: sonnet
-description: Run a fact-finding session BEFORE spec/plan work -- probe the live system and code, and produce a confidence-labeled facts doc (CONFIRMED-LIVE / EXTRACTED / INFERRED / UNKNOWN, with RESOLVED for closed discrepancies) under docs/<area>/facts/. Trigger on /personal-facts-check (formerly /personal-facts), "fact session", "facts pass", "facts check", "I need to do a fact thing session", "verify the facts doc", "kill the blanks in the facts". Update mode re-verifies an existing facts doc and marks discrepancies RESOLVED.
+description: Run a fact-finding session BEFORE spec/plan work -- probe the live system and code, and produce a confidence-labeled facts doc (CONFIRMED-LIVE / EXTRACTED / INFERRED / UNKNOWN, with RESOLVED for closed discrepancies) under docs/[area]/facts/. Trigger on /personal-facts-check (formerly /personal-facts), "fact session", "facts pass", "facts check", "I need to do a fact thing session", "verify the facts doc", "kill the blanks in the facts". Update mode re-verifies an existing facts doc and marks discrepancies RESOLVED.
 ---
 
 # /personal-facts-check
@@ -38,7 +38,7 @@ No unlabeled claims. A wrong fact is 3x worse than an UNKNOWN.
    no tool can observe (and record his answer as its own labeled fact,
    source: "Ping, <date>").
 3. **Write the doc** to `docs/<area>/facts/<YYYY-MM-DD>-<topic>-facts.md`
-   (ticket-shaped areas like `docs/ST-690/facts/` are the norm on work
+   (ticket-shaped areas like `docs/PROJ-690/facts/` are the norm on work
    repos). Structure: Scope, Facts table (label, claim, provenance), Open
    UNKNOWNs (each with the probe that would kill it), New questions raised.
 4. **Kill the blanks loop.** For each UNKNOWN whose probe is cheap and

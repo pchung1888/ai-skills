@@ -1,5 +1,21 @@
 # walk — the explainer / how-it-works playbook
 
+## Contents
+
+- What this is for
+- What walk mode is NOT
+- Source resolution
+- The voice -- two modes (Mode 3 not used as a structure-level signal)
+- Honest protocol (plain English)
+- Evidence -- light-touch in walk mode
+- Explainer discipline -- the four karpathy pillars (walker's form)
+- The signature element -- descriptive title (not a tier title)
+- Required structure
+- Voice intensity -- density rule (mild form for walk mode)
+- What walk mode does NOT enforce (relative to PR/QA)
+- Examples
+- Validator
+
 ## What this is for
 
 You point at a thing (code, spec, plan, conversation, feature, system) and ask "how does this work?" — and you want an answer that teaches, not grades. You're not reviewing it. You're not testing it. You're not pitching it. You want to understand it.
@@ -126,7 +142,7 @@ Pick the shape that fits the subject:
 - **ASCII flow** (default for non-trivial flow / call-fanout / pipeline) — Unicode box-drawing characters (`│ ─ ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ▼ ►`), wrapped in a plain code block (triple backticks, no language tag). Fits ~90 columns.
 - **Table** for state-by-state or input/output mapping (≤ 6 rows)
 - **Numbered checklist** for "to use this, you'd do these N things in order"
-- **Mermaid `flowchart`** ONLY when the target renderer is confirmed to support it AND the diagram has dynamic-layout needs ASCII can't reasonably express. See SKILL.md § "Diagram syntax" for the mermaid syntax subset that survives Confluence's strict plugin.
+- **Mermaid `flowchart`** ONLY when the target renderer is confirmed to support it AND the diagram has dynamic-layout needs ASCII can't reasonably express. See `references/diagrams.md` for the mermaid syntax subset that survives Confluence's strict plugin.
 
 Example (ASCII flow):
 

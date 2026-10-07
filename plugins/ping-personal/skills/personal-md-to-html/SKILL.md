@@ -25,6 +25,7 @@ hollow-circle timeline rails, inline SVG sketches and sparklines).
 ## Usage
 
 ```bash
+pip install -r requirements.txt   # once per machine: markdown-it-py
 python md-to-html.py examples/claire-arc.md
 python md-to-html.py examples/claire-arc.md --out /tmp/out.html
 python md-to-html.py examples/claire-arc.md --check
@@ -124,11 +125,11 @@ The intended workflow for producing a dashboard-enriched HTML doc:
    with custom language identifiers.
 3. **Render with one command:**
    ```bash
-   python .claude/skills/personal-md-to-html/personal-md-to-html.py <path>.md
+   python "${CLAUDE_PLUGIN_ROOT}/skills/personal-md-to-html/md-to-html.py" <path>.md
    ```
 4. **Validate** (optional but recommended before sharing):
    ```bash
-   python .claude/skills/personal-md-to-html/personal-md-to-html-check.py --input-file <path>.html
+   python "${CLAUDE_PLUGIN_ROOT}/skills/personal-md-to-html/md-to-html-check.py" --input-file <path>.html
    ```
 
 **Live example:** `docs/personal-md-to-html/sample-plan-as-dashboard.md` — the md-to-html

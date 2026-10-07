@@ -1,5 +1,13 @@
 # qa-examples — workflow flowchart + tables + icons + HOW-THIS-WORKS sections
 
+## Contents
+
+- Pre-test -- well-written Jira story (GOOD spec, 🌮)
+- 🌮 PM nailed this spec
+- Post-test -- bug found (Mode 2, Jira-vs-code table mandatory)
+- 🔴 Spec says ALL -- code says one
+- How to read these
+
 The workflow:
 
 ```
@@ -36,7 +44,7 @@ The workflow:
 
 **Source:**
 
-> **Story (ST-1234):** As a logged-in user, when I click "Log out", all my active sessions on every device should be terminated immediately.
+> **Story (PROJ-1234):** As a logged-in user, when I click "Log out", all my active sessions on every device should be terminated immediately.
 >
 > **Acceptance criteria:**
 > - On logout, every session row for this user has `is_active = false`.
@@ -46,7 +54,7 @@ The workflow:
 
 ### Rendering:
 
-_Explaining: ST-1234 · purpose: qa_
+_Explaining: PROJ-1234 · purpose: qa_
 
 ## 🌮 PM nailed this spec
 
@@ -93,13 +101,13 @@ When a logged-in user clicks "Log out," the backend is supposed to flip `is_acti
 
 **Source:**
 
-> **Story (ST-1234):** [same as above]
+> **Story (PROJ-1234):** [same as above]
 >
 > **Observed:** After logout from Device A, Device B is still authenticated. `/api/me` from Device B → 200 with user data. Session row for Device B still `is_active = true`.
 
 ### Rendering:
 
-_Explaining: bug against ST-1234 · purpose: qa_
+_Explaining: bug against PROJ-1234 · purpose: qa_
 
 ## 🔴 Spec says ALL — code says one
 

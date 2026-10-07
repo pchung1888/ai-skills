@@ -6,9 +6,9 @@ description: Ship a new version of the ping-personal plugin end to end -- coordi
 
 # /personal-plugin-release
 
-Ship a plugin version so that the NEW version is provably what Claude Code
-and Codex load. The historical failure is not the bump -- it is the tail:
-"you said 0.13.0 is installed, /personal-loop is still not there." Every
+Ship a plugin version so that the new version is provably what Claude Code
+and Codex load. The usual failure is not the bump -- it is the tail: the
+version is reported as installed but the new skill is still not loaded. Every
 release ends with verify-loaded gates; a release without them is not done.
 
 ## The manifest coupling (miss one and rollout silently breaks)
@@ -19,8 +19,8 @@ release ends with verify-loaded gates; a release without them is not done.
 | `.claude-plugin/marketplace.json` (repo root) | repo / Claude | `metadata.version` and the plugin's `version` entry |
 | `plugins/ping-personal/.codex-plugin/plugin.json` | repo / Codex | `version` |
 | `.codex-plugin/marketplace.json` (repo root) | repo / Codex | must point to `./plugins/ping-personal` |
-| `~/.claude/plugins/installed_plugins.json` | user / Claude | updated by the install step, NOT by hand-editing first -- verify it moved |
-| `~/.codex/config.toml` + Codex plugin cache | user / Codex | updated by `codex plugin marketplace add/upgrade` + `codex plugin add`, NOT by hand-editing first -- verify it moved |
+| `~/.claude/plugins/installed_plugins.json` | user / Claude | updated by the install step, not by hand-editing first -- verify it moved |
+| `~/.codex/config.toml` + Codex plugin cache | user / Codex | updated by `codex plugin marketplace add/upgrade` + `codex plugin add`, not by hand-editing first -- verify it moved |
 
 The install key in both runtimes is `ping-personal@ping-personal`, NOT
 `ping-personal@personal-plugin`.
@@ -30,7 +30,7 @@ The install key in both runtimes is `ping-personal@ping-personal`, NOT
 1. **Preflight.** Confirm clean working tree on a topic branch. Read all
    repo manifest files above; if versions already disagree, stop and
    reconcile before bumping. If merging master conflicts only on manifest
-   version files, resolve by taking the HIGHER version, then continue.
+   version files, resolve by taking the higher version, then continue.
 2. **Bump** all version-bearing repo manifests to the same new semver. Run
    the dual-runtime check and eval suite:
    `python scripts/check_dual_runtime.py` must print `DUAL RUNTIME CHECK PASS`.
@@ -56,7 +56,7 @@ The install key in both runtimes is `ping-personal@ping-personal`, NOT
      `ping-personal@ping-personal`.
    - `~/.claude/plugins/cache/ping-personal/ping-personal/<new-version>/`
      exists and contains the changed skill files (spot-check one changed line).
-   - If a NEW skill was added: it appears in the session skill list after
+   - If a new skill was added: it appears in the session skill list after
      reload. If it does not, the usual causes in order: reload not run yet,
      install pulled a stale marketplace clone (re-run `/plugin marketplace
      update ping-personal`), or the three-file coupling was incomplete.

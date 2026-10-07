@@ -73,6 +73,8 @@ list:
 - `/personal-lesson`
 - `/personal-fable-mode`
 - `/personal-online-research`
+- `/personal-mr-triage`
+- `/personal-harness`
 
 Then dogfood-test one:
 
@@ -178,7 +180,7 @@ pwsh plugins/ping-personal/evals/run-all.ps1
 
 The first proves the Claude and Codex manifests point at the same plugin and
 agree on version. The second proves every skill eval is green -- it must print
-`ALL EVALS PASS (38 skills)`.
+`ALL EVALS PASS (40 skills)`.
 
 ## Troubleshooting
 

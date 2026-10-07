@@ -1,13 +1,13 @@
 ---
 name: personal-loop
 model: inherit
-description: Outer loop that drives personal-workflow/personal-goal as an inner loop. Campaign-aware, condition-based autonomy (run until a verifiable stop-condition is true) plus timer cadence. Enforces THE GATE LAW (one gate, co-extensive with the goal), an autonomy dial for tick granularity, a severity-aware critic gate, and fail-closed unattended safety. Sequences a campaign of goals or resumes a single goal across quota windows. Triggers on /personal-loop <goal | --campaign slug | --resume slug | --every <interval> skill:<name>>.
+description: Outer loop that drives personal-workflow/personal-goal as an inner loop. Campaign-aware, condition-based autonomy (run until a verifiable stop-condition is true) plus timer cadence. Enforces THE GATE LAW (one gate, co-extensive with the goal), an autonomy dial for tick granularity, a severity-aware critic gate, and fail-closed unattended safety. Sequences a campaign of goals or resumes a single goal across quota windows. Triggers on /personal-loop [goal | --campaign slug | --resume slug | --every [interval] skill:[name]].
 ---
 
 # /personal-loop
 
 The OUTER loop. Drives `personal-workflow`/`personal-goal` as the inner loop.
-Does NOT modify them -- it drives them. Each outer tick runs ONE unit of inner
+Does not modify them -- it drives them. Each outer tick runs ONE unit of inner
 work as a FRESH beacon-anchored context, gates it, evaluates STOP, checkpoints,
 and either schedules the next tick or halts + reports.
 
@@ -18,8 +18,8 @@ FIX (see personal-critic-gate).
 
 ## The Gate Law
 
-The single most important rule in this skill. The reported one-message-per-fire
-stutter was a direct violation of it.
+The single most important rule in this skill. Violating it produces a
+one-message-per-fire stutter.
 
 - **INVARIANT 1 -- the gate is co-extensive with the goal.** The STOP gate must
   verify EVERY ending condition the goal states. If the goal says "all / every /
@@ -61,7 +61,7 @@ If you internalize nothing else: **multi-artifact goal -> campaign mode ->
 ## Roles block
 
 ```
-BEACON      = personal-goal               # host goal beacon (dart-goal / start-goal on remotes)
+BEACON      = personal-goal               # host goal beacon (host-goal on host repos)
 CONDUCTOR   = personal-workflow            # the inner per-goal conductor
 FAST_CRITIC = <resolved at runtime>        # see Role Resolution
 PANEL       = personal-critic-gate         # full 5-seat escalation
@@ -72,6 +72,10 @@ PANEL       = personal-critic-gate         # full 5-seat escalation
 `/personal-loop <bare goal>` | `--campaign <slug>` | `--resume <slug>` |
 `--every <interval> skill:<name>` | `--unattended` (arm OS relauncher) |
 `--force-resume` (clear a safety circuit-breaker -- see Survival)
+
+For `--every` / `--unattended`, pick the cadence primitive (in-session timer vs
+OS scheduler) from `references/scheduling.md`. `--campaign` beacons are parsed
+and advanced by `lib/campaign.py`.
 
 Pass-through to personal-goal: `--accept-cmd / --accept-match / --area / --branch`.
 
@@ -89,8 +93,8 @@ context; per-phase outer ticks throw that away.
 | `goal-phase` | medium -- outer loop re-enters every phase | once per phase | a phase needs a human fence, or one inner goal would blow the token ceiling |
 | `skill:<name>` | n/a -- one bare skill per tick | once per skill | a simple recurring `--every` chore |
 
-**DEFAULT = `inner-goal`.** Downgrade to `goal-phase` ONLY for reason (a) or (b)
-above. Never default to per-phase -- it is the stutter.
+**DEFAULT = `inner-goal`.** Downgrade to `goal-phase` only when a phase needs a human
+fence or one inner goal would blow the token ceiling. Never default to per-phase -- it is the stutter.
 
 **Per-tick, not per-goal.** The dial is re-evaluated EACH tick. Before a tick,
 run `preflight.detect_external_actions` over the tick's goal/phase text; a hit
@@ -110,7 +114,7 @@ already-vetted goal. Never fire mid-tick.
 **Readiness (`check_readiness`) -- 6 points:**
 1. Task recurs or is worth automating.
 2. A machine-checkable gate exists: crisp `accept_cmd` OR `all-goals-done` OR a
-   declared `fuzzy-judge` STOP (now backed by `stop_eval.py`, see Tick lifecycle).
+   declared `fuzzy-judge` STOP (backed by `stop_eval.py`, see Tick lifecycle).
    An UNVERIFIED goal (no `accept_cmd`, no `all-goals-done`) is NOT "not
    loopable" -- it is "not loopable UNATTENDED, but loopable ATTENDED via a
    `human-evidence` tick". `--unattended` still REFUSES it; attended proceeds.
@@ -153,11 +157,13 @@ Before analysis, build the EVIDENCE MAP (spec / `references/evidence-gathering.m
 run `lib/discover_sources.py:probe_repo` for the repo-local half, observe your
 own available MCP servers / skills / agents for the service half, then
 `merge_evidence` + `assert_no_secret_value` and record the map to the beacon and
-`outer-loop-tracker.md`. Then PULL all local (and attended-allowed external)
+`outer-loop-tracker.md` (create it from `references/outer-loop-tracker-template.md`).
+Then PULL all local (and attended-allowed external)
 evidence before asking the human anything -- "never ask what you can read".
 Locations not secrets (the map stores a `.env` key NAME, never a value).
 External reads are attended-free, unattended-allowlisted
-(`preflight.is_external_read_allowed`). Re-probe when a pull is empty or a new
+(`preflight.is_external_read_allowed`; the list lives in
+`references/external-read-allowlist.md`). Re-probe when a pull is empty or a new
 artifact is expected.
 
 ## Orchestration
@@ -199,7 +205,7 @@ FAST_CRITIC precedence (portability contract -- never hardcode an agent name):
 4. Inline-judge fallback: fresh generic subagent (claude/Explore) with
    adversarial-review + Honesty-Protocol brief.
 
-ALWAYS announce the resolved tier, e.g. `FAST_CRITIC = dart-critic (host-discovered)`
+Announce the resolved tier every run, so the gate strength is visible, e.g. `FAST_CRITIC = host-critic (host-discovered)`
 or `= inline judge (no critic agent found)`. The inline judge is WEAKER (less
 domain knowledge); both the announcement and the REPORT label the gate strength.
 
@@ -227,8 +233,8 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
 4. ACTION: one unit per the Autonomy dial (DEFAULT `inner-goal`).
    A non-gate WORKER/PROBE command that errors mid-tick is recorded and tolerated
    -- it does NOT abort the tick. Tick success is decided by the STOP gate
-   (step 7), never by "did every command exit 0" (the turn-9 PowerShell-in-Bash
-   slip is the canonical case: the DB gate was conclusive, the slip irrelevant).
+   (step 7), never by "did every command exit 0" (e.g. a PowerShell-in-Bash
+   slip when the DB gate was conclusive: the slip is irrelevant).
 5. SECRETS SCAN (post-action, pre-commit): re-run `secrets_scan.py` over the ACTUAL
    staged `git diff` before any commit. A hit blocks the commit and HALTS. (The
    step-3 scan sees only intent; this scan sees what the inner conductor produced.)
@@ -237,6 +243,7 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
    eval-plan Known-gaps backlog, not yet a standalone eval.]
 6. FAST GATE: dispatch FAST_CRITIC on the tick's output (1 seat). Parse with
    `personal-critic-gate/lib/vote_parser.py --fast-lane`. Returns PASS | FIX | ESCALATE.
+   Fast lane vs full-panel escalation rules: `references/tiered-gate.md`.
    The critic is **advisory**: it can neither declare the goal done nor halt a
    green-list run on taste alone. FIX is **severity-aware**:
    - PASS -> record + continue.
@@ -274,8 +281,8 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
 are `stop_eval.py`'s precedence verbatim. Do not restate this list elsewhere --
 reference it.
 
-**Gate-error semantics:** `accept_cmd` MUST exit 0 (done) / small nonzero (not
-done yet) and must NEVER be wrapped in a killer such as `timeout`. Exit `>= 126`
+**Gate-error semantics:** `accept_cmd` must exit 0 (done) / small nonzero (not
+done yet) and must not be wrapped in a killer such as `timeout`, because exit >= 126 is read as a broken gate. Exit `>= 126`
 (command-not-found, not-executable, or signal-kill `128+n`) is read as a broken
 gate (`gate-error` single-artifact, `child-gate-error` campaign) and fails loud
 rather than silently looping as "not done".
@@ -341,7 +348,7 @@ budget stays a reporting hint. A low reading defers or hands off; it never silen
 
 Default cadence: `/loop` (attended runs within a quota window).
 
-`/loop` does NOT auto-resume across a 5h quota reset (verified; GitHub #36320).
+`/loop` does NOT auto-resume across a 5h quota reset (verified).
 For unattended cross-reset runs, arm `--unattended`:
 - A Windows Task Scheduler task fires `claude -p "/personal-loop --resume <slug>"`.
 - Each fire reads the campaign beacon and advances one inner goal.

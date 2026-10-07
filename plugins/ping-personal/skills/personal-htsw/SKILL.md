@@ -1,7 +1,7 @@
 ---
 name: personal-htsw
 model: sonnet
-description: How This Shit Works — re-explain code, a PR diff, a spec, a plan, or current conversation for one of six purposes (walk / pr / qa / boss / baby / code-explain). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only — no file writes (code-explain may save a doc on explicit request). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top.
+description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of six purposes (walk / pr / qa / boss / baby / code-explain). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top.
 ---
 
 # htsw — How This Shit Works
@@ -88,9 +88,9 @@ What baby mode does:
 3. Uses BOTH vocabularies throughout the prose -- "the errand boy (`useEffect`) fetches from the filing cabinet (`Database`) once on mount."
 4. Renders a **story-rhythm ASCII block** (plain code fence, no language tag): a vertical chain where each step line carries BOTH the jargon token AND the analogy in parens, separated by `|` connector lines.
 5. Uses `📦` for physical-object analogies in TL;DR bullets and `🏷️` for labels that connect jargon to analogy. Walk's navigation icons (`▶ ⚙ 🧠 🚧 📍`) are also available.
-6. Declares the **audience** on the second line (immediately after the citation): `_For: <persona -- what they know, what they don't know>_`. The analogy domain MUST match the declared audience's existing mental model.
+6. Declares the **audience** on the second line (immediately after the citation): `_For: <persona -- what they know, what they don't know>_`. The analogy domain must match the declared audience's existing mental model.
 
-Baby mode is **audience-agnostic** -- the analogy domain MUST match the declared audience's daily lived experience, never default to a fixed world. The N anchors in `references/examples/baby-examples.md` are illustrative, not bounding. The skill picks the best analogy for each invocation.
+Baby mode is **audience-agnostic** -- the analogy domain must match the declared audience's daily lived experience, never default to a fixed world. The N anchors in `references/examples/baby-examples.md` are illustrative, not bounding. The skill picks the best analogy for each invocation.
 
 7. Places the **Cast of Characters table at the END** as a recap, not at the top. The Cast is a glossary you reach for when you forgot who character N was -- not an upfront roster to memorize.
 8. Enforces **Cast Persistence** across follow-up questions: once a Cast exists in a thread, the next baby rendering extends it. Follow-up renderings open with a one-line continuity nod and append a Status column (`inherited` / `new`) to the recap Cast table.
@@ -197,7 +197,7 @@ Different modes use icons for different purposes:
 
 **Boss — icon-free.** Tables and prose carry the structure; no icons at all.
 
-### Where icons MUST appear
+### Where icons must appear
 
 **PR mode:**
 - **TL;DR block (right after the tier title) — every bullet prefixed with an icon.**
@@ -223,7 +223,7 @@ Different modes use icons for different purposes:
 
 **Walk mode (icon and signature contract):**
 - **HOW-THIS-WORKS signature header is REQUIRED** at `###` (H3) level, one of the standard variations, optionally prefixed with `⚙` — e.g. `### ⚙ How this shit works`. When the section contains a flowchart/diagram, the signature header sits above the diagram. When it contains a table or ASCII flow, the header sits above that.
-- **TL;DR is required, but with a descriptive label** (`**TL;DR — the core idea:**`, `**TL;DR — short version:**`, `**TL;DR — in one breath:**`), NEVER a verdict label (`ship it`, `block this`, `file it`).
+- **TL;DR is required, but with a descriptive label** (`**TL;DR — the core idea:**`, `**TL;DR — short version:**`, `**TL;DR — in one breath:**`), never a verdict label (`ship it`, `block this`, `file it`).
 - TL;DR bullets use **navigation icons** (`▶ ⚙ 🧠 🚧 📍`) or no icons. Verdict icons (`🔴 ⚠ 🟢 🌮`) are FORBIDDEN in walk's TL;DR — they read as PR/QA verdict openers.
 - Inline `🔴` is allowed once or twice in body text when the explanation hits something genuinely broken the reader needs to know about. When used, the inline `🔴` inherits the evidence-and-suggestion contract (file:line citation + `→ note:` or `→ ask:` arrow).
 - Inline `🌮` allowed at most once or twice when a piece of design is genuinely beautiful and a newcomer might miss why. Never as a section-header opener.
@@ -247,7 +247,7 @@ The tier icon in the title is what the reader sees first. The TL;DR action verb 
 
 ## TL;DR contract (PR + QA only — boss is TL;DR-free)
 
-**Every PR and QA rendering MUST open with a TL;DR block right after the tier title.** This is the verdict-first layer that lets a busy PR reviewer or QA stakeholder make a decision without reading the rest of the brief.
+**Every PR and QA rendering must open with a TL;DR block right after the tier title.** This is the verdict-first layer that lets a busy PR reviewer or QA stakeholder make a decision without reading the rest of the brief.
 
 **Shape:**
 
@@ -271,7 +271,7 @@ The tier icon in the title is what the reader sees first. The TL;DR action verb 
 
 ## HOW-THIS-SHIT-WORKS contract (ALL explanatory modes — PR + QA + walk + baby + code-explain)
 
-**Every PR, QA, walk, baby, and code-explain rendering MUST include exactly one HOW-THIS-WORKS section.** This is the skill's literal namesake -- `htsw` stands for "how this shit works." The contract applies to all five explanatory modes:
+**Every PR, QA, walk, baby, and code-explain rendering must include exactly one HOW-THIS-WORKS section.** This is the skill's literal namesake -- `htsw` stands for "how this shit works." The contract applies to all five explanatory modes:
 
 - **PR mode** -- 2-4 sentences explaining what the diff does. Bridge from raw diff to actionable review comments.
 - **QA mode** -- 2-4 sentences explaining what the feature is supposed to do (pre-test) or what's actually happening when the bug fires (post-test).
@@ -283,13 +283,11 @@ The section header is one of a fixed library of variations (see `references/pr.m
 
 The section is the **bridge from raw artifact to comprehension.** Without it, the reader has to reconstruct intent from code, tables, or charts. With it, they start with the design already in their head — which is the whole point of htsw.
 
-**History note (2026-05-18):** The contract used to say "PR + QA — both variants" with walk's signature requirement only documented inside `references/walk.md`. That created a documentation drift where an author reading SKILL.md alone would skip the signature in walk renderings — exactly what happened in a walk-mode rendering on a sibling project. The contract is now stated identically in SKILL.md and walk.md.
-
 ## Evidence-and-suggestion contract — EVERY ⚠ AND 🔴 CLAIM
 
 **This is the load-bearing honesty rule.** When you mark something ⚠ or 🔴, you are accusing the dev (or PM) of doing their job wrong. You do not get to make that accusation on vibes.
 
-Every ⚠ and 🔴 in the body sections (Watch out for / Where to look / Edge cases / Spec gaps / Hypothesis) MUST satisfy BOTH:
+Every ⚠ and 🔴 in the body sections (Watch out for / Where to look / Edge cases / Spec gaps / Hypothesis) must satisfy both:
 
 1. **An evidence marker** — one of: a backtick-wrapped file path with line (`` `middleware/rate-limit.ts:42` ``), an RFC/standard reference (`RFC 6585 §4`), a direct quote from the source (markdown blockquote), a SQL/HTTP observation, an explicit negative search ("searched X and found nothing"), or a "the source doesn't say" qualifier.
 2. **A suggestion-arrow** — one of:
@@ -307,7 +305,7 @@ Where the rule does NOT apply: bullets inside the TL;DR block (deliberately ters
 
 ## Hedge rule — HOW-THIS-WORKS section (anti-overconfidence)
 
-**Inferences in the HOW-WORKS section MUST be hedged.** If a claim describes a cause-effect chain that isn't directly observable from the diff (a "because", "causes", "triggers", "due to"), it must be qualified with one of: `most likely`, `appears to`, `seems to`, `probably`, `looks like`. Direct observations don't need hedging — only inferred mechanisms do.
+**Inferences in the HOW-WORKS section must be hedged.** If a claim describes a cause-effect chain that isn't directly observable from the diff (a "because", "causes", "triggers", "due to"), it must be qualified with one of: `most likely`, `appears to`, `seems to`, `probably`, `looks like`. Direct observations don't need hedging — only inferred mechanisms do.
 
 **Examples:**
 
@@ -331,7 +329,7 @@ Where the rule does NOT apply: bullets inside the TL;DR block (deliberately ters
 - **Any single file changed ≥ 100 lines** (insertions + deletions, per `git show --stat`), OR
 - The diff includes a **binary or generated file** (`.dll`, `.cache`, `.pdb`, `.exe`, `.bin`, compiled output)
 
-When the trigger fires, the rendering MUST include a "Where to slow down" section (one of the recognized headers below) that names 1-3 files in priority order, each with one sentence explaining why this file is load-bearing.
+When the trigger fires, the rendering must include a "Where to slow down" section (one of the recognized headers below) that names 1-3 files in priority order, each with one sentence explaining why this file is load-bearing.
 
 **Recognized section headers (pick one — vary across renderings):**
 
@@ -434,27 +432,7 @@ Use Unicode box-drawing characters: `│` `─` `┌` `┐` `└` `┘` `├` `�
 
 **Use mermaid only when:** (a) the target rendering environment is confirmed to support it (GitHub UI, GitLab UI, VS Code with the Mermaid extension installed, Confluence with the mermaid plugin enabled, Mermaid Live Editor), AND (b) the diagram has dynamic-layout needs (very wide fan-out, deep nesting, dense edges) that ASCII can't reasonably express. Inline chat answers in this CLI session render markdown text, NOT mermaid — so even inline mode prefers ASCII.
 
-**When you do use mermaid**, the syntax rules below keep diagrams renderable across GitHub, VS Code preview, the Mermaid Live Editor, and Confluence's mermaid plugin:
-
-1. **No HTML tags inside labels except `<br/>`.** Specifically: NO `<b>`, `<i>`, `<u>`, `<span>`, `<font>`. Most renderers either sanitize HTML out of labels entirely or fail to parse the line. The only universally supported tag is `<br/>` for line breaks.
-
-2. **No HTML at all inside edge labels** (the bit between `|...|` pipes), quoted or unquoted. The edge-label parser is stricter than the node-label parser. Quoted edge labels like `-->|"label"|` accept colons, commas, slashes — but HTML breaks.
-
-3. **Move complex annotations from edge labels into destination node text.** If an edge label needs more than ~6 words or any styling, put the text into the node it points to and let the edge be unlabeled (or use a minimal `|Bug 1|` style label).
-
-4. **Avoid `#` in unquoted edge labels.** Mermaid uses `#` as a comment char at statement level, and the lexer can get confused even inside `|...|`. Write `Bug 2` instead of `Bug #2`.
-
-5. **Parens with internal commas inside node labels MUST be inside `"..."` quotes.** `node1[UBound(arr, 2)]` breaks; `node1["UBound(arr, 2)"]` works.
-
-6. **Apostrophes are fine inside double-quoted labels** but get fragile when stacked with HTML, parens, and pipes on the same line. If a label has parens + commas + apostrophes + HTML, rewrite it in plain text rather than try to escape your way out.
-
-7. **`classDef` styling works everywhere; inline `style` per-node is harder to reuse.** Prefer `classDef bad fill:#7a1f1f` + `class WX,GX bad` over `style WX fill:#7a1f1f`.
-
-8. **Test in the actual target renderer.** GitHub's mermaid is more permissive than VS Code's; Mermaid Live Editor is more permissive than both; Confluence's mermaid plugin is the strictest of all. The lowest-common-denominator rule: if it works in Confluence's plugin, it works everywhere.
-
-When a diagram doesn't render and the cause isn't obvious, the diagnostic order is: (a) strip all HTML tags, (b) remove all edge labels, (c) simplify to plain ASCII node IDs. If it renders at step (c), reintroduce features one at a time to bisect the breaker.
-
-**History note (2026-05-18):** Added after a walk-mode rendering on a sibling project shipped a mermaid chart with `<b>...</b>` inside both node and edge labels — failed to render in the user's preview environment. The rules above are the conservative subset that survives every renderer tested.
+**When you do use mermaid**, follow the renderer-safe subset in `references/diagrams.md` (no HTML in labels except `<br/>`, nothing complex in edge labels, test in the strictest target).
 
 ## Presentation rules
 
@@ -500,56 +478,20 @@ Soft caps. Going 10% over is fine; going 50% over means the rendering is ramblin
 - Have a `--clean` flag. Use `boss` mode instead.
 - Sanitize jargon out of an explanation. The dropped kid / family / non-tech mode failed because analogy REPLACED jargon -- readers walked away unable to talk to engineers. **`baby` mode is the replacement: analogy walks ALONGSIDE jargon, never instead of it.**
 
-## File layout
+## Files and the validator
 
-```
-.claude/skills/personal-htsw/
-├── SKILL.md                          (this file -- entry, contract, dispatch)
-├── htsw-check.py                     (the validator / eval -- cross-platform Python 3, no deps)
-└── references/
-    ├── walk.md                       voice + structure rules for walk (default explainer) mode
-    ├── pr.md                         voice + structure rules for PR mode
-    ├── qa.md                         voice + structure rules for QA mode
-    ├── boss.md                       voice + structure rules for boss mode
-    ├── baby.md                       voice + structure rules for baby (analogy-alongside-jargon) mode
-    ├── code-explain.md               voice + structure rules for code-explain (deep line-by-line) mode
-    └── examples/
-        ├── walk-examples.md          worked walk-mode explainer
-        ├── pr-examples.md            three quality tiers (good / fair / bad)
-        ├── qa-examples.md            pre-test + post-test variants
-        ├── boss-examples.md          feature pitch + plan walkthrough
-        ├── baby-examples.md          baby-mode anchors: react verify framework (3 renderings) + alternate universe example
-        └── code-explain-examples.md  worked code-explain rendering (WHY-first, file map, line-by-line)
-```
+Open only the playbook for the mode in use, and its examples file when the
+tier or tone is unclear:
 
-The playbook files (`pr.md`, `qa.md`, `boss.md`) contain the rules. The examples files show what the rules look like in practice. The validator script enforces what can be enforced mechanically.
+- `references/walk.md`, `pr.md`, `qa.md`, `boss.md`, `baby.md`, `code-explain.md` -- voice and structure rules per mode.
+- `references/examples/` -- worked renderings: `walk-examples.md`, `pr-examples.md`, `qa-examples.md`, `boss-examples.md`, `baby-examples.md`, `code-explain-examples.md`.
+- `references/diagrams.md` -- mermaid syntax rules; open only when a diagram must be mermaid.
+- `references/validator.md` -- what `htsw-check.py` checks; open it when a check fails.
 
-## The validator (the eval)
-
-Run `htsw-check.py` against any rendering to check it meets the contract. **Cross-platform** — Python 3 stdlib only, runs on macOS, Linux, and Windows with the same command:
+Check a rendering before handing it over:
 
 ```bash
-python3 .claude/skills/personal-htsw/personal-htsw-check.py --input-file <path-to-rendering.md>
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/personal-htsw/htsw-check.py" --input-file <path-to-rendering.md>
 ```
 
-Exit 0 = pass. Exit 1 = fail with detail. The validator checks:
-- First-line citation present and well-formed.
-- Tier title (PR/QA) or descriptive title (walk) present in the first 15 lines and not a generic stock-template heading.
-- **TL;DR section present right after the tier title with 2-4 icon-prefixed bullets** (PR/QA) **or descriptive-label TL;DR with navigation-icon bullets** (walk).
-- **HOW-THIS-WORKS section present in PR, QA, AND walk renderings** at `###` level, with one of the allowed header variations. Walk mode may prefix with `⚙` (e.g. `### ⚙ How this shit works`).
-- **Flowchart warnings (advisory, stderr-only, does NOT fail the build):**
-  - Mermaid block found in a **persisted** doc → portability warning (mermaid renders only in mermaid-aware viewers; ASCII flowchart is the safer default).
-  - HTML tags other than `<br/>` inside mermaid node labels → known-breaker warning (Confluence's plugin will fail; GitHub may render).
-  - HTML inside mermaid edge labels (`|...|`) → known-breaker warning (edge-label parser is stricter than node-label parser).
-  - `#` inside mermaid edge labels → known-breaker warning (mermaid treats `#` as a comment char).
-- **Deeper-dive section ("Where to slow down" or variation) present when trigger fires** — ≥ 5 files in the diff, or any `.dll` / `.cache` / `.pdb` / `.exe` / `.bin` marker, or a `Bin N -> M` git-stat binary line. Trigger detection is structural; below the threshold the section is optional.
-- **Evidence-and-suggestion contract**: every ⚠ / 🔴 in the body sections is paired with an evidence marker (file:line, RFC, quoted source, SQL/HTTP observation) and a suggestion-arrow (`→ fix:`, `→ suggestion:`, `→ optional:`, `→ next:`, `→ ask:`).
-- Status icons present where required.
-- Tables have Status columns where required.
-- Boss output has NO icons, NO tacos, NO banned words.
-- Length is under target (600 pr / 700 qa / 400 boss / 1800 baby inline / 3000 baby persisted).
-- Baby output is story-first: Cast table appears in the last ~30% of the doc (byte offset >= 65%); every Cast term has a bold inline-intro in story body before the table; a vertical story-rhythm block is present (plain code fence, >= 5 pipe connectors, >= 5 parenthetical-analogy lines); audience declaration `_For: ..._` is present within 5 lines of citation; no sanitization smell words (`easy`, `simple`, `just`, `basic`, `don't worry`); no baby-talk words (`sweetie`, `honey`, `ok kiddo`, `buddy`, `lil'`).
-
-This is what makes the contract real. Without the validator, the rules are aspirational; with it, the rules are checkable.
-
-**Why Python and not PowerShell?** The earlier version was `.ps1` — Windows-only. The skill is now portable across OSes, so the validator is too. Python 3 is preinstalled on macOS and most Linux distros, and on Windows it's a one-line install. Single script, single command, every OS.
+Exit 0 = pass, exit 1 = fail with detail. The script checks shape, not truth.

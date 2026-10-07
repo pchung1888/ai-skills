@@ -1,7 +1,7 @@
 ---
 name: personal-lesson-ui
 model: haiku
-description: UI / frontend lessons -- React, Next.js, TypeScript TSX patterns, CSS, layout, hydration, app router. Invoked by personal-lesson master router when classification matches UI keywords, or directly via /personal-lesson-ui or natural phrases like "lessons about UI", "lessons about React", "lessons about Next.js", "lessons about styling", "lessons about components". Appends new lessons to ~/.claude/lessons/personal-lesson-ui.md and reads from there for browse mode.
+description: UI / frontend lessons -- React, Next.js, TypeScript TSX patterns, CSS, layout, hydration, app router. Use when the personal-lesson router classifies a lesson as matching UI keywords, or when the user types /personal-lesson-ui or natural phrases like "lessons about UI", "lessons about React", "lessons about Next.js", "lessons about styling", "lessons about components". Appends new lessons to ~/.claude/lessons/personal-lesson-ui.md and reads from there for browse mode.
 user_invocable: true
 ---
 
@@ -19,27 +19,27 @@ behavior. Not specific to any single project.
 
 If invoked directly (not via the master router), check CLAUDE.md and
 .claude/rules/*.md for hard rules that the incoming lesson would duplicate. If
-the lesson IS a duplicate of a hard rule, reply:
+the lesson is a duplicate of a hard rule, reply:
 
 > This is already a hard rule in CLAUDE.md / .claude/rules/. Nothing appended.
 
-Then STOP. If invoked via the master router, skip Step 0 (the router already
+Then stop, because hard rules live in rules files, not lessons files. If invoked via the master router, skip Step 0 (the router already
 ran it).
 
 ### Step 1 -- Duplicate check
 
-Grep BOTH sources for a distinctive phrase from the incoming lesson (a component
+Grep both sources for a distinctive phrase from the incoming lesson (a component
 name, an error string, a 5-word snippet of the Rule):
 
 1. `~/.claude/lessons/personal-lesson-ui.md` (user-scope appends, skip if absent)
-2. The `## Seed Lessons` section of THIS file (`personal-lesson-ui/SKILL.md`)
+2. The `## Seed Lessons` section of this file (`personal-lesson-ui/SKILL.md`)
 
 If either matches, reply:
 
 > Duplicate: already recorded as "<existing title>" in personal-lesson-ui.
 > Nothing appended.
 
-Then STOP.
+Then stop.
 
 ### Step 2 -- Append
 

@@ -437,8 +437,8 @@ def _full_map():
     return {"jira": {}, "codebase": {}, "logs": {}, "graph": {}, "db": {}}
 
 def test_probe_finds_ticket_in_goal():
-    m = ds.probe_repo(os.path.dirname(__file__), goal_text="re-verify ST-690 round trip")
-    assert m["jira"]["ticket"] == "ST-690"
+    m = ds.probe_repo(os.path.dirname(__file__), goal_text="re-verify PROJ-690 round trip")
+    assert m["jira"]["ticket"] == "PROJ-690"
 
 def test_probe_no_ticket_is_none():
     m = ds.probe_repo(os.path.dirname(__file__), goal_text="fix the parser")

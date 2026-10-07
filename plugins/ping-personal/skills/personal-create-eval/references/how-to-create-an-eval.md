@@ -1,5 +1,23 @@
 # How To Create An Eval -- A Complete Field Guide
 
+## Contents
+
+- 0. The one-sentence definition
+- 1. The measurement loop (what you actually do)
+- 2. Anatomy of a real eval system (the demo's architecture)
+- 3. The grader contract (the declarative shape to copy)
+- 4. Code graders (the cheap, deterministic truth -- build these first)
+- 5. Judge graders (for taste code cannot measure)
+- 6. The failure curriculum -- the demo's instructive defects (the real gold)
+- 7. The hill-climb loop in practice (the demo's progression)
+- 8. Designing the eval SET (the playbook's prescription)
+- 9. First-implementation patterns (the ping-personal 13-skill suite)
+- 10. The synthesis -- how to create an eval for ANY skill
+- 11. Where the demo CONTRADICTS the playbook (read this twice)
+- 12. Anti-patterns (merged, all three sources)
+- 13. The rule of thumb (tape this to the wall)
+- 14. Skills that call an outside service (network, API key)
+
 > Distilled from three sources that agree more than they disagree:
 > 1. **First principles** -- `agent-evals-playbook.md` (the YouTube-talk distillation).
 > 2. **First implementation** -- the ping-personal 13-skill eval suite built this session

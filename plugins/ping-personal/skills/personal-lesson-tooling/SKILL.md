@@ -1,7 +1,7 @@
 ---
 name: personal-lesson-tooling
 model: haiku
-description: Tooling / process lessons -- git workflow, GitHub CLI, worktrees, hooks, settings.json, agent dispatch, multi-agent coordination, PowerShell patterns, Windows shell gotchas, commit conventions, subagent cost discipline. Invoked by personal-lesson master router when classification matches tooling keywords OR as the zero-hit fallback for any lesson that doesn't match another domain. Also triggered directly via /personal-lesson-tooling or natural phrases like "lessons about git", "lessons about tooling", "lessons about agents", "lessons about hooks", "lessons about PowerShell". Appends new lessons to ~/.claude/lessons/personal-lesson-tooling.md and reads from there for browse mode.
+description: Tooling / process lessons -- git workflow, GitHub CLI, worktrees, hooks, settings.json, agent dispatch, multi-agent coordination, PowerShell patterns, Windows shell gotchas, commit conventions, subagent cost discipline. Use when the personal-lesson router classifies a lesson as matching tooling keywords OR as the zero-hit fallback for any lesson that doesn't match another domain. Also use when the user types /personal-lesson-tooling or natural phrases like "lessons about git", "lessons about tooling", "lessons about agents", "lessons about hooks", "lessons about PowerShell". Appends new lessons to ~/.claude/lessons/personal-lesson-tooling.md and reads from there for browse mode.
 user_invocable: true
 ---
 
@@ -21,27 +21,27 @@ here.
 
 If invoked directly (not via the master router), check CLAUDE.md and
 .claude/rules/*.md for hard rules that the incoming lesson would duplicate. If
-the lesson IS a duplicate of a hard rule, reply:
+the lesson is a duplicate of a hard rule, reply:
 
 > This is already a hard rule in CLAUDE.md / .claude/rules/. Nothing appended.
 
-Then STOP. If invoked via the master router, skip Step 0 (the router already
+Then stop, because hard rules live in rules files, not lessons files. If invoked via the master router, skip Step 0 (the router already
 ran it).
 
 ### Step 1 -- Duplicate check
 
-Grep BOTH sources for a distinctive phrase from the incoming lesson (a command
+Grep both sources for a distinctive phrase from the incoming lesson (a command
 name, an error string, a 5-word snippet of the Rule):
 
 1. `~/.claude/lessons/personal-lesson-tooling.md` (user-scope appends, skip if absent)
-2. The `## Seed Lessons` section of THIS file (`personal-lesson-tooling/SKILL.md`)
+2. The `## Seed Lessons` section of this file (`personal-lesson-tooling/SKILL.md`)
 
 If either matches, reply:
 
 > Duplicate: already recorded as "<existing title>" in personal-lesson-tooling.
 > Nothing appended.
 
-Then STOP.
+Then stop.
 
 ### Step 2 -- Append
 

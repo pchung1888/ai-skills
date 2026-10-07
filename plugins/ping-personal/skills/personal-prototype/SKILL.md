@@ -18,11 +18,11 @@ I recommend and why, and here it is implemented + verified + in a PR."
 When you are prototyping against an EXISTING surface -- a screen already in the host
 app, a design comp, or the user's reference screenshots -- those real artifacts ARE
 the spec: the real markup, the real CSS classes/tokens, the real icons, and the
-reference images. Pass those artifact paths to every builder, and builders MUST Read
-them (open the files / Read the images), never work from a prose summary. Building a
+reference images. Pass those artifact paths to every builder, and builders read
+them (open the files / Read the images) rather than work from a prose summary. Building a
 known surface from a text description produces layouts the user rejects.
 
-This is CONDITIONAL: a greenfield feature (no surface exists yet) has no artifact to
+This is conditional: a greenfield feature (no surface exists yet) has no artifact to
 match, so build from the brainstormed intent instead. State which case you are in.
 
 ## Invocation
@@ -34,14 +34,14 @@ match, so build from the brainstormed intent instead. State which case you are i
 /personal-prototype --tournament <feature>  # build real variants + critic-gate vote
 ```
 
-`<n>` is the number of DISTINCT approaches. Default 5. Clamp to 2..8 (fewer than 2
+`<n>` is the number of distinct approaches. Default 5. Clamp to 2..8 (fewer than 2
 is not a comparison; more than 8 blows past useful comparison and process budget).
 
 `--tournament` opts into the adversarial selection escalation (see Phase 6): instead
 of choosing from paper option cards, the conductor BUILDS a couple of real competing
 prototype variants and routes them through `/personal-critic-gate` for a multi-aspect
 panel vote. It costs more (real builds + a 5-seat panel), so it is opt-in. Without the
-flag the conductor MAY propose it on a high-stakes choice but ASKS first.
+flag the conductor may propose it on a high-stakes choice but asks first.
 
 ## Roles block (the delegates this conductor folds in)
 
@@ -49,7 +49,7 @@ flag the conductor MAY propose it on a high-stakes choice but ASKS first.
 BRAINSTORM  = superpowers:brainstorming     # when the feature is underspecified
 RESEARCHER  = deep-research / WebSearch      # prior art, common approaches, gotchas
 PREVIEW     = /browse                        # render + screenshot the HTML artifact
-                                             # (CLAUDE.md: NEVER the chrome MCP)
+                                             # (CLAUDE.md: never the chrome MCP)
 ITERATE     = inline bounded loop (2-4 passes)  # refine the artifact in-session
                                              # (cross-session runs: see Phase 5)
 IMPLEMENTER = bunny (if present) / inline    # write the chosen option into the host repo
@@ -91,7 +91,7 @@ ask for it before anything else.
 - State a cost estimate (research + N-option generation is usually MEDIUM).
 
 ### 3. GENERATE N OPTIONS
-Produce `n` genuinely DISTINCT approaches -- different in mechanism, not cosmetics.
+Produce `n` genuinely distinct approaches -- different in mechanism, not cosmetics.
 Two options that collapse to the same idea is a bug: regenerate the duplicate. For
 each option, fill the **option card**:
 

@@ -28,7 +28,7 @@ every step here). Templates live in `references/templates/`.
 ## CREATE mode -- give a target a good eval
 
 1. **Name the target behavior** in one plain-English contract: given INPUT, the skill must
-   produce OUTPUT with properties X/Y/Z and must NOT do W. Separate the **LEVER** (the editable
+   produce OUTPUT with properties X/Y/Z and must not do W. Separate the **LEVER** (the editable
    skill text/prompt/model) from the **SUBJECT** (the artifact the user receives). You grade the
    SUBJECT, you version the LEVER.
 2. **List the top ~10 failure modes.** This list IS the eval map. For each, run the decisive test.
@@ -45,7 +45,7 @@ every step here). Templates live in `references/templates/`.
    python lib/scaffold_eval.py --skill <path-to-skill-dir> [--taste] [--dry-run]
    ```
    Creates `evals/eval-plan.md` + `evals/eval.ps1` (name substituted) + `evals/fixtures/`, and
-   `evals/judge-rubric.md` when `--taste`. It will NOT overwrite without `--force`. `run-all.ps1`
+   `evals/judge-rubric.md` when `--taste`. It will not overwrite an existing eval without `--force`. `run-all.ps1`
    auto-discovers `evals/eval.ps1` by glob -- there is no separate registration step.
 5. **Fill `eval-plan.md`** (target behavior + failure-mode table + tiered eval cases + ship gate).
 6. **Write the code graders first.** Build a pure extractor (artifact -> typed facts) if one is
@@ -59,7 +59,7 @@ every step here). Templates live in `references/templates/`.
    neutral or a mandatory zero -- it depends on whether the modality is required). Decouple
    "is X present" (code grader) from "is X good IF present" (judge).
    *Optional:* if `personal-jev` is set up, Jev can be a cheap hand-run second judge for
-   abstracted artifacts (field guide 5.5). Never put it in `eval.ps1`; nothing here needs it.
+   abstracted artifacts (field guide 5.5). Never put it in `eval.ps1`, because `run-all` would then need its key and the network; nothing here needs it.
    **If the target calls an outside service** (network / API key), follow field guide section 14:
    canned answers, dead local port by default, listener control test, sentinel key, mutation proof.
 8. **Calibrate every grader.** Bundle a **known-good** fixture (`fixtures/good-*`) that must PASS
@@ -110,7 +110,7 @@ every step here). Templates live in `references/templates/`.
 ## Non-negotiables (apply in both modes)
 
 - **Prove the aggregator's RED path** if you touch `run-all.ps1`: a planted failing grader must
-  make it print `EVALS FAIL` / exit 1 and NOT falsely print `ALL EVALS PASS`. The aggregator is
+  make it print `EVALS FAIL` / exit 1 and not falsely print `ALL EVALS PASS`. The aggregator is
   itself a grader; the "passes everything" rule applies to it most of all.
 - **Wrap, don't duplicate.** If the target already ships a test suite, the eval INVOKES it (and
   adds frontmatter/structure checks); it does not re-implement it.

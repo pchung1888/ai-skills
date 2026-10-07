@@ -1,5 +1,19 @@
 # code-explain — the deep file-by-file + line-by-line walkthrough playbook
 
+## Contents
+
+- What this is for
+- code-explain vs walk -- when to use which
+- Source resolution
+- Output -- inline by default, save on request
+- The voice -- same as walk
+- Honest protocol (plain English)
+- Required structure (the contract)
+- Length
+- What code-explain does NOT do
+- Validator
+- Examples
+
 ## What this is for
 
 You point at a **code change** (a diff, a commit, a branch-vs-master delta) or a **piece of source**, and you want it taught the way you'd teach a new teammate who has to maintain it: **why** it exists first, then **what changed where**, then the load-bearing code **line by line** in plain English. The output is a teaching document — the kind you'd hand to a colleague who needs to understand *and defend* the change.

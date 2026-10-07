@@ -1,5 +1,19 @@
 # baby -- the story-first analogy-alongside-jargon playbook
 
+## Contents
+
+- What this is for
+- The best-analogy rule
+- What baby mode is NOT
+- D9 Audience Declaration (REQUIRED -- every baby rendering)
+- D5 Cast Persistence Rule
+- Required structure (v0.3.0 story-first order)
+- Icon reference for baby mode
+- Banned words
+- Human contracts (validator cannot enforce, author carries)
+- What the validator checks mechanically (v0.3.0)
+- Examples
+
 ## What this is for
 
 You point at a thing (code, spec, plan, system) and the reader needs to understand it -- but they haven't seen this particular system before. Baby mode teaches by pairing every jargon term with an everyday physical object. The jargon stays literally on the page; the analogy is a companion, not a replacement.

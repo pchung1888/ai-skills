@@ -23,7 +23,7 @@ Thin wrapper over a code-location tool. Translates a plain-English question
 about a fictional demo app ("Northwind Trading" -- a legacy web app with
 Trade / Investor / Security / Position style entities, used here purely as
 an illustrative example domain) into a knowledge-graph query and formats the
-result as `page name + navigation path + file:line citation`. Does NOT
+result as `page name + navigation path + file:line citation`. It does not
 duplicate graph-traversal logic -- that lives in `/graphify` or
 `/understand-anything`.
 
@@ -115,12 +115,12 @@ its labels feed the `confidence` field.
 3. **Format** per the output contract below: numbered nav steps +
    `SOURCE:` citation. If multiple candidate pages exist and the graph tool
    ranks them clearly, list the top 3 with one-line descriptors each.
-4. **Self-report metric** (FINAL STEP -- DO NOT SKIP). Invoke the wrapper
-   script:
+4. **Self-report metric** (final step on every answer, because the metric
+   line is the audit trail). Invoke the wrapper script:
 
-   **Invoke via the PowerShell tool (NOT Bash -- Bash misreads PS backtick
+   **Invoke via the PowerShell tool (not Bash -- Bash misreads PS backtick
    line-continuations as command tokens).** Use the call operator `&` so the
-   wrapper runs in-process; do NOT use `pwsh -File ... -AnswerMarkdown
+   wrapper runs in-process; do not use `pwsh -File ... -AnswerMarkdown
    $multilineVar` -- on Windows, argv fragments multi-line strings across
    line breaks and the wrapper reports a missing-argument error even when the
    variable is populated.
@@ -140,11 +140,14 @@ its labels feed the `confidence` field.
 
    The wrapper stamps id/ts/host from the system clock, substitutes
    `{{id}}` `{{ts}}` `{{host}}` `{{skill}}` `{{confidence}}` `{{escalated}}`
-   placeholders ONLY within the YAML frontmatter, writes both files
+   placeholders only within the YAML frontmatter, writes both files
    atomically, and validates against `cs-metric-schema.json`. If the wrapper
    exits non-zero, **re-run with corrected inputs; do not bypass.**
 
-   Schema reference: `cs-metric-schema.json` (sibling file).
+   Schema reference: `cs-metric-schema.json` (sibling file). Other bundled
+   files: `cs-metric-write.tests.ps1` (Pester tests for the wrapper; run when
+   editing `cs-metric-write.ps1`) and `cs-metrics-viewer.html` (open in a
+   browser to view the collected metrics).
 
    **Answer markdown shape (skill must emit):**
    ````markdown
@@ -202,8 +205,8 @@ its labels feed the `confidence` field.
    ```
 
    Even when this skill escalates via `personal-cs-escalate-to-dev`, invoke
-   the wrapper FIRST (with `escalated:true`, `cited:false`, empty
-   `sources_read`, and `suggestion`/`dev_concern` describing why), THEN
+   the wrapper first (with `escalated:true`, `cited:false`, empty
+   `sources_read`, and `suggestion`/`dev_concern` describing why), then
    invoke escalation. The metric line on the escalation branch is how the
    pattern learns from refusals.
 

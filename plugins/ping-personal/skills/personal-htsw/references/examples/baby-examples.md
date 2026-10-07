@@ -1,3 +1,13 @@
+
+## Contents
+
+- How the React verify framework sees your app -- the office building
+- How CTEs and window functions hang together -- the library archive
+- How waitForSelector fits the Playwright assertion chain -- extending the theater metaphor
+- How a SKILL.md tells Claude Code what to do -- the recipe card
+- What those earnings call numbers actually mean -- the cafe analogy
+- How a bill becomes a rule -- the HOA board analogy
+
 _Explaining: React TodoApp -- useState, useEffect, verifyAttrs, data-verify-* attributes · purpose: baby_
 _For: junior front-end developer -- knows JavaScript and the DOM, has heard "useState" and "useEffect" once but cannot say what they do, knows what an HTTP request is and what HTML attributes are_
 

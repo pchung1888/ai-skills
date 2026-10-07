@@ -29,7 +29,7 @@ source", "never overwrite .env files" -- reply EXACTLY:
 
 > This is already a hard rule in CLAUDE.md / .claude/rules/. Nothing appended.
 
-Then STOP. Hard rules live in rules files, not lessons files.
+Then stop. Hard rules live in rules files, not lessons files.
 
 The check is a fuzzy semantic match, not a literal string match. Read the rules
 files and use judgment. If the lesson merely relates to a hard rule without
@@ -51,7 +51,7 @@ as the target for Step 2. The rule it encodes: highest count of distinct
 case-insensitive substring keyword hits wins; ties break
 `data` -> `parser` -> `ui` -> `tooling`; zero hits -> `personal-lesson-tooling`.
 
-**The script parses the baseline keyword table BELOW out of this SKILL.md, so
+**The script parses the baseline keyword table below out of this SKILL.md, so
 this table is the single source of truth** -- edit the table here and the
 classifier picks it up; there is no second copy to keep in sync.
 
@@ -96,7 +96,7 @@ this master router.
   misroutes often, add a more specific override in `.claude/lessons-keywords.md`
   or hand-correct the dispatch -- Step 1 is a suggestion, not a contract.
 - **Step 0 stays model-owned.** Only Step 1 (classification) is scripted. The
-  hard-rule gate is a genuine semantic judgment and is NOT delegated to the
+  hard-rule gate is a genuine semantic judgment and is not delegated to the
   classifier.
 
 ---

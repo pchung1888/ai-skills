@@ -1,6 +1,6 @@
 # ai-skills
 
-**A production dual-runtime plugin (Claude Code + Codex): 28 skills, 8
+**A production dual-runtime plugin (Claude Code + Codex): 32 skills, 8
 role-scoped agents, ~50 Python modules, and a deterministic eval gate that
 blocks every merge.**
 
@@ -13,10 +13,10 @@ as evidence of how I approach agentic systems.
 ```
 $ pwsh plugins/ping-personal/evals/run-all.ps1
   OK  dual-runtime ... personal-goal ... personal-loop ... personal-critic-gate (40) ...
-  ALL EVALS PASS (38 skills)
+  ALL EVALS PASS (40 skills)
 ```
 
-(38 = the 30 skills plus 8 Codex persona-wrapper skills, one per agent.)
+(40 = the 32 skills plus 8 Codex persona-wrapper skills, one per agent.)
 
 ---
 
@@ -33,8 +33,9 @@ to a concrete, inspectable piece of this repo.
 | **Context engineering** | `personal-goal` beacons, `personal-handoff` handoffs | Skills that write and re-read their own structured memory across sessions, so work survives a crash or a context reset instead of living only in a chat log. |
 | **Harness engineering** | `personal-workflow/lib/fence.py`, `personal-loop/lib/preflight.py`, `secrets_scan.py` | Deterministic guardrails *around* the model: irreversible-action detection, readiness/scope/exclusion gates before an unattended run, pre-commit secret scanning. The model proposes; code disposes. |
 | **Loop engineering** | `personal-loop` | An outer loop that drives inner goals with exactly one authoritative stop-gate per run (never a critic's opinion), an autonomy dial trading gate frequency for unattended duration, and a fail-closed mode that refuses to arm if its own safety primitives are not provably present. |
-| **Evaluation-driven development** | every `skills/*/evals/`, `run-all.ps1` | 25 deterministic red/green graders, one per skill. `run-all.ps1` is the real ship gate: no green, no merge. |
+| **Evaluation-driven development** | every `skills/*/evals/`, `run-all.ps1` | 32 deterministic red/green graders, one per skill. `run-all.ps1` is the real ship gate: no green, no merge. |
 | **Multi-agent orchestration** | `plugins/ping-personal/agents/` | 8 role-scoped persona agents (plan / research / implement / parse / design / git / audit / critique) dispatched by role, instead of one do-everything agent. |
+| **Cross-runtime rules harness** | `harness/`, `scripts/sync_harness_adapters.py`, `scripts/check_harness_sync.py`, `/personal-harness` | One source of global rules generated into `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and ChatGPT exports. Installs are transactional (journaled, byte-exact rollback on failure, self-tested at every fault boundary) and refuse to overwrite hand-edited adapters. The shipped `harness/` is a placeholder template. |
 | **Dual-runtime portability** | `runtime-compatibility.md`, `scripts/check_dual_runtime.py`, `.codex-plugin/` | One skill tree packaged for both Claude Code and Codex: parallel manifests, per-agent Codex wrapper skills, a Claude-to-Codex model/effort mapping table, and a drift check that fails the build if the two runtimes disagree. |
 | **Model/effort routing** | `model:` frontmatter in every `SKILL.md` | Orchestrators (`personal-loop`, `personal-workflow`, `personal-goal`, `personal-fable-mode`, `personal-online-research`) run `inherit` so the driving session's tier is never silently downgraded; mechanical workers pin `haiku`; judgment-heavy workers pin `sonnet`/`opus`. Enforced by the eval gate, not convention. |
 

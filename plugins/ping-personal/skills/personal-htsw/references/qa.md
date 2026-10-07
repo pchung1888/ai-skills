@@ -1,5 +1,22 @@
 # qa — test-design or bug-writeup playbook
 
+## Contents
+
+- What this is for
+- How the skill picks the variant
+- Workflow shape
+- The voice -- three modes
+- Honest protocol (plain English)
+- Evidence-and-suggestion contract -- EVERY ⚠ AND 🔴 CLAIM
+- Tester discipline -- the four karpathy pillars (in plain English)
+- Plan-mode input -- when the source is a plan doc, not a spec
+- The signature element -- tier title
+- Pre-test variant -- required structure
+- Post-test variant -- required structure
+- Length
+- Examples
+- Validator
+
 ## What this is for
 
 Two situations:
@@ -59,10 +76,10 @@ How loud you get is a function of how many 🔴 / ⚠ icons land in the body. Th
 | 🔴 count in body | Required voice load |
 |---|---|
 | **0-2** | Mode 1 (baseline) is fine. One Mode-2 phrase allowed but not required. |
-| **3-4** | Mode 2 MUST appear in: (a) TL;DR action verb — pick the strongest available (`send it back`, `hard nope`, `block — and re-do`), (b) the What-actually-happened paragraph, AND (c) at least one body-section bullet. |
+| **3-4** | Mode 2 must appear in: (a) TL;DR action verb — pick the strongest available (`send it back`, `hard nope`, `block — and re-do`), (b) the What-actually-happened paragraph, AND (c) at least one body-section bullet. |
 | **5+** | Mode 2 carries the **entire What-actually-happened paragraph** (every sentence in the right register). Mode-2 phrases appear in **3+ body bullets**. TL;DR opens with the strongest action verb available (`yeah no, ain't shipping`, `block this — needs a real pass`, `revert and re-do`). |
 
-**Warning-heavy variant** (5+ ⚠ AND 0 🔴): Mode 2 stays muted, but cumulative tone shifts — TL;DR can use `address these and merge`, but the body should NOT read cheerful. Pile of warnings is its own signal even without a hard block.
+**Warning-heavy variant** (5+ ⚠ AND 0 🔴): Mode 2 stays muted, but cumulative tone shifts — TL;DR can use `address these and merge`, but the body should not read cheerful. Pile of warnings is its own signal even without a hard block.
 
 **The point: a reviewer who finds 6 broken things shouldn't write like they found a typo.** The 🔴 icons signal urgency; the prose must match. Symptom of failing this rule: a rendering that uses six 🔴 markers and one "hot garbage" surrounded by neutral prose. That reads as a confused brief — the icons say BAD, the words say NEUTRAL, and the reader gets mixed signals.
 

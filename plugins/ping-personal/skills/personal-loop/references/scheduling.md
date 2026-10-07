@@ -16,8 +16,8 @@ SOLVED by the beacon. Every phase is git-committed. Any fresh start reads
 the beacon and resumes from the last committed checkpoint.
 
 **Problem 2 -- auto-restarting after the 5h window RESETS, while away.**
-NOT automatic with `/loop` (verified; GitHub issue #36320 is an open feature
-request as of 2026-06-16). The restart trigger must live where quota cannot
+NOT automatic with `/loop` (open feature request: GitHub issue #36320; if it
+has shipped, prefer it over the OS relauncher below). The restart trigger must live where quota cannot
 block it: the operating system.
 
 ## Verified platform facts (2026-06-16)

@@ -52,7 +52,7 @@ file; the support engineer copies/pastes it once, with no editing required.
    cmd equivalent is `%TEMP%\escalate-to-dev-latest.md`). Overwrites each
    invocation; only the latest escalation is kept.
 
-4. **Self-report metric** (DO NOT SKIP). Invoke the wrapper -- write this
+4. **Self-report metric** (required on every escalation). Invoke the wrapper -- write this
    BEFORE telling the support engineer (step 5); the metric line is the
    audit trail, the user-facing instruction is the action. Invoke exactly as
    documented in `personal-cs-client-question/SKILL.md` Mechanism §4,
@@ -80,7 +80,7 @@ file; the support engineer copies/pastes it once, with no editing required.
    `trigger`, `upstream_skill`, `upstream_confidence`, and `msg_path` are
    real top-level fields in `cs-metric-schema.json` -- the viewer's
    escalation-trigger detail panel reads them directly. `suggestion` and
-   `dev_concern` MUST be non-empty -- escalations are where future tuning
+   `dev_concern` must be non-empty -- escalations are where future tuning
    learns most.
 
 5. **Tell the support engineer (terse):**

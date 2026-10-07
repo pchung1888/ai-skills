@@ -38,7 +38,7 @@ tags mechanical churn as skim-eligible.
    ```
 
 5. **Update the description** with `gh pr edit --body-file` / `glab mr update
-   --description`, PRESERVING everything outside the markers. Quote the PR
+   --description`, preserving everything outside the markers. Quote the PR
    URL and confirm the section landed by re-reading the body.
 
 ## Boundaries

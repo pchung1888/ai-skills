@@ -266,7 +266,7 @@ EVIDENCE_PATTERN = re.compile(
     r"`[^`]+`"                              # backtick-wrapped code/path/SQL
     r"|RFC\s+\d+"                           # RFC reference
     r"|MDN[:\s]"                            # MDN reference
-    r"|MSRB\s+Rule"                         # MSRB rule
+    r"|OWASP\s+ASVS"                        # OWASP ASVS requirement
     r"|searched\b"                          # explicit negative search
     r"|found nothing|no match|no such file" # explicit not-found
     r"|doesn'?t\s+(say|mention|contain)"    # source-doesn't-say qualifier

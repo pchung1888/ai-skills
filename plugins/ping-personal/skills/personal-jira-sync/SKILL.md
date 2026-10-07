@@ -1,7 +1,7 @@
 ---
 name: personal-jira-sync
 model: sonnet
-description: Reflect finished work back into the Jira ticket -- update the description with what shipped, add a closeout comment, attach or reference evidence (screenshots, PR links), or split a progress doc into subtasks. Trigger on /personal-jira-sync, "update the ticket with what we changed", "sync ST-NNN", "put this on the Jira", "create subtasks from the progress file", "update the description to reflect what is done". Requires the Atlassian MCP connection; degrades to a paste-ready block when it is absent.
+description: Reflect finished work back into the Jira ticket -- update the description with what shipped, add a closeout comment, attach or reference evidence (screenshots, PR links), or split a progress doc into subtasks. Trigger on /personal-jira-sync, "update the ticket with what we changed", "sync PROJ-NNN", "put this on the Jira", "create subtasks from the progress file", "update the description to reflect what is done". Requires the Atlassian MCP connection; degrades to a paste-ready block when it is absent.
 ---
 
 # /personal-jira-sync
@@ -12,7 +12,7 @@ what actually shipped, with evidence.
 ## Procedure
 
 1. **Resolve the issue key.** From the argument, else the branch name
-   (`topic/690-...` and `feature/ST-690-...` both mean `ST-690`), else ask.
+   (`topic/690-...` and `feature/PROJ-690-...` both mean `PROJ-690`), else ask.
 2. **Preflight the MCP.** Check the Atlassian tools are reachable this
    session (ToolSearch for `getJiraIssue` / `editJiraIssue`). If absent:
    produce the full update as a PASTE-READY block (description text +

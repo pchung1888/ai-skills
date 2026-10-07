@@ -70,6 +70,23 @@ name, GUIDs, SQL, stored-proc names, keys), previews by default, and only sends 
 
 Measures harness drift: parses Claude Code JSONL transcripts and reports evidence share, skill-attribution share, and the decay curve across a session or a cohort of past sessions.
 
+### `/personal-mr-triage`
+
+Triage reviewer comments on a GitLab MR or GitHub PR. Each finding is verified
+against the code with evidence (`file:line` or command output), then fixed or
+pushed back on with reasons. Replies are drafted to the reviewer in plain
+language, never citing the private chat, and posted only after you approve.
+Before it says "pushed" it shows the remote commit hash.
+
+### `/personal-harness`
+
+Apply, update, check or extend your global rules on the current machine. Apply
+runs `scripts/bootstrap_machine.ps1` (clone or pull, install the generated
+CLAUDE.md / AGENTS.md, install or update this plugin) and explains any FAIL line.
+Add-rule edits `harness/`, installs, runs the sync check and pushes after you
+approve the diff. A brand-new machine needs the bootstrap command once, before
+the plugin (and so this skill) exists there.
+
 ## Agents -- the role line-up
 
 Eight project-agnostic role agents. Each follows a consistent response format and reads your project's `CLAUDE.md` / `.claude/rules/*.md` for project-specific constraints. Dispatch by `@-mention` or natural language (e.g. "dispatch iris on src/auth.ts"), or as `subagent_type: <name>` via the Agent tool.
@@ -96,3 +113,26 @@ Optional pre-commit guard that detects fabricated code references in long markdo
 ### `pre-push-discipline.sh`
 
 Optional pre-push guard that blocks the three most common "oh no" pushes: direct push to `main` / `master`, deletes of `feature/*` (long-lived integration branches), and any non-fast-forward push to any branch. Drop it into `.githooks/` alongside the backtick guard. Bypass with `git push --no-verify` (documented reason expected).
+
+### Claude Code hooks (`hooks/hooks.json`)
+
+Loaded automatically with the plugin. `stop-unpushed.sh` warns at session stop
+when the current branch has commits that are not on its upstream.
+`post-edit-check.sh` runs after Edit/Write and flags CRLF line endings in `.sh`
+files and missing or malformed SKILL.md frontmatter. Both share `hook-lib.sh`.
+
+## Cross-runtime rules harness
+
+`harness/` holds one set of global rules for every assistant runtime:
+`harness/core/shared.md` (the rules, with your identity as placeholders) plus
+thin overlays in `harness/runtime/` for Claude, Codex and ChatGPT. The shipped
+files are a template: edit them before you install.
+
+| Command | What it does |
+|---|---|
+| `python scripts/sync_harness_adapters.py --update-manifest` | Rebuild `harness/manifest.json` after editing `harness/` |
+| `python scripts/sync_harness_adapters.py --install` | Write `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` (the first install backs up the old files) |
+| `python scripts/check_harness_sync.py --check` | Verify manifest, installed adapters, ASCII and secret scan |
+| `powershell -ExecutionPolicy Bypass -File scripts\bootstrap_machine.ps1 -RepoPath <clone folder>` | New machine: clone or pull this repo, install adapters, install the plugin. Example `-RepoPath`: `C:\Users\<you>\src\ai-skills` |
+
+`/personal-harness` wraps these commands.

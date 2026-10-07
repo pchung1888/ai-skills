@@ -10,7 +10,7 @@ Thin orchestrator over the understand-anything plugin. Handles the full lifecycl
 **install** -> **onboard** -> **use**.
 
 The skill detects state, routes to the right mode, and then delegates to the
-plugin's own skills via the Skill tool. It does NOT reimplement the analyzer
+plugin's own skills via the Skill tool. It does not reimplement the analyzer
 pipeline or the dashboard -- those stay in the plugin.
 
 ## Modes and aliases
@@ -31,7 +31,7 @@ pipeline or the dashboard -- those stay in the plugin.
 | `explain <file/fn>` | `understand-anything:understand-explain` |
 | `diff [ref]` | `understand-anything:understand-diff` |
 | `domain` | `understand-anything:understand-domain` |
-| `guide` | `understand-anything:understand-onboard` (team doc -- NOT a graph build) |
+| `guide` | `understand-anything:understand-onboard` (team doc -- not a graph build) |
 
 **Note on naming (AD-3):** "onboard" in this skill means "scan the project and
 create the knowledge graph" -- that maps to `/understand`. The plugin's own
@@ -78,7 +78,7 @@ Full procedure: `references/install.md`.
 **Critical boundary (AD-2):** This skill CANNOT run `/plugin marketplace add` or
 `/plugin install` -- those are Claude Code harness commands, not Bash commands.
 If the plugin is missing, install mode prints the exact lines for the user to
-type. It does NOT attempt to self-install.
+type and does not attempt to self-install.
 
 Summary of what install mode does vs. what the USER does:
 
