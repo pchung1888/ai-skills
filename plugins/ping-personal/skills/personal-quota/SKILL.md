@@ -1,12 +1,12 @@
 ---
 name: personal-quota
 model: haiku
-description: Report REAL Claude usage for the current account -- 5h (session) window %, weekly %, per-model scoped %, and context-window %, each with its reset time in local EST/EDT. TRIGGER on "/personal-quota", "how much quota", "how much usage left", "what's my usage", "am I close to the limit", "quota check", "how full is my weekly", "when does my session reset", "when does my weekly reset". Reads ccstatusline's cache when fresh, otherwise fetches the same /api/oauth/usage endpoint directly with the subscription token, so it never depends on ccstatusline being alive.
+description: Report real Claude usage for the current account -- 5h (session) window %, weekly %, per-model scoped %, and context-window %, each with its reset time in local EST/EDT. TRIGGER on "/personal-quota", "how much quota", "how much usage left", "what's my usage", "am I close to the limit", "quota check", "how full is my weekly", "when does my session reset", "when does my weekly reset". Reads ccstatusline's cache when fresh, otherwise fetches the same /api/oauth/usage endpoint directly with the subscription token, so it never depends on ccstatusline being alive.
 ---
 
 # /personal-quota
 
-Show the operator's REAL Claude usage: session (5h) %, weekly %, any per-model scoped %,
+Show the operator's real Claude usage: session (5h) %, weekly %, any per-model scoped %,
 and context-window %, each with when it resets in local time.
 
 ## When to invoke
@@ -14,7 +14,7 @@ and context-window %, each with when it resets in local time.
 Triggers are in the frontmatter description. Use it to decide "finish now / pause / fresh
 session / smaller job" against real numbers instead of the IDE's percentage meters.
 
-Do NOT invoke for: prompt-cache hit rate (that is `/personal-cache-stats`), historical
+Do not invoke for: prompt-cache hit rate (that is `/personal-cache-stats`), historical
 usage charts (see `~/.claude/usage-data/report.html`), or Anthropic developer-API console
 questions (the operator has no developer API access -- this skill uses the subscription
 OAuth token, which is a different thing).
@@ -123,5 +123,6 @@ To turn it off, point `statusLine.command` back at `ccstatusline`.
 ## Related
 
 - `/personal-cache-stats` -- prompt-cache hit rate for the current session (different metric).
+- `plan.ps1` (same folder) -- turns a quota snapshot into a task plan: a usage band plus FITS_NOW / DEFER per task. Used by `personal-loop` and `personal-workflow`.
 - `/cost` -- Claude Code's built-in per-session cost. Does not show plan quota %.
 - ccstatusline session/weekly widgets -- the always-on statusline version of these numbers.

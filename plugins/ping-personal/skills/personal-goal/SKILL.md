@@ -1,7 +1,7 @@
 ---
 name: personal-goal
 model: inherit
-description: Initialize a long-running multi-phase goal with a crash-recovery beacon. Use when starting a goal that may span sessions or survive a crash. Triggers on /personal-goal <slug>.
+description: Initialize a long-running multi-phase goal with a crash-recovery beacon. Use when starting a goal that may span sessions or survive a crash. Triggers on /personal-goal [slug].
 ---
 
 # /personal-goal
@@ -59,15 +59,15 @@ acknowledgement, not a detection.
    autonomous, separately for Phase 1 and Phase 2+. Default if unanswered:
    phase_1_mode=interactive, phase_2plus_mode=autonomous (the common case).
    Record both in the beacon frontmatter via beacon_writer.py --phase-1-mode /
-   --phase-2plus-mode (auto_mode_triggers = [T3]; T5 struck 2026-09-18).
+   --phase-2plus-mode (auto_mode_triggers = [T3]; T5 is struck).
 4. Validate acceptance gate:
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/accept_gate.py --validate <args>`
-   - On non-zero exit, surface the error and STOP.
+   - On non-zero exit, surface the error and stop.
 5. Resolve area:
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/area_resolver.py --slug <s> [--area <a>]`
 6. Write beacon:
    - `python ${CLAUDE_PLUGIN_ROOT}/skills/personal-goal/lib/beacon_writer.py <args> --requirement-file <path> --out docs/<area>/<slug>-audit-tracker.md`
-   - The requirement flag is REQUIRED (see "The requirement comes first" above);
+   - The requirement flag is required (see "The requirement comes first" above);
      the writer exits 3 without it.
 6b. Triage the phase list with the owner -- THE ONE QUESTION (REQUIRED when the
    phase list came from a plan, a findings pass, a TODO ingest, or any earlier
@@ -78,7 +78,7 @@ acknowledgement, not a detection.
 
    > "Which of these neither serves the ask above nor unblocks it?"
 
-   Do NOT offer a menu of implementations -- every option in such a menu ratifies
+   Do not offer a menu of implementations -- every option in such a menu ratifies
    the premise and makes the owner its author. "None of these -- there is a smaller
    way to do this" must be a reachable answer.
    Then set each surviving phase's Source cell to one of:
@@ -98,7 +98,7 @@ acknowledgement, not a detection.
    ignore rule exits 1 even when it stages successfully, so a plain add leaves
    the beacon uncommitted. This is the only beacon commit that exists before the
    first phase, so losing it loses the whole goal.
-9. Print handoff block; STOP.
+9. Print handoff block; stop.
 
 ## After /personal-goal returns
 
@@ -119,7 +119,7 @@ token estimates.
 
 On a phase FAIL:
 
-- The retry MUST be a FRESH one-shot Agent dispatch. NEVER use SendMessage to continue the
+- The retry must be a fresh one-shot Agent dispatch. NEVER use SendMessage to continue the
   failed agent -- the failed agent's polluted context would carry over and repeat the same failure.
 - The retry brief contains ONLY: the original phase brief + a distilled failure block (what failed,
   what was tried, what must not be repeated). Use the "## RETRY CONTEXT" section in
@@ -128,5 +128,5 @@ On a phase FAIL:
   sentences that describe the failure cause, the approaches tried, and the hard constraints
   the retry must respect.
 - If `/personal-goal-next` advance.py exits with code 4 (RETRY CAP HIT or NO PROGRESS
-  DETECTED), do NOT retry. STOP the goal and surface the BLOCKED status to the user for
+  DETECTED), do not retry. Stop the goal and surface the BLOCKED status to the user for
   human intervention.

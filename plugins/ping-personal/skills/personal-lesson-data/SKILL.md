@@ -1,7 +1,7 @@
 ---
 name: personal-lesson-data
 model: haiku
-description: Data-boundary lessons -- read-only data sources, file path encoding, secrets/env handling, gitignore contracts, data schema boundaries. Any project's "thou shalt not write here" perimeter and related data contract lessons. Invoked by personal-lesson master router when classification matches data keywords, or directly via /personal-lesson-data or natural phrases like "lessons about data", "lessons about vault", "lessons about file paths", "lessons about secrets", "lessons about env". Appends new lessons to ~/.claude/lessons/personal-lesson-data.md and reads from there for browse mode.
+description: Data-boundary lessons -- read-only data sources, file path encoding, secrets/env handling, gitignore contracts, data schema boundaries. Any project's "thou shalt not write here" perimeter and related data contract lessons. Use when the personal-lesson router classifies a lesson as matching data keywords, or when the user types /personal-lesson-data or natural phrases like "lessons about data", "lessons about vault", "lessons about file paths", "lessons about secrets", "lessons about env". Appends new lessons to ~/.claude/lessons/personal-lesson-data.md and reads from there for browse mode.
 user_invocable: true
 ---
 
@@ -20,27 +20,27 @@ perimeter around its data sources.
 
 If invoked directly (not via the master router), check CLAUDE.md and
 .claude/rules/*.md for hard rules that the incoming lesson would duplicate. If
-the lesson IS a duplicate of a hard rule, reply:
+the lesson is a duplicate of a hard rule, reply:
 
 > This is already a hard rule in CLAUDE.md / .claude/rules/. Nothing appended.
 
-Then STOP. If invoked via the master router, skip Step 0 (the router already
+Then stop, because hard rules live in rules files, not lessons files. If invoked via the master router, skip Step 0 (the router already
 ran it).
 
 ### Step 1 -- Duplicate check
 
-Grep BOTH sources for a distinctive phrase from the incoming lesson (a file
+Grep both sources for a distinctive phrase from the incoming lesson (a file
 path pattern, an env var name, a 5-word snippet of the Rule):
 
 1. `~/.claude/lessons/personal-lesson-data.md` (user-scope appends, skip if absent)
-2. The `## Seed Lessons` section of THIS file (`personal-lesson-data/SKILL.md`)
+2. The `## Seed Lessons` section of this file (`personal-lesson-data/SKILL.md`)
 
 If either matches, reply:
 
 > Duplicate: already recorded as "<existing title>" in personal-lesson-data.
 > Nothing appended.
 
-Then STOP.
+Then stop.
 
 ### Step 2 -- Append
 

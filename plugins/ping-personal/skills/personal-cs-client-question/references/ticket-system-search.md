@@ -1,5 +1,17 @@
 # Ticket-System Case-Law Search -- Reference
 
+## Contents
+
+- Why this pattern exists
+- Fields you need (adapt the IDs to your ticket system)
+- Tool of choice
+- Query template -- find resolved tickets matching the question
+- Decision rule -- when a hit qualifies as a sufficient answer
+- Output format when citing a past resolution
+- Confidentiality gate (cross-client)
+- Telemetry
+- Cross-references
+
 Companion data for `personal-cs-client-question`'s smart-search decision
 tree (step 6) and for `personal-cs-step-by-step` (which inherits the lookup
 via its internal call). Single source of truth for the query pattern, the

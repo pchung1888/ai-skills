@@ -1,7 +1,7 @@
 ---
 name: personal-critic-gate
 model: sonnet
-description: Adversarial-review gate (critic vote). Fires a 5-seat panel (ms-mario, amanda, rhea+coin, domain seat, codex/iris) before high-risk actions, 3-of-5 majority. Two operating modes -- interactive PAUSE (default) and autonomous AUTO-RESOLVE. Version v0.9.0 (panel v2). Triggers on /personal-critic-gate <artifact-or-diff>.
+description: Adversarial-review gate (critic vote). Fires a 5-seat panel (ms-mario, amanda, rhea+coin, domain seat, codex/iris) before high-risk actions, 3-of-5 majority. Two operating modes -- interactive PAUSE (default) and autonomous AUTO-RESOLVE. Triggers on /personal-critic-gate [artifact-or-diff].
 ---
 
 # /personal-critic-gate
@@ -33,7 +33,7 @@ Right before you would otherwise commit, push, or hand off a deliverable:
 - "/personal-critic-gate current diff" (review the staged changes)
 - In autonomous mode (T3): a subagent returned BLOCKED with 2+ recovery
   paths -- vote on which path to take.
-  (T5, a panel at every phase boundary, was STRUCK on 2026-09-18 -- see Trigger Set.)
+  (T5, a panel at every phase boundary, is STRUCK -- see Trigger Set.)
 
 ---
 
@@ -62,28 +62,11 @@ Flags:
 
 ## Planning-Time Artifacts
 
-In addition to pre-ship diffs and plan files, the gate fires on
-planning-time recommendations -- cases where the driver has produced
-"a set of options + a single recommendation" and wants a vote before
-locking the pick.
-
-Planning-time artifact block shape (inline text passed as the argument):
-
-```
-TYPE: planning-time-recommendation
-OPTIONS: [A: <label>, B: <label>, ...]
-RECOMMENDATION: <one of the option labels>
-RATIONALE: <one paragraph of why this pick>
-CONTEXT: <one paragraph: what is being decided, scope, constraints>
-```
-
-For planning-time artifacts:
-
-- All 5 seats cast a vote using one OPTIONS label (or ABSTAIN).
-- Majority (3+ seats) on the same option wins.
-- If no option reaches 3 seats, fall through to ms-mario veto: ms-mario's
-  pick wins if it dissents from the top vote-getter; otherwise the top
-  vote-getter stands.
+The gate also votes on a planning-time recommendation block (`TYPE:
+planning-time-recommendation` with OPTIONS / RECOMMENDATION / RATIONALE /
+CONTEXT). Seats vote an OPTIONS label or ABSTAIN; 3+ on one option wins, else
+ms-mario's dissenting pick wins. Block shape and tie rule:
+`references/planning-time.md`.
 
 ---
 
@@ -226,14 +209,8 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
    file, append to beacon Agent Activity Log, HALT for human -- do NOT
    proceed regardless of what the vote would be.
 
-3. **Print mode line:**
-   - If a beacon was found: print `"Mode: <mode> (from beacon <slug>)"`
-   - If no beacon: print `"Mode: interactive (default; no beacon found)"`
-   - Validate inferred phase number against the beacon Phase Status table.
-     If the phase marked as current in the beacon does not exist in the
-     Phase Status table or is already completed, print a warning and halt:
-     `"WARN: phase mismatch -- beacon says phase N but Phase Status shows
-     <actual state>; refusing to auto-resolve until mismatch is resolved."`
+3. **Print the mode line and validate the phase** exactly as Mode Discovery
+   steps 5-6 say (halt on a phase mismatch).
 
 4. **Run preflight codex probe** (see Preflight Codex Probe above). Determine
    whether Seat 5 is codex or iris.
@@ -314,11 +291,8 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
     **If codex available:**
     Invoke the Agent tool with `subagent_type: "codex:codex-rescue"`.
     Do NOT invoke Seat 5 via the Skill tool and do NOT type the
-    `/codex:rescue` slash command: the Codex plugin's `rescue.md` warns
-    that `Skill(codex:rescue)` re-enters the command and HANGS the session.
-    The Agent-tool path is the only programmatic route.
-    (EXTRACTED from the Codex plugin's `commands/rescue.md` line 8;
-    verified working via a live read-only test 2026-06-07.)
+    `/codex:rescue` slash command: both re-enter the command and HANG the
+    session. The Agent-tool path is the only programmatic route.
 
     The subagent's prompt MUST begin with the literal token `--fresh` so
     the forwarder skips its "resume prior Codex thread?" AskUserQuestion
@@ -339,30 +313,16 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
     Do NOT fix. Do NOT edit any files. Review-only.
     ```
 
-    **Cross-vendor text strip (REQUIRED -- do this before building the prompt).**
-    Seat 5 runs on OpenAI's Codex CLI, a DIFFERENT VENDOR from every other seat. The
-    artifact text is interpolated into its prompt unfiltered, and beacons are in-scope
-    artifacts -- so a beacon's `## Requirement` section, which holds the owner's
-    unedited words and may quote client names or account identifiers, would leave the
-    vendor boundary. Before emitting the prompt: remove any `## Requirement` section
-    and replace any `ASK:<fragment>` Source cell with `ASK:[withheld]`, substituting
-    `[requirement withheld from cross-vendor seat]` where the section was.
-    This is a capability cut, not a filter, and it has NO escape hatch -- it does not
-    depend on a pattern matching correctly. Seat 5 is the fresh-eyes seat looking for
-    unexamined assumptions; it does not need the owner's words to do that, and amanda
-    (in-vendor, Seat 2) already owns requirement-matching.
+    **Cross-vendor text strip (REQUIRED, no escape hatch).** Seat 5 runs on a
+    different vendor, so the owner's words must not leave the boundary. Before
+    emitting the prompt, remove any `## Requirement` section (substitute
+    `[requirement withheld from cross-vendor seat]`) and replace any
+    `ASK:<fragment>` Source cell with `ASK:[withheld]`. amanda (Seat 2) owns
+    requirement-matching, so Seat 5 loses nothing it needs.
 
-    **Read-only guard (IMPORTANT -- residual risk).** The `codex:codex-rescue`
-    forwarder DEFAULTS to a write-capable Codex run (`--write`) and only
-    stays read-only when the brief reads as "review-only / read-only /
-    review / diagnosis / research". This is a heuristic the forwarder
-    applies to the natural-language brief -- there is NO hard `--read-only`
-    flag exposed. The "Do NOT fix. Do NOT edit any files. Review-only."
-    lines above are what keep Seat 5 read-only, so they MUST stay verbatim.
-    (EXTRACTED from the plugin's `codex-cli-runtime` skill + `codex-rescue`
-    agent; the prose guard was confirmed to hold in the 2026-06-07 test, but
-    it is not enforced -- treat a write-capable slip as a real, if unlikely,
-    risk.)
+    **Read-only guard.** The forwarder defaults to a write-capable run and stays
+    read-only only because the brief reads as review-only, so the "Do NOT fix.
+    Do NOT edit any files. Review-only." line MUST stay verbatim.
 
     **If codex unavailable (probe failed):**
     Invoke the Agent tool with `subagent_type: "iris"`. Brief:
@@ -374,43 +334,17 @@ If the probe succeeds: dispatch codex as Seat 5 as documented below.
     - "At the end, add a final JSON object: `{\"VOTE\": \"PASS\"|\"FIX\"|\"BLOCK\",
       \"why\": \"one sentence\"}`."
 
-    Seat 5 vote parsing (robust extraction -- do it in this order):
-    - Do NOT use "last non-empty line". When dispatched via the Agent tool
-      the harness appends a trailing `agentId: ... (use SendMessage ...)`
-      footer with no preceding newline, so the JSON is not on a clean final
-      line. (EXTRACTED from the 2026-06-07 live test, where the returned
-      text ended `...}agentId: a6ca... (use SendMessage ...)`.)
-    - Extract the vote object with a quote-aware BALANCED `{...}` scan, not a
-      flat regex. Walk the text tracking brace depth AND string state: skip
-      braces inside double-quoted string values, and track backslash escapes
-      so an escaped quote (`\"`) does not prematurely end a string. Collect
-      every top-level balanced `{...}` span, then take the LAST span that
-      `JSON.parse`s and carries a top-level `"VOTE"` key. A naive flat pattern
-      such as
-      `\{[^{}]*"VOTE"[^{}]*\}` is NOT sufficient: a `{` or `}` inside a
-      `"why"` string value truncates the match, and Codex prose routinely
-      contains example objects earlier in the text. (This brittleness was
-      caught by a live Codex Vote 3 on this skill's own diff, 2026-06-07.)
-    - Validate the parsed object before counting it. Its `VOTE` value MUST be
-      one of `PASS` / `FIX` / `BLOCK` for diff/plan artifacts (legacy aliases
-      `SHIP` -> `PASS`, `ABORT` -> `BLOCK` are accepted), or a declared
-      OPTIONS label / `ABSTAIN` for planning-time artifacts. A parsed object
-      whose `VOTE` is missing, null, or out-of-set is a parse FAILURE, not a
-      vote -- do not coerce it.
-    - If extraction, parse, or validation fails: retry once (fresh dispatch,
-      same brief).
-    - On second failure: Seat 5 = ABSTAIN; record the parse failure in the
-      tally block. The remaining 4 seats proceed; 3-of-4 majority applies.
-    - ABSTAIN (a valid object with `"VOTE": "ABSTAIN"`) is recorded as
-      ABSTAIN and does NOT count toward any outcome.
-    - The canonical implementation is `lib/vote_parser.py` in this skill's
-      directory. Use it as the reference for all parsing logic.
-    - Residual risk (accepted, not eliminated): a stray VOTE-shaped object
-      in reviewer prose AFTER the real vote would make "last valid span" pick
-      the wrong one. Mitigation: the brief above REQUIRES the vote object to
-      be the FINAL content emitted, so "last span" aligns with the real vote.
-      Keep that instruction verbatim. On genuine ambiguity, treat as a parse
-      failure and retry once.
+    Seat 5 vote parsing -- `lib/vote_parser.py` is the canonical implementation:
+    - Do NOT use "last non-empty line": the Agent harness appends an
+      `agentId: ...` footer after the JSON.
+    - Extract with a quote-aware balanced `{...}` scan and take the LAST span
+      that parses with a top-level `"VOTE"` key. A flat regex is NOT sufficient.
+    - The `VOTE` value MUST be one of `PASS` / `FIX` / `BLOCK` (aliases `SHIP`,
+      `ABORT`), or an OPTIONS label / `ABSTAIN` for planning-time artifacts.
+      Anything else is a parse failure, never coerced.
+    - On failure retry once; on a second failure Seat 5 = ABSTAIN and 3-of-4
+      applies.
+    Full rules, evidence and residual risk: `references/seat5-dispatch.md`.
 
 12. **Wait for all seat reviewers** (seats 1-5, if dispatched). Collect all
     results before computing the tally.
@@ -529,29 +463,10 @@ In autonomous mode, the gate self-fires at:
   path to take. The artifact is a planning-time recommendation block listing
   the recovery paths as OPTIONS.
 
-- **T5 -- Phase-Boundary. STRUCK 2026-09-18.** It was declared here and never
-  routed to: `personal-workflow` sends only ship/merge decisions to this gate, so
-  T5 had never once fired. A gate that exists only on paper is worse than no gate,
-  because it earns credit in the operator's model of the harness while catching
-  nothing. Wiring it instead was costed and rejected: one panel is ~150-400K
-  tokens, so a six-phase goal would be 0.9-2.4M tokens in review alone -- the same
-  order of magnitude as T2, which was already rejected for exactly that reason.
-  What replaces it: per-phase scope is enforced in code, not by a panel.
-  `advance.py` refuses to mark a phase done whose Source records no owner warrant
-  (exit 6), and `finalize.py` refuses while any detour is open (exit 7). Those cost
-  nothing per phase and cannot be skipped under deadline.
-
-- **T1 -- AskQuestion-Swap. DEFERRED.** T1 (replace any `AskUserQuestion`
-  call in autonomous mode with a `/personal-critic-gate` vote) cannot be
-  implemented as a slash-command intercept. It requires a `PreToolUse`
-  hook on `AskUserQuestion`, which has no precedent in the current hook
-  framework. T1 is deferred to a follow-up version.
-
-Do NOT add T2 (every option-set) or T4 (prior-critic-carryover) to the
-trigger set. Both were explicitly rejected:
-
-- T2: cost runaway (~1.5-4.5M tokens per goal, LARGE bucket).
-- T4: redundant -- phase-boundary scope is now enforced in code by advance.py, not by a panel.
+- **T5 (phase boundary) STRUCK**, **T1 (AskQuestion swap) DEFERRED**. Do not add
+  T2 (every option-set: cost runaway) or T4 (prior-critic carryover: redundant,
+  phase scope is enforced in code by `advance.py` / `finalize.py`). Reasons and
+  costings: `references/history.md`.
 
 ---
 
@@ -560,23 +475,12 @@ trigger set. Both were explicitly rejected:
 Seat 5 routes through the `codex:codex-rescue` subagent (the worker behind
 the `/codex:rescue` command). This requires OpenAI's `codex` plugin to be
 installed and enabled, and the `codex` CLI to be on PATH and authenticated.
-If Codex is not available (detected via preflight probe):
+Without it, the Preflight Codex Probe swaps in iris, so the panel always
+keeps 5 votes.
 
-- Announce "codex unavailable -- Seat 5 = iris" BEFORE the panel starts.
-- Dispatch iris as Seat 5 (fresh-context skeptic).
-- The panel stays at 5 seats; the old "reviewer-as-veto fallback" is
-  superseded by this design. The gate always operates with 5 votes.
-
-Path B note: `/codex:review` and `/codex:adversarial-review` both carry
-`disable-model-invocation: true` in their plugin frontmatter and CANNOT
-be programmatically invoked by Claude. The `codex:codex-rescue` subagent
-(reached via the `/codex:rescue` command, which has NO disable flag) is the
-only model-invokable Codex review path and therefore serves as Seat 5's
-exclusive source. Dispatch it with the Agent tool
-(`subagent_type: "codex:codex-rescue"`), NOT the Skill tool -- see step 11.
-(EXTRACTED from OpenAI codex plugin v1.0.4 frontmatter, verified 2026-06-07;
-SUGGESTION: if a future plugin version drops the disable flag on `review`,
-re-evaluate using `/codex:review` directly for Seat 5.)
+`codex:codex-rescue` is the only Codex review path Claude can invoke (the
+`/codex:review` commands disable model invocation); why, and when to revisit:
+`references/history.md`.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: personal-goal-next
 model: haiku
-description: Advance the audit-tracker beacon after a phase finishes. Called by the driving Claude session. Triggers on /personal-goal-next <slug> ...
+description: Advance the audit-tracker beacon after a phase finishes. Called by the driving Claude session. Triggers on /personal-goal-next [slug] ...
 ---
 
 # /personal-goal-next
@@ -54,7 +54,7 @@ Special modes:
 
 When advance.py or finalize.py is given a beacon path, they glob under `docs/` for
 other `*<slug>*-audit-tracker.md` files. If more than one matches the slug, a WARNING
-is printed to stderr listing all candidates. The command does NOT refuse -- the operator
+is printed to stderr listing all candidates. The command does not refuse -- the operator
 must resolve the ambiguity manually.
 
 ## Acceptance caching (finalize.py)

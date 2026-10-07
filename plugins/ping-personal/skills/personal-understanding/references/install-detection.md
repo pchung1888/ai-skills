@@ -1,5 +1,13 @@
 # install-detection -- layered plugin detection (AD-4)
 
+## Contents
+
+- Layer 1 -- skill resolution (cheapest)
+- Layer 2 -- environment variable and well-known paths
+- Layer 3 -- package.json + pnpm-workspace.yaml presence
+- Layer 4 -- built vs. unbuilt (core dist check)
+- Summary output format
+
 Run these four layers in order. Stop at the first layer that matches and report
 which layer matched. If no layer matches, the plugin is not installed.
 

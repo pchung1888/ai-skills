@@ -33,7 +33,7 @@ personal-md-to-html for rendering.
 - Degrade gracefully: if firecrawl is unavailable and cannot be installed,
   fall back to the built-in WebSearch/WebFetch tools and say so in the report
   (the verification contract does not change).
-- firecrawl conventions (from the official skill, non-negotiable):
+- firecrawl conventions (from the official skill; keep all of them):
   - Always quote URLs (shell eats `?` and `&`).
   - Write outputs to `.firecrawl/` with `-o`; keep `.firecrawl/` gitignored.
   - `search --scrape` already returns page content -- never re-scrape those
@@ -127,16 +127,14 @@ The Storm Research pipeline with firecrawl as the fetch layer.
 ## Codex runtime note
 
 On Codex (skills shared via ~/.agents/skills junctions) there is no Claude
-Agent tool: run storm lenses and verifiers SEQUENTIALLY in one context, keep
+Agent tool: run storm lenses and verifiers sequentially in one context, keep
 every other step identical. See runtime-compatibility.md at the plugin root.
 
 ## Anti-patterns
 
 - Answering from training memory with a citation pasted on top (every cited
-  claim must trace to a source fetched THIS session).
+  claim must trace to a source fetched this session).
 - Storm mode for a lookup-shaped question (cost without value).
 - Skipping the verification phase to save time -- then it is a brief, label
   it as one.
-- Re-scraping URLs that `search --scrape` already returned.
-- Unquoted URLs in shell commands.
 - Presenting lens convergence as independent consensus.

@@ -12,7 +12,7 @@ Show how well the current Claude Code session is reusing cached prompt tokens.
 
 Triggers are in the frontmatter description. Also useful after a large
 CLAUDE.md or `.claude/rules/*.md` edit, to confirm the cache repopulated on
-the next turn. Do NOT invoke for prompt-caching theory questions (answer
+the next turn. Do not invoke for prompt-caching theory questions (answer
 inline) or anything needing the Anthropic API console (the user has no API
 access).
 
@@ -26,7 +26,7 @@ every assistant turn. Reports four numbers:
 
 | Field | Meaning |
 |---|---|
-| Cache READ (hit) | Tokens served from cache. HIGHER is better. |
+| Cache READ (hit) | Tokens served from cache. Higher is better. |
 | Cache WRITE (miss) | Tokens that paid full input price AND were written to cache for later reuse. |
 | Fresh INPUT (tail) | The new user message + tool outputs appended after the cache breakpoint. Always uncached. |
 | Hit rate | `READ / (READ + WRITE + FRESH)` as a percentage. Target >80% on a warm session. |
@@ -86,7 +86,7 @@ before eviction.
 
 ## Honest limits
 
-- The script reads ONLY the local transcript file. It cannot see what
+- The script reads only the local transcript file. It cannot see what
   Anthropic's server actually charged -- the numbers reported are the
   `usage` block Claude Code received, which is the authoritative cost
   source, but billing tier discounts (if any) are applied server-side and

@@ -1,7 +1,7 @@
 ---
 name: personal-handoff
 model: haiku
-description: Capture current session state as a structured handoff document in docs/progress/YYYY-MM-DD-<task>-progress.md. TRIGGER when (1) agent or user is about to stop mid-task, (2) any limit is approaching (context, session, weekly, daily, or token), (3) user uses preparative phrasing like "I'll need X soon", "going to need", "before we stop", "wrap up", "stopping for today", "stopping soon", or (4) user says "save progress", "handoff", "capture state", "create progress", "create handoff", "write progress", "write handoff", "/personal-handoff", or "/personal-progress" (the former name of this skill). Trigger PREPARATIVELY -- fire NOW even when the user says "soon" or "once we hit a good stopping point" so the artifacts are ready. If the user also asks to park open questions for the next session, ALSO write a sibling docs/progress/YYYY-MM-DD-<task>-handoff.md. Progress = WHAT happened. Handoff = WHAT NEXT-YOU NEEDS TO DECIDE. Do NOT trigger for final commits on complete tasks -- use TODO.md instead.
+description: Captures current session state as a structured handoff document in docs/progress/YYYY-MM-DD-[task]-progress.md. Use when work is about to stop mid-task, when any limit (context, session, weekly, daily, token) is approaching, when the user signals an upcoming stop ("soon", "wrap up", "before we stop"), or when they ask to save progress, hand off, or capture state (/personal-handoff, /personal-progress). Fire before the stop actually happens so the artifacts are ready. If the user also wants open questions parked for the next session, also write docs/progress/YYYY-MM-DD-[task]-handoff.md (Progress = WHAT happened; Handoff = WHAT next-you must decide). Not for final commits on completed tasks - those go in TODO.md.
 user_invocable: true
 ---
 
@@ -16,7 +16,7 @@ session (or agent) can resume without losing context.
 
 Before writing anything, collect the following facts. Pull everything a tool
 can read yourself; ask the user only for what tools cannot see (runtime
-side-effects, test results you did not run). Do NOT leave blanks in the
+side-effects, test results you did not run). Do not leave blanks in the
 output file.
 
 | Item | Where to find it |
@@ -59,7 +59,7 @@ Determine the output filename:
 
 Use the bundled template at
 `${CLAUDE_PLUGIN_ROOT}/skills/personal-handoff/templates/progress-template.md`
-as the structure. Fill in ALL sections -- no blanks, no "TBD".
+as the structure. Fill in all sections -- no blanks, no "TBD".
 
 Key rules:
 
@@ -68,7 +68,7 @@ Key rules:
   said. Never paraphrase. Next-session plans against whatever is written here, so a
   summary quietly becomes the new requirement, and the aim moves one handoff at a
   time.
-- **What I am unsure about:** REQUIRED. Never "nothing". A handoff that carries only
+- **What I am unsure about:** required. Never "nothing". A handoff that carries only
   conclusions hands the next session maximum confidence and minimum context -- the
   intermediate doubts are precisely what does not survive a handoff unless written
   down on purpose. Name the least confident claim, the assumption worth challenging,
@@ -115,7 +115,7 @@ next session can judge how fresh and trustworthy this doc is:
 ## Step 2.5: Sibling Handoff File (if user requested it OR if open decisions exist)
 
 Write a sibling handoff file at
-`docs/progress/YYYY-MM-DD-<task-slug>-handoff.md` when ANY of these are true:
+`docs/progress/YYYY-MM-DD-<task-slug>-handoff.md` when any of these are true:
 
 - User explicitly mentions both "progress.md and handoff.md" (or equivalent).
 - User says "save the questions for next session" / "ask me on the next
@@ -123,7 +123,7 @@ Write a sibling handoff file at
 - You have open user-decisions blocking next-session resume that you would
   otherwise ask inline.
 
-The handoff file's purpose is the OPPOSITE of the progress file: progress
+The handoff file's purpose is the opposite of the progress file: progress
 describes state; handoff describes pending decisions. Each open question
 gets:
 
@@ -155,7 +155,7 @@ After writing the file:
 3. Ask: "Commit this progress file now, or leave it unstaged?"
    - If commit: `git add -f docs/progress/<filename>.md && git commit -m "progress: capture state for <task-slug>"`
    - The `-f` is load-bearing: `git add` on a path under an ignore rule exits 1
-     EVEN WHEN it stages successfully, so a plain `&&` chain short-circuits and
+     even when it stages successfully, so a plain `&&` chain short-circuits and
      the handoff silently never commits. This file is the cross-session carrier;
      whether it reaches git must not depend on the host repo's ignore posture.
    - If no commit: leave unstaged (it will not be lost -- just not in history)

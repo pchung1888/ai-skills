@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "sources": {
+    "core/shared.md": {
+      "sha256": "11472fb233b70f8925ce27f3ad08ba395525e6160d01a57ccff752d748d96c3a",
+      "size": 2046
+    },
+    "runtime/chatgpt.md": {
+      "sha256": "d1b3c398a1b675c235d67a7b67dc50f67aa8efdbc316aacf271be41ec83d4642",
+      "size": 180
+    },
+    "runtime/claude.md": {
+      "sha256": "1ee8d10be9b859ac83895a74ec98048bee00704803cee3a326d7ca1845b0fbb1",
+      "size": 288
+    },
+    "runtime/codex.md": {
+      "sha256": "9bfb3396dc63464ee0505ebe02cc1e8eba564d1907bab18466f05c71823e714b",
+      "size": 242
+    }
+  }
+}

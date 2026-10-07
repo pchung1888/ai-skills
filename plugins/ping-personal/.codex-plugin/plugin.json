@@ -1,7 +1,7 @@
 {
   "name": "ping-personal",
-  "version": "0.25.0",
-  "description": "Personal cross-project skills for Claude Code and Codex: goal orchestration, workflow conductor, critic gate, md-to-html, htsw, eval maker, prototype conductor, facts-check, online research, quota tracking, Jev second opinions, drift checks, lesson capture, release and PR workflows.",
+  "version": "0.27.0",
+  "description": "Personal cross-project skills for Claude Code and Codex: goal orchestration, workflow conductor, critic gate, md-to-html, htsw, eval maker, prototype conductor, facts-check, online research, quota tracking, Jev second opinions, drift checks, lesson capture, release and PR workflows, MR/PR review triage, and a cross-runtime rules harness.",
   "author": {
     "name": "pchung1888"
   },

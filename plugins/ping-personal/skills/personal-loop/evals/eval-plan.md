@@ -83,5 +83,5 @@ before an unattended run):
 - heartbeat idempotency/CAS: the outer-loop-tracker heartbeat write must be atomic; CAS
   semantics are prose-specified but not yet eval-exercised. [DRIVER-WIRED backlog]
 
-ST-690 replay tier (manual, Tier E): needs a driver-simulation harness that does not exist
+PROJ-690 replay tier (manual, Tier E): needs a driver-simulation harness that does not exist
 yet -- a scoped cost; until built, this tier is manual (Tier E).

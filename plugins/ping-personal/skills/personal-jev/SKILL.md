@@ -22,7 +22,7 @@ the decision is genuinely his. Jev does not generate text; it answers questions 
 4. **Batch.** Put every question for one decision (or one checklist) in ONE payload. Jev
    evaluates many questions in parallel in a single call; one approval per batch is the point.
 5. **Report YOUR CALL honestly.** When the script flags `YOUR CALL`, do not recommend. Lay out
-   the tradeoff and say the decision depends on Ping's preference.
+   the tradeoff and say the decision depends on Ping's preference, because Jev's own odds are too close to break the tie.
 
 ## Write the state as a packet
 
