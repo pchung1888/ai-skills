@@ -331,9 +331,32 @@ def check_repeat_install_idempotency(sync) -> None:
             require(not sync.transaction_root().exists(), "idempotent install left transaction artifacts")
 
 
+def check_template_guard(sync) -> None:
+    """The installer refuses the placeholder template and accepts filled-in rules."""
+    saved = sync.SHARED_PATH
+    try:
+        with tempfile.TemporaryDirectory(prefix="harness-template-guard-") as temporary:
+            sync.SHARED_PATH = Path(temporary) / "shared.md"
+            for marker in sync.TEMPLATE_MARKERS:
+                sync.SHARED_PATH.write_bytes(f"# Rules\n\n- **Name:** {marker}\n".encode("ascii"))
+                try:
+                    with redirect_stdout(io.StringIO()):
+                        sync.refuse_template_source()
+                except SystemExit as exc:
+                    require(exc.code == 1, "template guard exited with the wrong status")
+                else:
+                    fail(f"template guard accepted a source containing {marker!r}")
+            sync.SHARED_PATH.write_bytes(b"# Rules\n\n- **Name:** Alex Rivera\n")
+            sync.refuse_template_source()
+    finally:
+        sync.SHARED_PATH = saved
+    print("HARNESS TEMPLATE GUARD SELF-TEST PASS")
+
+
 def check_adapters() -> None:
     sync = load_module(SYNC_SCRIPT, "harness_sync_source")
     check_adapter_transaction_recovery(sync)
+    check_template_guard(sync)
     outputs = sync.compose_adapters()
     targets = {
         "claude": (HOME / ".claude" / "CLAUDE.md", "claude-global.md"),

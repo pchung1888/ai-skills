@@ -27,6 +27,13 @@ Use the first folder whose `git remote get-url origin` ends in `/ai-skills` or
 If none exists, use `$HOME\src\ai-skills`; apply mode clones it there.
 Add-rule pushes, so point `origin` at your own fork, not the public repo.
 
+Rules can live apart from the scripts, for example in a private repo. If the
+user environment variable `PING_HARNESS_ROOT` is set, it names the `harness/`
+folder to install from: apply and check use it, and add-rule edits, commits and
+pushes in the repo that holds that folder. Run `echo $env:PING_HARNESS_ROOT`
+before apply and report the value. The installer refuses the unfilled template,
+so a machine whose rules live elsewhere fails loudly instead of losing them.
+
 ## apply
 
 1. If the repo folder does not exist, clone it:
@@ -51,6 +58,7 @@ Add-rule pushes, so point `origin` at your own fork, not the public repo.
 | Python 3.9 or newer not found | install Python from python.org (not the Microsoft Store alias) |
 | manual drift | someone edited `~/.claude/CLAUDE.md` by hand; show the diff against `~/.ping-harness\staging\claude-global.md`, move wanted lines into add-rule, then ask before re-running |
 | the claude CLI is not on PATH | install Claude Code, then retry |
+| still the placeholder template | fill in `harness/core/shared.md`, or point at your real rules: `[Environment]::SetEnvironmentVariable('PING_HARNESS_ROOT', '<repo>\harness', 'User')`, then open a new shell and retry |
 
 ## check
 

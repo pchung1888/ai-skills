@@ -17,7 +17,8 @@ $contractChecks = @(
     @{ Pat = '(?i)wait for the user.s OK';                         Why = 'rule edits need approval' },
     @{ Pat = '(?i)Never hand-edit';                                Why = 'generated files are not hand-edited' },
     @{ Pat = '(?i)Never commit anything from';                     Why = 'per-machine state stays out of git' },
-    @{ Pat = '/reload-plugins';                                    Why = 'running session must reload' }
+    @{ Pat = '/reload-plugins';                                    Why = 'running session must reload' },
+    @{ Pat = 'PING_HARNESS_ROOT';                                  Why = 'rules can live outside the scripts repo' }
 )
 
 $tests = @(
