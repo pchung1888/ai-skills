@@ -39,12 +39,20 @@ Render markdown (plans, specs, audit trackers) as styled HTML. Two themes: `arc`
 
 ### `/personal-htsw` -- How This Shit Works
 
-Re-explain code, a PR diff, a spec, a plan, or current conversation for one of four purposes:
+Re-explain code, a PR diff, a spec, a plan, or current conversation. Main modes:
 
 - `walk` -- walk-me-through-it explainer (default)
 - `pr` -- PR review brief
 - `qa` -- QA testing brief
 - `boss` -- pitch-it-to-my-boss summary
+- `now` -- where this session stands: verdict, flowchart, focus table (used by the ping-hud Simple and Deep HTML buttons)
+
+### `/personal-next`
+
+Independent next-step recommender behind the ping-hud Next button. Writes a
+facts-only brief of the session, asks one read-only seat (`next-recommender`) for
+2-4 typed next steps as JSON, checks them with `validate.py`, then lets you pick
+by clicking.
 
 ### `/personal-quota`
 
@@ -102,6 +110,8 @@ Eight project-agnostic role agents. Each follows a consistent response format an
 | `rhea` | Quality, security, and governance auditor | Post-implementation audit + governance hardening. Binary verdict: APPROVED or REJECTED. Owns TDD/BDD decisions, secrets scan, agent-scope check, token-cost gate. |
 | `ms-mario` | Critic | Adversarial GAN-style reviewer. Severity-tagged findings (Critical / High / Medium / Low). Code-Reading Pre-Flight. Vote 2 of `/personal-critic-gate`. |
 
+One utility agent sits outside the line-up: `next-recommender`, the read-only seat that `/personal-next` dispatches.
+
 The line-up assumes a "single dispatcher + multiple role agents" workflow. The dispatcher is the orchestrating main session; the agents only need to be invoked correctly.
 
 ## Hooks
@@ -120,6 +130,17 @@ Loaded automatically with the plugin. `stop-unpushed.sh` warns at session stop
 when the current branch has commits that are not on its upstream.
 `post-edit-check.sh` runs after Edit/Write and flags CRLF line endings in `.sh`
 files and missing or malformed SKILL.md frontmatter. Both share `hook-lib.sh`.
+Codex reads the same shell hooks from `hooks/codex-hooks.json` (no `modules` field).
+
+### ping-hud mod (`hooks/register.tsx`, Claude Code only)
+
+`hooks/hooks.json` loads `register.tsx` as a Claude Code mod. It draws a band
+above the prompt (model, context, quota forecast, buttons such as Handoff,
+Simple, Explain, Kid, Deep HTML, Next and Plan), a Goals pane, an Agents pane, and the
+`/personal-hud` command. The band is on after load; `/personal-hud off` hides it
+and `/personal-hud on` brings it back. Quota numbers need a Claude subscription
+login; on other accounts they may show `--`. The Plan button needs the separate `html-plan`
+plugin. Tests: `claude plugin test plugins/ping-personal`.
 
 ## Cross-runtime rules harness
 

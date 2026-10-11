@@ -23,7 +23,7 @@ checker still measures what it claims (accepts good output, rejects bad output).
 | ID | Failure | Why It Matters | Grader |
 | --- | --- | --- | --- |
 | F01 | First-line citation missing or malformed | Downstream tooling + the checker key off it; breaks every mode | code |
-| F02 | TL;DR missing or not 2-4 icon bullets | TL;DR is the scannable contract Ping relies on | code |
+| F02 | TL;DR missing or not 2-4 icon bullets | TL;DR is the scannable contract the owner relies on | code |
 | F03 | Rendering exceeds the per-mode length cap | Long renderings defeat the "fast brief" purpose | code |
 | F04 | Boss mode leaks engineering jargon or status icons | Boss output goes to clients; jargon/icons break the polish contract | code |
 | F05 | A WARN/BAD-tier bullet has no evidence + no fix-arrow | Verdicts without evidence are guessing (Honesty Protocol) | code |
@@ -83,3 +83,14 @@ checker still measures what it claims (accepts good output, rejects bad output).
 - No code-grader failure (`eval.ps1` exits 0).
 - Locked good fixture (`good-baby.md`) must keep passing `htsw-check.py` (no regression).
 - Judge may flag taste issues for follow-up, but a code-grader red blocks ship.
+
+## now mode (2026-10-09)
+
+- seven_modes_documented: `now` named in SKILL.md (was six_modes_documented).
+- reference_playbooks_present: references/now.md exists.
+- now_playbook_present: now.md carries Verdict, Flowchart, the When / Your job / Time table, Why this shape, TL;DR.
+- now_chat_only: the modes-table row for `now` says it writes no files.
+- deep_html_documented: SKILL.md documents `now --deep --html <path>`; now.md asks for per-phase tables, a Glossary, EXTRACTED / INFERRED labels and a diagram.
+- deep_writes_md_and_html: now.md says the Markdown goes next to `<path>`, is rendered with md-to-html.py `--out <path>`, and the link is printed.
+- output_path_not_a_source: the source-table row for `now --deep --html <path>` says the source is the current conversation and `<path>` is never read as a source.
+- now_stays_chat_only: the `now` modes-table row still says it writes no files, and now.md keeps plain now chat-only.

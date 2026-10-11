@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PostToolUse hook for Edit|Write. Warns (never blocks) when:
+# PostToolUse hook for Edit|Write (Claude: tool_input.file_path; Codex: apply_patch text in tool_input.command).
+# Warns (never blocks) when:
 #  (a) a tracked file's line endings changed versus what git checks out for HEAD (CRLF/LF/mixed);
 #  (b) a SKILL.md has a broken frontmatter: no opening/closing ---, name not equal to its folder,
 #      empty description, tabs, or non-ASCII bytes.
@@ -7,10 +8,6 @@
 . "$(dirname "$0")/hook-lib.sh"
 
 input=$(cat)
-raw=$(json_get "$input" file_path)
-[ -z "$raw" ] && exit 0
-file=$(to_posix_path "$raw")
-[ -f "$file" ] || exit 0
 warnings=""
 warn() { warnings="${warnings}$1
 "; }
@@ -26,6 +23,11 @@ eol_style() {
     elif [ "$crlf" -ge "$lf" ]; then echo CRLF
     else echo mixed; fi
 }
+
+# Runs both checks on one file; a path that is not a file is skipped.
+check_file() {
+local file=$1
+[ -f "$file" ] || return 0
 
 # (a) line-ending drift on tracked files
 if command -v git >/dev/null 2>&1; then
@@ -68,6 +70,24 @@ if [ "$(basename "$file")" = "SKILL.md" ]; then
         printf '%s' "$front" | grep -q "$(printf '\t')" && warn "SKILL.md: the frontmatter contains a tab; YAML needs spaces."
         printf '%s' "$front" | LC_ALL=C grep -q "$(printf '[\200-\377]')" && warn "SKILL.md: the frontmatter has non-ASCII characters; use plain ASCII."
     fi
+fi
+
+}
+
+# Claude sends one file_path. Codex sends the apply_patch text: one "*** Update File: <path>" or
+# "*** Add File: <path>" line per file, paths relative to cwd, newlines still escaped as \n.
+raw=$(json_get "$input" file_path)
+if [ -n "$raw" ]; then
+    check_file "$(to_posix_path "$raw")"
+else
+    patch=$(json_get "$input" command)
+    cwd=$(to_posix_path "$(json_get "$input" cwd)")
+    while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        case "$rel" in /*|[A-Za-z]:*) check_file "$(to_posix_path "$rel")" ;; *) check_file "${cwd:-.}/$rel" ;; esac
+    done <<EOF
+$(printf '%s' "$patch" | sed 's/\\n/\n/g' | sed -n 's/^\*\*\* \(Update\|Add\) File: //p' | tr -d '\r')
+EOF
 fi
 
 [ -z "$warnings" ] && exit 0

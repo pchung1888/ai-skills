@@ -6,7 +6,7 @@ $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..\..')
 Set-Location $RepoRoot
 $env:PYTHONIOENCODING = 'utf-8'   # guard the cp1252 console crash (CLAUDE.md Windows pitfall)
 $Lib = 'plugins/ping-personal/skills/personal-workflow/lib'
-$Fix = 'plugins/ping-personal/skills/personal-workflow/tests/fixtures'
+$Fix = 'plugins/ping-personal/tests/fixtures/personal-workflow'
 
 $tests = @(
     @{

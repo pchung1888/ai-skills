@@ -1,7 +1,7 @@
 ---
 name: personal-htsw
 model: sonnet
-description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of six purposes (walk / pr / qa / boss / baby / code-explain). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top.
+description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of seven purposes (walk / pr / qa / boss / baby / code-explain / now). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request; now --deep --html writes the page it is given). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top.
 ---
 
 # htsw — How This Shit Works
@@ -9,10 +9,11 @@ description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, o
 ## What it's for
 
 `/personal-htsw <mode> [<path>]` re-explains a source (file, diff, spec, plan,
-or the current conversation when no path is given) for one of six purposes.
+or the current conversation when no path is given) for one of seven purposes.
 Mode is optional and defaults to `walk` -- most invocations want explanation,
-not grading. Output is inline to the chat; the skill writes no files
-(code-explain is the one carve-out -- it saves a `.md` only on explicit request).
+not grading. Output is inline to the chat; the skill writes no files. Two carve-outs:
+code-explain saves a `.md` only on explicit request, and `now --deep --html <path>` writes
+the page named by `<path>` (the ping-hud Deep HTML button).
 
 ## Modes and aliases
 
@@ -23,6 +24,7 @@ not grading. Output is inline to the chat; the skill writes no files
 | `qa` | `tester`, `test` | About to test something against a Jira story, OR you found a bug and want to write it up |
 | `boss` | `client`, `sales`, `pitch`, **`clean`** | Pitching a plan to your boss or a client. Also the "clean" version when you want any explanation in professional language. |
 | `baby` | `eli5`, `analogy` | "Explain this with a concrete analogy." Every jargon term stays on the page AND gets paired with an everyday physical object so a junior dev learns both vocabularies at once. |
+| `now` | `status`, `whats-going-on` | "What is going on right now?" Explains the current conversation in layman terms: verdict, flowchart of the work, what you need to focus on, why this shape, TL;DR. Chat only, writes no files. The ping-hud Simple button runs it. |
 | `code-explain` | `code`, `explain-code`, `line-by-line`, `deep-dive`, `cx` | Understand a code change in depth — file-by-file, line-by-line, **why-first**. The deep sibling of `walk`. Inline by default; saves a doc on request. |
 
 **There is no separate `--clean` flag.** If you want a clean / professional / suitable-for-client version of any explanation, just use `boss` mode. Walk / PR / QA are for internal use — they keep the explicit language. Boss is the polite version. Walk is the most common; reach for it when you want to *understand* something, not grade it.
@@ -72,6 +74,19 @@ When NOT to use code-explain:
 - The audience is non-engineering → `boss`
 
 Full playbook: `references/code-explain.md`.
+
+### Now mode -- what is going on right now
+
+For the person who looks up mid-session and asks "where are we?". The source is always the
+current conversation. Output, in order: a 1-2 line verdict, a flowchart of the work (done ->
+doing -> next), a "what you need to focus on" table (When / Your job / Time), a short
+"why this shape" note, and a TL;DR. Layman terms, every technical term named and glossed once.
+Chat only: it writes no files. Full playbook: `references/now.md`.
+
+`now --deep --html <path>` (the ping-hud Deep HTML button) is the deep variant: same source,
+a longer explanation with per-phase tables, a glossary, evidence labels and diagrams, written
+as Markdown next to `<path>` and rendered to `<path>` with personal-md-to-html. Details in
+`references/now.md`.
 
 ### Baby mode — analogy walks alongside jargon, never instead of it
 
@@ -155,6 +170,8 @@ Boss output uses tables for visual structure — Impact-at-a-glance for features
 | No path arg, PR mode | Call `/review` first; fall back to current conversation if `/review` unavailable |
 | No path arg, QA or boss mode | Use the current conversation |
 | No path arg, baby mode | Use the current conversation |
+| now mode | Always the current conversation; a path arg is ignored |
+| `now --deep --html <path>` | Always the current conversation. `<path>` is the output file, never read as a source, so it is not an error when it does not exist yet |
 | Path arg given, code-explain mode | Read that file/diff; if it's a *change*, also pull `git diff <base>...HEAD` / `git show <hash>` and read the live file at its real line numbers |
 | No path arg, code-explain mode | The change just discussed, or `git diff <base>...HEAD` for the current branch |
 | Path doesn't exist | Fail loud: "Source not found: \<path\>" |

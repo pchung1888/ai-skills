@@ -40,6 +40,12 @@ preparatively when a limit approaches or the user signals an imminent stop.
   WHAT-happened vs WHAT-next distinction.
 - `required_sections`: Step 0 / Step 2 Write Progress / Step 2.5 Sibling Handoff / Safety Rules.
 - `templates_present`: the `templates/` directory exists.
+- `unattended_flag_documented`: an `## Unattended mode` section names `--unattended` and `-audit-tracker.md`.
+- `unattended_asks_no_questions`: the unattended rule says to ask no questions.
+- `unattended_writes_unknown`: the unattended section writes `Unknown` for unreadable items.
+- `unattended_skips_readback`: the unattended section skips the verbatim read-back.
+- `unattended_never_commits`: the unattended section says never commit.
+- `goal_beacon_per_bound_path`: template and SKILL.md carry `Goal beacon: <path>`, one line per bound path, deduped.
 
 ### Model Judge
 

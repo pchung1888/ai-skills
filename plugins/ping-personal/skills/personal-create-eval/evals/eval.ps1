@@ -6,11 +6,13 @@ $ErrorActionPreference = 'Stop'
 $env:PYTHONIOENCODING = 'utf-8'
 
 $SkillDir = Resolve-Path (Join-Path $PSScriptRoot '..')   # personal-create-eval/
+$PluginRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Skill    = Join-Path $SkillDir 'SKILL.md'
 $Refs     = Join-Path $SkillDir 'references'
 $Lib      = Join-Path $SkillDir 'lib'
-$GoodFix  = Join-Path $PSScriptRoot 'fixtures/good-skill'
-$BadFix   = Join-Path $PSScriptRoot 'fixtures/bad-skill'
+$FixtureRoot = Join-Path $PluginRoot 'tests\fixtures\personal-create-eval'
+$GoodFix  = Join-Path $FixtureRoot 'good-skill'
+$BadFix   = Join-Path $FixtureRoot 'bad-skill'
 
 function Invoke-Py([string]$script, [string[]]$rest) {
     python (Join-Path $Lib $script) @rest *> $null
@@ -72,7 +74,7 @@ $tests = @(
     @{
         Name = 'optional_dependency_calibration: an eval calling an optional skill is HIGH; healthy is not [F07]'
         Run = {
-            $j = python (Join-Path $Lib 'audit_eval.py') --json --skill (Join-Path $PSScriptRoot 'fixtures/bad-jev-dependent-skill') | Out-String | ConvertFrom-Json
+            $j = python (Join-Path $Lib 'audit_eval.py') --json --skill (Join-Path $FixtureRoot 'bad-jev-dependent-skill') | Out-String | ConvertFrom-Json
             if (-not @($j | Where-Object { $_.code -eq 'optional_dependency' -and $_.severity -eq 'HIGH' })) { throw "auditor missed an eval that calls the optional Jev skill -- F07" }
             $g = python (Join-Path $Lib 'audit_eval.py') --json --skill $GoodFix | Out-String | ConvertFrom-Json
             if (@($g | Where-Object { $_.code -eq 'optional_dependency' })) { throw "auditor flagged the healthy good-skill as dependent -- F07 false positive" }
