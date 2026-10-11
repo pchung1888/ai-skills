@@ -1,6 +1,6 @@
 {
   "name": "ping-personal",
-  "version": "0.27.1",
+  "version": "0.31.3",
   "description": "Personal cross-project skills for Claude Code and Codex: goal orchestration, workflow conductor, critic gate, md-to-html, htsw, eval maker, prototype conductor, facts-check, online research, quota tracking, Jev second opinions, drift checks, lesson capture, release and PR workflows, MR/PR review triage, and a cross-runtime rules harness.",
   "author": {
     "name": "pchung1888"
@@ -17,6 +17,7 @@
     "claude"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "Ping Personal",
     "shortDescription": "Cross-project personal workflow skills for Codex",
@@ -30,7 +31,6 @@
     ],
     "defaultPrompt": [
       "Use personal-fable-mode to plan and verify a multi-step coding task.",
-      "Run personal-create-eval to add or audit an eval for a skill.",
       "Run personal-quota to check real 5h, weekly, and context usage.",
       "Use personal-handoff to capture a session handoff."
     ],

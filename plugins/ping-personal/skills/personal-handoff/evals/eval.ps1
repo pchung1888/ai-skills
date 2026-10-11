@@ -76,6 +76,60 @@ $tests = @(
             if ($s -notmatch 'Never paraphrase') { throw "SKILL.md does not forbid paraphrasing the ask" }
             if ($s -notmatch '(?i)link, do not restate') { throw "SKILL.md does not carry the link-not-restate rule" }
         }
+    },
+    @{
+        Name = 'unattended_flag_documented: SKILL.md documents --unattended and the -audit-tracker.md path args'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?m)^## Unattended mode') { throw "no '## Unattended mode' section" }
+            if ($s -notmatch [regex]::Escape('--unattended')) { throw "--unattended not documented" }
+            if ($s -notmatch [regex]::Escape('-audit-tracker.md')) { throw "bound tracker path pattern -audit-tracker.md not documented" }
+        }
+    },
+    @{
+        Name = 'unattended_asks_no_questions: unattended mode asks the user nothing'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?i)unattended[^\n]*asks? no questions|asks? no questions[^\n]*unattended|ask no questions') { throw "no 'ask no questions' rule for unattended mode" }
+        }
+    },
+    @{
+        Name = 'unattended_writes_unknown: unreadable items are written as Unknown'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            $i = $s.IndexOf('## Unattended mode')
+            if ($i -lt 0) { throw "no Unattended mode section" }
+            if ($s.Substring($i) -notmatch '(?i)writes? `Unknown`') { throw "unattended section does not say to write Unknown" }
+        }
+    },
+    @{
+        Name = 'unattended_skips_readback: unattended mode skips the verbatim read-back'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            $i = $s.IndexOf('## Unattended mode')
+            if ($i -lt 0) { throw "no Unattended mode section" }
+            if ($s.Substring($i) -notmatch '(?i)skip[^\n]*read-back') { throw "unattended section does not skip the read-back" }
+        }
+    },
+    @{
+        Name = 'unattended_never_commits: unattended mode never commits or asks about committing'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            $i = $s.IndexOf('## Unattended mode')
+            if ($i -lt 0) { throw "no Unattended mode section" }
+            if ($s.Substring($i) -notmatch '(?i)never commit') { throw "unattended section does not say never commit" }
+        }
+    },
+    @{
+        Name = 'goal_beacon_per_bound_path: SKILL.md and template carry a Goal beacon: <path> line, one per bound path, deduped'
+        Run  = {
+            $s = Get-Content $Skill -Raw
+            $t = Get-Content (Join-Path $SkillDir 'templates/progress-template.md') -Raw
+            if ($t -notmatch '(?m)^Goal beacon: ') { throw "template has no 'Goal beacon: <path>' line" }
+            if ($s -notmatch [regex]::Escape('Goal beacon: <path>')) { throw "SKILL.md does not document 'Goal beacon: <path>'" }
+            if ($s -notmatch '(?i)one `Goal beacon: <path>` line per bound path') { throw "no one-line-per-bound-path rule" }
+            if ($s -notmatch '(?i)dedup') { throw "no dedupe rule" }
+        }
     }
 )
 

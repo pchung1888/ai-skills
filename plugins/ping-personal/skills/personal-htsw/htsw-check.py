@@ -496,6 +496,36 @@ def check_qa(content, word_count):
     return findings
 
 
+def check_now(content):
+    """now mode (references/now.md): verdict, an ASCII flowchart, the When / Your job / Time table,
+    a why-this-shape note and a TL;DR of at most 5 bullets; ASCII only; no citation line."""
+    findings = []
+    lines = content.split('\n')
+    first = next((l.strip() for l in lines if l.strip()), '')
+    if not first:
+        findings.append('now: empty rendering (no verdict line)')
+    bad = sorted({c for c in content if ord(c) > 127})
+    if bad:
+        findings.append('now: non-ASCII characters (now output is ASCII only): ' + ' '.join('U+%04X' % ord(c) for c in bad[:5]))
+    blocks = re.findall(r'```[^\n]*\n(.*?)```', content, re.DOTALL)
+    if not any('->' in b for b in blocks):
+        findings.append('now: no flowchart (a fenced block using -> arrows: done -> doing -> next)')
+    if not re.search(r'(?m)^\|\s*When\s*\|\s*Your job\s*\|\s*Time\s*\|', content):
+        findings.append("now: no focus table with the columns '| When | Your job | Time |'")
+    if not re.search(r'(?im)^(#+\s*|\*\*)why this shape', content):
+        findings.append("now: no 'Why this shape' section")
+    m = re.search(r'(?ims)^(?:#+\s*TL;DR[^\n]*|\*\*TL;DR[^\n]*)\n(.*)', content)
+    if not m:
+        findings.append('now: no TL;DR section')
+    else:
+        bullets = [l for l in m.group(1).split('\n') if re.match(r'^\s*[-*]\s+\S', l)]
+        if not 1 <= len(bullets) <= 5:
+            findings.append(f'now: TL;DR needs 1-5 bullets (found {len(bullets)})')
+    if len(lines) > 45:
+        print(f'[htsw-check] WARN: now rendering is {len(lines)} lines; now.md asks for about 40', file=sys.stderr)
+    return findings
+
+
 def check_walk(content, word_count, is_persisted=False):
     """Walk mode — the explainer / how-it-works mode. Default when no mode is
     given. Light-touch validation because walk has no verdict; the contract is:
@@ -1204,15 +1234,18 @@ def check_code_explain(content, word_count, is_persisted=False):
     return findings
 
 
-def validate_one(content, is_persisted=False):
+def validate_one(content, is_persisted=False, purpose=None):
     """Validate a single rendering string. Returns (purpose, word_count, findings).
 
     `is_persisted` affects walk mode (700 -> 1200) and code-explain mode
     (3000 -> 4000). PR/QA/boss have their own fixed caps that don't change
     with persistence.
     """
-    purpose = detect_purpose(content)
+    # now output carries no citation line (references/now.md), so its purpose comes from --purpose.
+    purpose = purpose or detect_purpose(content)
     word_count = count_words(content)
+    if purpose == 'now':
+        return (purpose, word_count, check_now(content))
     if purpose == 'pr':
         findings = check_pr(content, word_count)
     elif purpose == 'qa':
@@ -1329,6 +1362,12 @@ def main():
              'Default: persisted=True when --input-file or --examples-file is used; '
              'persisted=False when --input-string is used. This flag forces persisted=True.',
     )
+    parser.add_argument(
+        '--purpose',
+        choices=['now'],
+        help='Validate as this mode instead of reading the citation line. now mode output has no '
+             'citation line; example: --purpose now --input-file reply.md',
+    )
     args = parser.parse_args()
 
     if args.examples_file:
@@ -1340,7 +1379,7 @@ def main():
     is_persisted = bool(args.persisted) or bool(args.input_file)
 
     content = load_content(args)
-    purpose, word_count, findings = validate_one(content, is_persisted)
+    purpose, word_count, findings = validate_one(content, is_persisted, args.purpose)
 
     if not findings:
         print(f"[htsw-check] PASS: {purpose} rendering meets the contract (word count: {word_count}).")

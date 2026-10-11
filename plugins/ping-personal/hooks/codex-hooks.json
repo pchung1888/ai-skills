@@ -1,0 +1,28 @@
+{
+  "description": "ping-personal shell hooks for Codex: the same list as hooks/hooks.json without its Claude-only modules field (scripts/check_dual_runtime.py keeps them equal).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-unpushed.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-check.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

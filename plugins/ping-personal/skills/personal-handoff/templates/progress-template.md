@@ -5,6 +5,9 @@
 **Issue:** `<ticket-id>` (Jira / GitHub Issue / etc.)
 **Last updated:** YYYY-MM-DD | **PR/MR:** `<repo>#<N>` -> `<target-branch>`
 
+Goal beacon: <path>
+<!-- Path of the goal's -audit-tracker.md, one line per bound goal; omit if no goal. Example: docs/goals/x-audit-tracker.md -->
+
 ---
 
 ## Status Summary

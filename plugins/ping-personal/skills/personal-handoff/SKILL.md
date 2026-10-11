@@ -10,6 +10,9 @@ user_invocable: true
 Capture the current session state as a structured progress file so the next
 session (or agent) can resume without losing context.
 
+If the arguments contain `--unattended`, follow "Unattended mode" at the end of
+this file instead of asking anything. Otherwise behave as described below.
+
 ---
 
 ## Step 0: Gather State
@@ -78,6 +81,9 @@ Key rules:
   was most recently in motion -- that is the difference between returning to the goal
   and letting the detour become the project. A detour whose Origin is `phase-N` is
   drift, not a detour; say so.
+- **Goal beacon line:** when the session works on a goal whose tracker path is known,
+  write `Goal beacon: <path>` on its own line near the top of the file (the HUD's
+  resume-bind reads that line). Example: `Goal beacon: docs/goals/x-audit-tracker.md`.
 - **Link, do not restate.** Reference the plan, spec and beacon by path. Keep the
   status table (that is live state the plan does not hold) but not the task prose --
   a restated copy diverges from its source, and the daily overwrite then destroys the
@@ -159,6 +165,23 @@ After writing the file:
      the handoff silently never commits. This file is the cross-session carrier;
      whether it reaches git must not depend on the host repo's ignore posture.
    - If no commit: leave unstaged (it will not be lost -- just not in history)
+
+---
+
+## Unattended mode (`--unattended`)
+
+Used by the HUD Handoff button: `/personal-handoff --unattended <tracker paths>`.
+Without the flag, nothing above changes.
+
+- **Bound trackers:** every other argument token that is a path ending
+  `-audit-tracker.md` is a bound goal tracker.
+- **Ask no questions:** each place that would ask the user (Step 0 test result,
+  runtime state, DB state) writes `Unknown` plus what was unknown instead.
+- **Skip the read-back:** skip the Step 3 verbatim read-back.
+- **Never commit:** never commit and never ask about committing; leave the file
+  unstaged.
+- **Goal beacons:** write one `Goal beacon: <path>` line per bound path, deduped,
+  in the order given.
 
 ---
 

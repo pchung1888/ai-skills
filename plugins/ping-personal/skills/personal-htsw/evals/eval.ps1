@@ -27,21 +27,71 @@ $tests = @(
         }
     },
     @{
-        Name = 'six_modes_documented: walk / pr / qa / boss / baby / code-explain all named in SKILL.md'
+        Name = 'seven_modes_documented: walk / pr / qa / boss / baby / code-explain / now all named in SKILL.md'
         Run = {
             $s = Get-Content $Skill -Raw
-            foreach ($m in @('walk','pr','qa','boss','baby','code-explain')) {
+            foreach ($m in @('walk','pr','qa','boss','baby','code-explain','now')) {
                 if ($s -notmatch [regex]::Escape("``$m``")) { throw "mode '$m' not documented (no backtick mention)" }
             }
         }
     },
     @{
-        Name = 'reference_playbooks_present: references/{walk,pr,qa,boss,baby,code-explain}.md all exist'
+        Name = 'reference_playbooks_present: references/{walk,pr,qa,boss,baby,code-explain,now}.md all exist'
         Run = {
-            foreach ($m in @('walk','pr','qa','boss','baby','code-explain')) {
+            foreach ($m in @('walk','pr','qa','boss','baby','code-explain','now')) {
                 $p = Join-Path $Refs "$m.md"
                 if (-not (Test-Path $p)) { throw "missing reference playbook: references/$m.md" }
             }
+        }
+    },
+    @{
+        Name = 'now_playbook_present: references/now.md has verdict, flowchart, focus table, why-this-shape, TL;DR'
+        Run = {
+            $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            foreach ($k in @('Verdict','Flowchart','| When | Your job | Time |','Why this shape','TL;DR')) {
+                if ($n -notmatch [regex]::Escape($k)) { throw "now.md missing section: $k" }
+            }
+        }
+    },
+    @{
+        Name = 'now_chat_only: SKILL.md says now mode writes no files'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?m)^\|\s*`now`.*writes no files') { throw "modes-table row for now does not say it writes no files" }
+        }
+    },
+    @{
+        Name = 'deep_html_documented: SKILL.md + now.md document now --deep --html <path> with per-phase tables, glossary, evidence labels, diagrams'
+        Run = {
+            $s = Get-Content $Skill -Raw; $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            if ($s -notmatch [regex]::Escape('now --deep --html <path>')) { throw "SKILL.md does not document 'now --deep --html <path>'" }
+            foreach ($k in @('per-phase table','Glossary','EXTRACTED','INFERRED','diagram')) {
+                if ($n -notmatch [regex]::Escape($k)) { throw "now.md deep section missing: $k" }
+            }
+        }
+    },
+    @{
+        Name = 'deep_writes_md_and_html: now.md says deep writes Markdown next to <path>, renders <path> with md-to-html, prints the link'
+        Run = {
+            $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            foreach ($k in @('Markdown next to','md-to-html.py','--out <path>','link')) {
+                if ($n -notmatch [regex]::Escape($k)) { throw "now.md deep section missing: $k" }
+            }
+        }
+    },
+    @{
+        Name = 'output_path_not_a_source: source table says the --html path is output, never read, no fail-loud when missing'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?m)^\|\s*`now --deep --html <path>`.*current conversation.*never read as a source') { throw "source-table row for now --deep --html missing or incomplete" }
+        }
+    },
+    @{
+        Name = 'now_stays_chat_only: plain now writes no files; --deep --html is the only now carve-out'
+        Run = {
+            $s = Get-Content $Skill -Raw; $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            if ($s -notmatch '(?m)^\|\s*`now`.*writes no files') { throw "modes-table row for now lost 'writes no files'" }
+            if ($n -notmatch 'Without `--deep --html`, now mode writes no files') { throw "now.md does not keep plain now chat-only" }
         }
     },
     @{
@@ -63,6 +113,17 @@ $tests = @(
             foreach ($f in $bad) {
                 $code = Invoke-Checker $f.FullName
                 if ($code -eq 0) { throw "grader ACCEPTED a broken rendering: $($f.Name) -- F08 regression" }
+            }
+        }
+    },
+    @{
+        Name = 'checker_now_mode: --purpose now accepts fixtures/now-good.md and rejects every fixtures/now-bad-*.md'
+        Run = {
+            python $Checker --purpose now --input-file (Join-Path $Fix 'now-good.md') *> $null
+            if ($LASTEXITCODE -ne 0) { throw "checker rejected a conforming now rendering (exit $LASTEXITCODE)" }
+            foreach ($f in Get-ChildItem (Join-Path $Fix 'now-bad-*.md')) {
+                python $Checker --purpose now --input-file $f.FullName *> $null
+                if ($LASTEXITCODE -eq 0) { throw "checker ACCEPTED a broken now rendering: $($f.Name)" }
             }
         }
     },

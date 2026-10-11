@@ -79,9 +79,27 @@ def main() -> int:
     require(claude_entry.get("source") == "./plugins/ping-personal", "Claude marketplace points to shared plugin path")
     require(codex_entry.get("source", {}).get("path") == "./plugins/ping-personal", "Codex marketplace points to shared plugin path")
     require(codex_plugin.get("skills") == "./skills/", "Codex plugin exposes shared skills directory")
+    prompts = codex_plugin.get("interface", {}).get("defaultPrompt", [])
+    require(len(prompts) <= 3, f"Codex defaultPrompt has at most 3 entries; Codex ignores the field above 3 ({len(prompts)})")
+    # Claude reads hooks/hooks.json, whose modules field Codex rejects; Codex reads its own file instead.
+    claude_hooks = load_json(PLUGIN / "hooks" / "hooks.json")
+    require(claude_hooks.get("modules") == ["./register.tsx"], "Claude hooks.json lists the mod module ./register.tsx")
+    require(codex_plugin.get("hooks") == "./hooks/codex-hooks.json", "Codex plugin points hooks at hooks/codex-hooks.json")
+    codex_hooks = load_json(PLUGIN / "hooks" / "codex-hooks.json")
+    require("modules" not in codex_hooks, "Codex hooks file has no modules field")
+    require(codex_hooks.get("hooks") == claude_hooks.get("hooks"), "Codex and Claude shell hook lists match")
 
     skill_dirs = [p for p in (PLUGIN / "skills").iterdir() if (p / "SKILL.md").is_file()]
     require(len(skill_dirs) >= 34, f"top-level skill count is at least 34 ({len(skill_dirs)})")
+    nested_skill_files = sorted(
+        path for path in (PLUGIN / "skills").rglob("SKILL.md")
+        if path.parent.parent != PLUGIN / "skills"
+    )
+    nested_skill_paths = ", ".join(rel(path) for path in nested_skill_files) or "none"
+    require(
+        not nested_skill_files,
+        f"Codex skills root has no nested SKILL.md files ({nested_skill_paths})",
+    )
 
     allowed_models = {"haiku", "sonnet", "opus", "inherit"}
     for skill_dir in sorted(skill_dirs):
@@ -96,7 +114,7 @@ def main() -> int:
         wrapper = PLUGIN / "skills" / persona / "SKILL.md"
         agent_policy = PLUGIN / "skills" / persona / "agents" / "openai.yaml"
         eval_file = PLUGIN / "skills" / persona / "evals" / "eval.ps1"
-        bad_fixture = PLUGIN / "skills" / persona / "evals" / "fixtures" / "bad-wrapper" / "SKILL.md"
+        bad_fixture = PLUGIN / "tests" / "fixtures" / "persona-wrappers" / persona / "SKILL.md"
 
         require(source.is_file(), f"{persona} canonical persona source exists")
         require(wrapper.is_file(), f"{persona} Codex persona wrapper exists")

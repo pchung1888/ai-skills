@@ -33,9 +33,9 @@ dogfood: the eval-maker has an eval, and that eval runs its own scaffold + audit
 | E02 | SKILL.md body | both CREATE and ENHANCE modes documented | a mode dropped (F02) |
 | E03 | references/ | field guide + 3 templates present | a reference lost (F03) |
 | E04 | lib/ | scaffold_eval.py + audit_eval.py present | a script lost (F04) |
-| E05 | scaffold_eval.py --dry-run on fixtures/good-skill | exit 0, prints planned actions | scaffold broken (F05) |
-| E06 | audit_eval.py --skill fixtures/good-skill | exit 0 (healthy) | auditor passes everything (F06) |
-| E07 | audit_eval.py --skill fixtures/bad-skill | exit 1 (HIGH: no eval.ps1) | auditor misses a broken eval (F06) |
+| E05 | scaffold_eval.py --dry-run on `plugins/ping-personal/tests/fixtures/personal-create-eval/good-skill` | exit 0, prints planned actions | scaffold broken (F05) |
+| E06 | audit_eval.py --skill `plugins/ping-personal/tests/fixtures/personal-create-eval/good-skill` | exit 0 (healthy) | auditor passes everything (F06) |
+| E07 | audit_eval.py --skill `plugins/ping-personal/tests/fixtures/personal-create-eval/bad-skill` | exit 1 (HIGH: no eval.ps1) | auditor misses a broken eval (F06) |
 
 ## Graders
 

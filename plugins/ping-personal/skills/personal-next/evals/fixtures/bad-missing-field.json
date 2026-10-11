@@ -1,0 +1,1 @@
+{"candidates":[{"id":"c1","label":"Ship it"},{"id":"c2","label":"Stop now","meaning":"m","consequence":"c","cost":"SMALL","risk":"low","reversible":true,"combinable":false,"confidence":0.7}],"top_pick":"c1"}
