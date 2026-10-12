@@ -61,7 +61,101 @@ function Invoke-Plan {
     try { return ($raw | ConvertFrom-Json) } catch { throw "plan.ps1 -Json bad output:`n$raw" }
 }
 
+# Run quota.ps1 -Provider <p> -Json against a fixture snapshot dir and Codex dir; return array.
+# Network stays off (-NoFetch, bogus creds); the ccstatusline cache is optional.
+function Invoke-Prov {
+    param([string]$Provider, [string]$Snap, [string]$Usage, [int]$AgeMinutes = 5, [int]$NowShiftMin = 0)
+    $usagePath = $NONE
+    if ($Usage) {
+        $usagePath = Join-Path ([System.IO.Path]::GetTempPath()) ("pq-usage-{0}.json" -f ([guid]::NewGuid().ToString('N')))
+        Copy-Item -LiteralPath (Join-Path $Fix $Usage) -Destination $usagePath -Force
+        (Get-Item -LiteralPath $usagePath).LastWriteTime = $BASE.AddMinutes($NowShiftMin - $AgeMinutes).LocalDateTime
+    }
+    $snapDir = if ($Snap) { Join-Path $Fix $Snap } else { $NONE }
+    $a = @('-NoProfile','-File',$Quota,'-Json','-NoFetch','-Provider',$Provider,
+           '-Now', $BASE.AddMinutes($NowShiftMin).ToString('o'),
+           '-CredentialsPath', $NONE, '-UsageJsonPath', $usagePath, '-CtxJsonPath', $NONE,
+           '-SnapshotDir', $snapDir, '-CodexDir', (Join-Path $Fix 'codex'))
+    $raw = (& pwsh @a 2>&1) -join "`n"
+    if ($Usage) { Remove-Item -LiteralPath $usagePath -Force -ErrorAction SilentlyContinue }
+    try { $o = @($raw | ConvertFrom-Json) } catch { throw "quota.ps1 -Provider did not emit valid JSON:`n$raw" }
+    return [pscustomobject]@{ raw = $raw; o = $o }
+}
+
 $tests = @(
+    @{
+        Name = 'provider_claude_snapshot: fresh mod snapshot -> two claude windows, source=mod-snapshot'
+        Run = {
+            $r = Invoke-Prov -Provider claude -Snap 'snap-good'
+            if ($r.o.Count -ne 2) { throw "expected 2 entries; got $($r.o.Count): $($r.raw)" }
+            $five = $r.o | Where-Object { $_.window -eq '5h' }
+            if ($five.provider -ne 'claude' -or [int]$five.percentUsed -ne 31) { throw "bad 5h entry: $($r.raw)" }
+            if ($five.source -ne 'mod-snapshot') { throw "expected source mod-snapshot; got '$($five.source)'" }
+            if ([int]$five.ageSec -ne 120) { throw "expected ageSec 120; got '$($five.ageSec)'" }
+            if (-not $five.resetsAt) { throw "resetsAt missing" }
+            if ([int]($r.o | Where-Object { $_.window -eq '7d' }).percentUsed -ne 64) { throw "bad 7d entry" }
+            if ($r.raw -match '(?i)token') { throw "output has a token field" }
+        }
+    },
+    @{
+        Name = 'provider_codex: newest rollout log -> codex 5h=12 7d=3, source=codex-log'
+        Run = {
+            $r = Invoke-Prov -Provider codex -Snap $null
+            if ($r.o.Count -ne 2) { throw "expected 2 codex entries; got $($r.raw)" }
+            if ([int]($r.o | Where-Object { $_.window -eq '5h' }).percentUsed -ne 12) { throw "codex 5h should be 12: $($r.raw)" }
+            if ([int]($r.o | Where-Object { $_.window -eq '7d' }).percentUsed -ne 3)  { throw "codex 7d should be 3" }
+            if (@($r.o | Where-Object { $_.provider -ne 'codex' -or $_.source -ne 'codex-log' }).Count) { throw "bad provider/source: $($r.raw)" }
+        }
+    },
+    @{
+        Name = 'provider_all: claude + codex entries in one array'
+        Run = {
+            $r = Invoke-Prov -Provider all -Snap 'snap-good'
+            if ($r.o.Count -ne 4) { throw "expected 4 entries; got $($r.raw)" }
+            if (@($r.o | Where-Object provider -eq 'claude').Count -ne 2) { throw "expected 2 claude" }
+        }
+    },
+    @{
+        # Review Focus 3: a snapshot read mid-write is torn JSON -> treat as no snapshot.
+        Name = 'torn_snapshot_falls_back: truncated JSON -> ccstatusline cache, not mod-snapshot'
+        Run = {
+            $r = Invoke-Prov -Provider claude -Snap 'snap-torn' -Usage 'good-usage-fresh.json'
+            if ($r.o.Count -ne 2) { throw "expected 2 fallback entries; got $($r.raw)" }
+            if (@($r.o | Where-Object source -eq 'mod-snapshot').Count) { throw "torn snapshot was used" }
+            if ([int]($r.o | Where-Object window -eq '5h').percentUsed -ne 57) { throw "expected cache 57: $($r.raw)" }
+        }
+    },
+    @{
+        Name = 'old_snapshot_ignored: snapshot older than 15 min -> not used'
+        Run = {
+            $r = Invoke-Prov -Provider claude -Snap 'snap-good' -NowShiftMin 30
+            if (@($r.o | Where-Object source -eq 'mod-snapshot').Count) { throw "32m-old snapshot was used: $($r.raw)" }
+        }
+    },
+    @{
+        Name = 'default_provider_runtime: no -Provider in Codex -> codex entries; CLAUDECODE wins'
+        Run = {
+            $saved = @{ CLAUDECODE = $env:CLAUDECODE; CODEX_SANDBOX = $env:CODEX_SANDBOX }
+            $a = @('-NoProfile','-File',$Quota,'-NoFetch','-Now',$BASE.ToString('o'),'-CredentialsPath',$NONE,
+                   '-UsageJsonPath',$NONE,'-CtxJsonPath',$NONE,'-SnapshotDir',$NONE,'-CodexDir',(Join-Path $Fix 'codex'))
+            try {
+                $env:CLAUDECODE = $null; $env:CODEX_SANDBOX = 'seatbelt'
+                $raw = (& pwsh @a 2>&1) -join "`n"
+                $o = @($raw | ConvertFrom-Json)
+                if (-not $o.Count -or @($o | Where-Object provider -ne 'codex').Count) { throw "Codex runtime did not default to codex:`n$raw" }
+                $env:CLAUDECODE = '1'
+                $raw = (& pwsh @a 6>&1 2>&1) -join "`n"
+                if ($raw -notmatch 'Claude Usage') { throw "Claude runtime did not default to the claude report:`n$raw" }
+            } finally { $env:CLAUDECODE = $saved.CLAUDECODE; $env:CODEX_SANDBOX = $saved.CODEX_SANDBOX }
+        }
+    },
+    @{
+        Name = 'default_output_unchanged: no -Provider still prints the human report'
+        Run = {
+            $raw = (& pwsh -NoProfile -File $Quota -NoFetch -Now $BASE.ToString('o') -CredentialsPath $NONE -UsageJsonPath $NONE -CtxJsonPath $NONE 6>&1 2>&1) -join "`n"
+            if ($raw -notmatch 'Claude Usage') { throw "default output changed:`n$raw" }
+        }
+    },
     @{
         Name = 'skill_frontmatter: SKILL.md declares name personal-quota + model + description'
         Run = {

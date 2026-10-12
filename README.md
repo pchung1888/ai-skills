@@ -155,6 +155,10 @@ the point.
   and confirmed absent by grep -- not assumed. Where a real value was doing
   double duty as a functional safety check (a deploy-path fence), the mechanism
   was kept and the identifier genericized into a documented extension point.
+- **Same version number, smaller package.** A version here (for example 0.33.0)
+  carries every public-safe change from the private release of that number. The
+  private-only pieces (a personal avatar skill, a job-search skill, and the
+  planning documents) are left out on purpose.
 
 Doing the redaction as a design decision rather than an afterthought is the same
 instinct the rest of this repo is built on.

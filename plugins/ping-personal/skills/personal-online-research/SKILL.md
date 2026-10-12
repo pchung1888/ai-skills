@@ -21,7 +21,7 @@ primary sources (Gate 4), report calibrated with labels (Gate 5).
 Fusion of two bases: the official firecrawl CLI skills (installed by
 `firecrawl init`; fetch-layer conventions reused verbatim) and the community
 "Storm Research" skill (the five-lens adversarial pipeline and mandatory
-citation-verification phase), rebuilt on Ping's ecosystem: fable-mode gates,
+citation-verification phase), rebuilt on this plugin's ecosystem: fable-mode gates,
 Honesty Protocol labels, process/token budget discipline, and
 personal-md-to-html for rendering.
 
@@ -55,7 +55,7 @@ personal-md-to-html for rendering.
 Pick the cheapest mode that answers the question (fable-mode effort dial).
 Announce the mode and its cost in one line before starting. Storm mode spawns
 parallel subagents: per the Process Budget rules in CLAUDE.md, CONFIRM with
-Ping before the lens fan-out and again before the verifier fan-out, with agent
+the user before the lens fan-out and again before the verifier fan-out, with agent
 counts named. Never silently upgrade lookup -> storm.
 
 ## Mode: lookup

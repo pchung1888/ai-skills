@@ -1,7 +1,7 @@
 ---
 name: personal-htsw
 model: sonnet
-description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of seven purposes (walk / pr / qa / boss / baby / code-explain / now). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request; now --deep --html writes the page it is given). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top.
+description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of seven purposes (walk / pr / qa / boss / baby / code-explain / now). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request; now --deep --html writes the page it is given). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top. Add --cantonese to any mode (or say "explain in Cantonese") to get the answer in Hong Kong Cantonese.
 ---
 
 # htsw — How This Shit Works
@@ -13,7 +13,8 @@ or the current conversation when no path is given) for one of seven purposes.
 Mode is optional and defaults to `walk` -- most invocations want explanation,
 not grading. Output is inline to the chat; the skill writes no files. Two carve-outs:
 code-explain saves a `.md` only on explicit request, and `now --deep --html <path>` writes
-the page named by `<path>` (the ping-hud Deep HTML button).
+the page named by `<path>`. The ping-hud HTSW buttons and Explanation pane send these rules to a
+side call and show the answer in the pane, not the chat (see `references/now.md`).
 
 ## Modes and aliases
 
@@ -24,7 +25,7 @@ the page named by `<path>` (the ping-hud Deep HTML button).
 | `qa` | `tester`, `test` | About to test something against a Jira story, OR you found a bug and want to write it up |
 | `boss` | `client`, `sales`, `pitch`, **`clean`** | Pitching a plan to your boss or a client. Also the "clean" version when you want any explanation in professional language. |
 | `baby` | `eli5`, `analogy` | "Explain this with a concrete analogy." Every jargon term stays on the page AND gets paired with an everyday physical object so a junior dev learns both vocabularies at once. |
-| `now` | `status`, `whats-going-on` | "What is going on right now?" Explains the current conversation in layman terms: verdict, flowchart of the work, what you need to focus on, why this shape, TL;DR. Chat only, writes no files. The ping-hud Simple button runs it. |
+| `now` | `status`, `whats-going-on` | "What is going on right now?" Explains the current conversation in layman terms: verdict, flowchart of the work, what you need to focus on, why this shape, TL;DR. Chat only, writes no files. The ping-hud Simple button runs its rules in the Explanation pane. |
 | `code-explain` | `code`, `explain-code`, `line-by-line`, `deep-dive`, `cx` | Understand a code change in depth — file-by-file, line-by-line, **why-first**. The deep sibling of `walk`. Inline by default; saves a doc on request. |
 
 **There is no separate `--clean` flag.** If you want a clean / professional / suitable-for-client version of any explanation, just use `boss` mode. Walk / PR / QA are for internal use — they keep the explicit language. Boss is the polite version. Walk is the most common; reach for it when you want to *understand* something, not grade it.
@@ -83,7 +84,7 @@ doing -> next), a "what you need to focus on" table (When / Your job / Time), a 
 "why this shape" note, and a TL;DR. Layman terms, every technical term named and glossed once.
 Chat only: it writes no files. Full playbook: `references/now.md`.
 
-`now --deep --html <path>` (the ping-hud Deep HTML button) is the deep variant: same source,
+`now --deep --html <path>` (also the ping-hud Deep HTML button, in the pane) is the deep variant: same source,
 a longer explanation with per-phase tables, a glossary, evidence labels and diagrams, written
 as Markdown next to `<path>` and rendered to `<path>` with personal-md-to-html. Details in
 `references/now.md`.
@@ -299,6 +300,48 @@ The tier icon in the title is what the reader sees first. The TL;DR action verb 
 The section header is one of a fixed library of variations (see `references/pr.md`, `references/qa.md`, `references/walk.md`) so renderings don't read like a template — `### How this shit works`, `### What this actually does`, `### Under the hood`, `### The flow`, `### In plain English`, `### Behind the scenes`, `### The plumbing`. **All modes use `###` (H3) level** for this header — the validator's `HTSW_HEADER_PATTERN` requires H3. Walk mode renderings have the descriptive subject-title at `##` (H2) and the HOW-WORKS section at `###` immediately following the TL;DR block. Walk mode may prefix the header with the `⚙` navigation icon — e.g. `### ⚙ How this shit works`.
 
 The section is the **bridge from raw artifact to comprehension.** Without it, the reader has to reconstruct intent from code, tables, or charts. With it, they start with the design already in their head — which is the whole point of htsw.
+
+## Explaining sentences -- humanized inside the sentence (ALL modes)
+
+Headers, slang, icons, persona voice and the Kid story stay as they are. This section is
+about the sentences that explain an idea, a step that was done, or how something technical
+works. Each one must read like a person telling you across the desk.
+
+1. Say who does what. "The safety check refuses the path", not "the path is refused".
+2. One idea per sentence. Two ideas means two sentences.
+3. Name the term, then say right away what it does: "`normPath`, a small helper that turns
+   every backslash into a forward slash".
+4. Say why it matters, in the same or the next sentence. A fact with no "so what" is not done.
+5. Never point at something the reader was not shown. "The flip" or "the gate" only after
+   you have said what the flip or the gate is.
+6. Code names are fine, but plain words must still say what changed. A sentence that is only
+   a pile of code names fails.
+
+| Before | After |
+|---|---|
+| "The fix wraps `root` in `normPath(...)` in two places: the regex test and the `full` mkdir path." | "The fix sends the repo folder name through `normPath`, a small helper that turns every backslash into a forward slash. It does this twice: once before the safety check reads the path, and once before the plugin builds the new folder's path." |
+| "A test that fails without the fix proves it catches this exact bug, so the bug cannot quietly come back." | "I added a test that hands the plugin a backslash folder, the way Windows really does. Then I took the fix out and ran it, and the test failed. So if anyone undoes the fix later, this test goes red and warns them." |
+
+These rules apply wherever htsw runs: the main chat, a subagent, or the Explanation pane.
+Boss mode keeps its polite register and follows these rules too.
+
+A subagent asked for a simple or detailed explanation runs this skill itself and reports back to
+the main chat in this voice. The persona agents (`agents/*.md`, except the JSON-only
+next-recommender) carry the six rules in short form under their language rule, so a report
+follows them without loading this file. Keep those copies in step: the htsw eval fails when one
+drifts.
+
+## Language switch -- --cantonese
+
+`--cantonese` works on every mode, for example `/personal-htsw walk --cantonese`.
+
+- The whole answer is in spoken Hong Kong Cantonese, the way people talk, not formal
+  written Chinese.
+- Code, file paths, commands and technical terms stay in English.
+- Same structure, headers, icons and Explaining-sentences rules as the English answer.
+- Punctuation stays ASCII (`,` `.` `"` `?`), not full-width marks.
+- It is on by default when the project's instructions ask for Cantonese replies, or when
+  the ask says "in Cantonese". Otherwise the answer is in English.
 
 ## Evidence-and-suggestion contract — EVERY ⚠ AND 🔴 CLAIM
 

@@ -47,6 +47,11 @@ Re-explain code, a PR diff, a spec, a plan, or current conversation. Main modes:
 - `boss` -- pitch-it-to-my-boss summary
 - `now` -- where this session stands: verdict, flowchart, focus table (used by the ping-hud Simple and Deep HTML buttons)
 
+Every mode follows the "Explaining sentences" rules (who does what, one idea per
+sentence, name the term then say what it does, say why it matters). Add
+`--cantonese` to any mode for an answer in spoken Hong Kong Cantonese; technical
+terms and punctuation stay ASCII English.
+
 ### `/personal-next`
 
 Independent next-step recommender behind the ping-hud Next button. Writes a
@@ -57,8 +62,9 @@ by clicking.
 ### `/personal-quota`
 
 Report your REAL Claude usage: 5h (session) %, weekly %, per-model scoped %,
-and context-window %, each with its reset time in local EST/EDT. Reads
-ccstatusline's cache when fresh, otherwise fetches the same `/api/oauth/usage`
+and context-window %, each with its reset time in local EST/EDT. Reads the
+ping-hud mod's live-usage snapshot first when it is fresh, then ccstatusline's
+cache when fresh, otherwise fetches the same `/api/oauth/usage`
 endpoint directly with your subscription OAuth token -- so it never depends on
 ccstatusline being installed or alive. Context % is captured by an opt-in,
 self-owned statusline shim (`ctx-sidecar`) that chains to ccstatusline so your
@@ -135,12 +141,19 @@ Codex reads the same shell hooks from `hooks/codex-hooks.json` (no `modules` fie
 ### ping-hud mod (`hooks/register.tsx`, Claude Code only)
 
 `hooks/hooks.json` loads `register.tsx` as a Claude Code mod. It draws a band
-above the prompt (model, context, quota forecast, buttons such as Handoff,
-Simple, Explain, Kid, Deep HTML, Next and Plan), a Goals pane, an Agents pane, and the
-`/personal-hud` command. The band is on after load; `/personal-hud off` hides it
-and `/personal-hud on` brings it back. Quota numbers need a Claude subscription
-login; on other accounts they may show `--`. The Plan button needs the separate `html-plan`
-plugin. Tests: `claude plugin test plugins/ping-personal`.
+above the prompt (model, context, quota forecast) with two button rows: an
+Action row (Handoff, Plan, Next, Agents, Goals) and an HTSW row (Pane, Simple,
+Explain, Kid, Deep HTML, Motion). It also adds a Goals pane, an Agents pane, an
+Explanation pane, and the `/personal-hud` command. The band is on after load;
+`/personal-hud off` hides it and `/personal-hud on` brings it back. Quota numbers
+need a Claude subscription login; on other accounts they may show `--`. The Plan
+button needs the separate `html-plan` plugin. Tests: `claude plugin test plugins/ping-personal`.
+
+The Explanation pane answers the HTSW buttons through a side call, so the
+explanation stays out of the main chat. Motion puts a request in the prompt box;
+after you send it, the main session starts `film-maker`, a background Sonnet
+subagent registered by the mod and limited to the ToolSearch, Artifact and
+ArtifactData tools. It makes a 30-second film, and the pane shows the link.
 
 ## Cross-runtime rules harness
 

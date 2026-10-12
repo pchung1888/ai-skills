@@ -22,7 +22,7 @@ compute per-option composites correctly; (6) flag `YOUR CALL` when Jev is split.
 | F06 | Missing YOUR CALL | false confidence on a split decision | `your_call` |
 | F07 | Frontmatter rot / dangling ref | skill stops triggering | `skill_frontmatter`, `referential_integrity` |
 | F08 | Vacuous green | tests pass while broken | mutation run (Baseline) + F01 control |
-| F09 | Sent payload differs from the approved preview | Ping OKs one thing, another is sent | `approval_bind` (no / wrong / stale fingerprint -> exit 6, no connection, correct fingerprint not echoed) |
+| F09 | Sent payload differs from the approved preview | The user OKs one thing, another is sent | `approval_bind` (no / wrong / stale fingerprint -> exit 6, no connection, correct fingerprint not echoed) |
 | F10 | Key only found in the current folder | every send from the scratchpad fails | `key_file` (key via `-KeyFile`, empty env, empty cwd; none anywhere -> exit 1) |
 | F11 | Composite hides unsure or missing inputs | a flat number ranks options on guesses | `composite_honesty` (missing -> null + listed; unsure -> YOUR CALL; choice ids skipped) |
 | F12 | Receipt missing, lossy, leaky, or written for a refused payload | calibration impossible, or blocked text lands on disk | `receipt` (full odds, schema, decision slot, no key; none on leak / bad shape / no approval) |
@@ -32,7 +32,7 @@ All graders are code; no judge (nothing graded is a matter of taste).
 ## Not Covered (honest limits)
 
 - Live API: one manual `-Send` with a harmless payload confirms the real request/response
-  shape. Ask Ping before running (pricing unknown).
+  shape. Ask the user before running (pricing unknown).
 - Quality of Claude's abstraction and Which-tool advice: human spot check on 5 samples.
 - Tripwire recall on paraphrased client details: by design it only catches identifiers.
 

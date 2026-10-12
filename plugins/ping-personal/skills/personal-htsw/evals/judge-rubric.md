@@ -17,6 +17,11 @@
 - **F09** baby-mode analogy *replaces* jargon instead of pairing with it.
 - **F10** explanation reads beginner-friendly but is technically wrong.
 - **F11** walk mode launders the salt or smuggles in a pr/qa-style verdict.
+- **F12** an explaining sentence breaks SKILL.md "Explaining sentences": no actor, several
+  ideas crammed together, a term named but never said what it does, no "so what", or a
+  reference to something the reader was not shown. Calibration pair: the Before column of
+  that section's table is a fail; the After column is a pass. Slang, headers and icons are
+  never an F12 fault.
 
 ## How to run
 

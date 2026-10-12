@@ -184,16 +184,23 @@ FIX (safe default). See `lib/tally.py` for full tie/insufficient handling.
 
 ## Preflight Codex Probe (before dispatching Seat 5 on a real artifact)
 
-Before dispatching Seat 5 to `codex:codex-rescue` on a real artifact, fire a
-trivial read-only dry-run Agent call (e.g. "List top-level directory structure;
-read-only; no edits"). If this probe fails:
+Before dispatching Seat 5 to `codex:codex-rescue` on a real artifact, run this
+one-line read-only Bash probe directly from the shell (no Agent subprocess):
+
+```bash
+timeout 60 codex exec --skip-git-repo-check -s read-only "Reply with only the word PROBE_OK and nothing else." 2>&1 | grep -q PROBE_OK
+```
+
+Pass = exit code 0 AND the output contains `PROBE_OK`. Measured 2026-10-09:
+about 6 seconds, about 1K Claude tokens. If the probe fails (non-zero exit,
+timeout, or no `PROBE_OK`):
 
 1. Announce immediately: "codex unavailable -- Seat 5 = iris (fresh-context
    skeptic)."
 2. Proceed with the full panel. Dispatch iris as Seat 5.
 3. Record "codex_available: false" in the tally block.
 
-If the probe succeeds: dispatch codex as Seat 5 as documented below.
+If the probe passes: dispatch codex as Seat 5 as documented below.
 
 ---
 

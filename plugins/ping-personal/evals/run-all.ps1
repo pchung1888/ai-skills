@@ -35,6 +35,28 @@ else {
 }
 Write-Host ""
 
+# Mod checks (ping-hud band in hooks/): source must be pure ASCII, and its claude plugin tests must pass.
+$PluginDir = Resolve-Path (Join-Path $PSScriptRoot '..')
+$modFiles = Get-ChildItem (Join-Path $PluginDir 'hooks\*') -Include *.ts, *.tsx -File
+$nonAscii = @($modFiles | Where-Object { [System.IO.File]::ReadAllBytes($_.FullName) | Where-Object { $_ -gt 127 } | Select-Object -First 1 })
+if ($nonAscii.Count -gt 0) {
+    Write-Host ("MOD ASCII FAIL: {0}" -f (($nonAscii | ForEach-Object Name) -join ', ')) -ForegroundColor Red
+    exit 1
+}
+Write-Host ("  OK    {0,-26} MOD ASCII PASS ({1} files)" -f 'ping-hud mod', $modFiles.Count) -ForegroundColor Green
+if (Get-Command claude -ErrorAction SilentlyContinue) {
+    $modOut = (claude plugin test $PluginDir 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $modOut
+        Write-Host "MOD TESTS FAIL" -ForegroundColor Red
+        exit 1
+    }
+    $modSummary = (($modOut -split "`n") | Where-Object { $_ -match 'Ran \d+ tests' } | Select-Object -Last 1)
+    Write-Host ("  OK    {0,-26} MOD TESTS PASS {1}" -f 'ping-hud mod', ($modSummary.Trim())) -ForegroundColor Green
+}
+else { Write-Host ("  SKIP  {0,-26} claude CLI not on PATH (Codex-only machine)" -f 'ping-hud mod') -ForegroundColor Yellow }
+Write-Host ""
+
 $SkillsDir = Resolve-Path (Join-Path $PSScriptRoot '..\skills')
 $evals = Get-ChildItem (Join-Path $SkillsDir '*\evals\eval.ps1') | Sort-Object FullName
 

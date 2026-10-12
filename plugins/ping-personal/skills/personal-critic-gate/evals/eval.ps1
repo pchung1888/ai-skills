@@ -169,6 +169,9 @@ $tests = @(
             if ($s -notmatch '(?i)codex unavailable') {
                 throw "SKILL.md must document 'codex unavailable' announcement"
             }
+            if ($s -notmatch 'codex exec .*PROBE_OK') {
+                throw "SKILL.md preflight must be the one-line 'codex exec' probe expecting PROBE_OK"
+            }
         }
     },
     @{

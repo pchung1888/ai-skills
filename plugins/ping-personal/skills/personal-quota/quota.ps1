@@ -27,7 +27,12 @@
 #   pwsh -NoProfile -File quota.ps1 -NoFetch        # cache-only, never touch the network
 #   pwsh -NoProfile -File quota.ps1 -FreshnessMinutes 5
 # Test-injection hooks (used by evals; not for normal use):
-#   -UsageJsonPath -CtxJsonPath -CredentialsPath -Now "<iso8601>"
+#   -UsageJsonPath -CtxJsonPath -CredentialsPath -Now "<iso8601>" -SnapshotDir -CodexDir
+#   pwsh -NoProfile -File quota.ps1 -Provider claude|codex|all   # JSON array of
+#     {provider, window (5h|7d), percentUsed, resetsAt, source, ageSec}; claude order is
+#     mod snapshot (<15 min old) -> OAuth fetch -> ccstatusline cache if present.
+#   No -Provider: Claude report, unless run from Codex (CLAUDECODE unset and CODEX_SANDBOX,
+#     CODEX_SANDBOX_NETWORK_DISABLED, CODEX_THREAD_ID or CODEX_HOME set) -> same as -Provider codex.
 
 [CmdletBinding()]
 param(
@@ -38,7 +43,10 @@ param(
     [string]$CtxJsonPath,
     [string]$CredentialsPath,
     [string]$UsageUrlOverride,   # test hook: point the fetch at an unreachable URL to exercise the error path offline
-    [string]$Now
+    [string]$Now,
+    [ValidateSet('claude','codex','all')][string]$Provider,
+    [string]$SnapshotDir,   # default ~/.claude/live-usage (ping-hud mod snapshots)
+    [string]$CodexDir       # default ~/.codex/sessions (Codex rollout-*.jsonl logs)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -168,6 +176,85 @@ function Get-Context {
     $ctxAge = $null
     if ($c.ts) { try { $ctxAge = [math]::Round(($nowTs - [datetimeoffset]::Parse([string]$c.ts)).TotalMinutes, 1) } catch {} }
     return @{ pct = [int]$c.contextPct; model = [string]$c.model; ageMin = $ctxAge }
+}
+
+# ---- -Provider mode: one entry shape for Claude and Codex --------------------------------------
+function Get-SnapshotEntries {
+    # Newest ping-hud snapshot; torn/invalid JSON or older than 15 min = no snapshot.
+    if (-not (Test-Path -LiteralPath $SnapshotDir)) { return @() }
+    $f = Get-ChildItem -LiteralPath $SnapshotDir -Filter '*.json' -File -ErrorAction SilentlyContinue |
+         Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $f) { return @() }
+    try {
+        $o = Get-Content -LiteralPath $f.FullName -Raw | ConvertFrom-Json
+        $w = $o.writtenAt; $wt = if ($w -is [datetime]) { [datetimeoffset]$w.ToUniversalTime() } else { [datetimeoffset]::Parse([string]$w) }
+        $age = [int]($nowTs - $wt).TotalSeconds
+        if ($age -gt 900 -or $age -lt -60) { return @() }
+        return @($o.claude | Where-Object { $_.window -in '5h','7d' } | ForEach-Object {
+            [ordered]@{ provider = 'claude'; window = $_.window; percentUsed = $_.percentUsed
+                        resetsAt = $_.resetsAt; source = 'mod-snapshot'; ageSec = $age } })
+    } catch { return @() }
+}
+
+function ConvertTo-ClaudeEntries {
+    param($D, [string]$Src, $AgeSec)
+    $iso = { param($t) if ($t) { $t.ToString('o') } else { $null } }
+    return @(
+        [ordered]@{ provider = 'claude'; window = '5h'; percentUsed = $D.sessionPct; resetsAt = (& $iso $D.sessionReset); source = $Src; ageSec = $AgeSec },
+        [ordered]@{ provider = 'claude'; window = '7d'; percentUsed = $D.weeklyPct;  resetsAt = (& $iso $D.weeklyReset);  source = $Src; ageSec = $AgeSec })
+}
+
+function Get-CodexEntries {
+    # Newest rollout-*.jsonl -> its last rate_limits line (same rules as the mod's parseCodex).
+    if (-not (Test-Path -LiteralPath $CodexDir)) { return @() }
+    $f = Get-ChildItem -LiteralPath $CodexDir -Recurse -Filter 'rollout-*.jsonl' -File -ErrorAction SilentlyContinue |
+         Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $f) { return @() }
+    $lines = @(Get-Content -LiteralPath $f.FullName)
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        if ($lines[$i] -notmatch '"rate_limits"') { continue }
+        try { $rl = ($lines[$i] | ConvertFrom-Json).payload.rate_limits } catch { continue }
+        if (-not $rl) { continue }
+        $out = @()
+        foreach ($w in @($rl.primary, $rl.secondary)) {
+            if ($null -eq $w -or $null -eq $w.used_percent) { continue }
+            $win = switch ([int]$w.window_minutes) { 300 { '5h' } 10080 { '7d' } default { $null } }
+            if (-not $win) { continue }
+            $reset = [datetimeoffset]::FromUnixTimeSeconds([long]$w.resets_at)
+            $pct = if ($reset -le $nowTs) { 0 } else { $w.used_percent }
+            $out += [ordered]@{ provider = 'codex'; window = $win; percentUsed = $pct; resetsAt = $reset.ToString('o'); source = 'codex-log'; ageSec = $null }
+        }
+        if ($out.Count) { return $out }
+    }
+    return @()
+}
+
+# No -Provider: report the runtime that called us. Claude Code sets CLAUDECODE=1 (checked first,
+# because Claude sessions can carry CODEX_COMPANION_* vars); a Codex marker var means Codex.
+if (-not $Provider -and -not $env:CLAUDECODE -and
+    ($env:CODEX_SANDBOX -or $env:CODEX_SANDBOX_NETWORK_DISABLED -or $env:CODEX_THREAD_ID -or $env:CODEX_HOME)) {
+    $Provider = 'codex'
+}
+
+if ($Provider) {
+    if (-not $SnapshotDir) { $SnapshotDir = Join-Path $home_ '.claude\live-usage' }
+    if (-not $CodexDir)    { $CodexDir    = Join-Path $home_ '.codex\sessions' }
+    $entries = @()
+    if ($Provider -in 'claude','all') {
+        $claude = @(Get-SnapshotEntries)
+        if (-not $claude.Count -and -not $NoFetch) {
+            $live = Get-LiveUsage
+            if ($live) { $claude = ConvertTo-ClaudeEntries $live 'oauth' 0 }
+        }
+        if (-not $claude.Count) {
+            $c = Get-CacheUsage
+            if ($c) { $claude = ConvertTo-ClaudeEntries $c 'ccstatusline-cache' ([int]($c.ageMin * 60)) }
+        }
+        $entries += $claude
+    }
+    if ($Provider -in 'codex','all') { $entries += @(Get-CodexEntries) }
+    ConvertTo-Json -InputObject @($entries) -Depth 4
+    exit 0
 }
 
 # ---- resolve quota (cache-first, OAuth fallback) ------------------------------------------------

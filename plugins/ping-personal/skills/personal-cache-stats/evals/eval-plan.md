@@ -14,7 +14,7 @@ and tolerate malformed JSON lines without crashing.
 
 | ID | Failure | Why It Matters | Grader |
 | --- | --- | --- | --- |
-| F01 | hit-rate math wrong (read / (read+write+fresh)) | the headline number Ping decides on is wrong | code |
+| F01 | hit-rate math wrong (read / (read+write+fresh)) | the headline number the user decides on is wrong | code |
 | F02 | a malformed JSON line crashes the whole run | one bad line zeroes the whole report | code |
 | F03 | lines without a usage block are counted as turns | turn count + denominators inflate | code |
 | F04 | `-SessionFile` ignored / not honored | cannot point it at a known transcript -> not testable | code |

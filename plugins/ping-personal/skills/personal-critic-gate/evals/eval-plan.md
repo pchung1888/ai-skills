@@ -43,7 +43,7 @@ validates phase against beacon Phase Status table.
 | E08 | mode discovery | Mode: <mode> + Mode: interactive (default; no beacon found) documented | mode line absent |
 | E09 | lib scripts | lib/vote_parser.py + lib/tally.py exist + referenced in SKILL.md | canonical impl missing |
 | E10 | rhea master of coin | agents/rhea.md has Master of Coin section | token-cost gate absent |
-| E11 | preflight probe | SKILL.md documents preflight + "codex unavailable" announcement | probe absent |
+| E11 | preflight probe | SKILL.md documents one-line `codex exec` preflight (expects PROBE_OK) + "codex unavailable" announcement | probe absent or back to a full Agent dispatch |
 | E12 | domain routing | routing table with vex + maggie keyword rules present | Seat 4 routing undocumented |
 
 ## Graders

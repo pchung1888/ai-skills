@@ -29,7 +29,7 @@ seat proposed. The main session does not get to push its own favourite (DEC-9, D
 
 1. Print one cost line: "Next: 1 recommender agent, about 35-55K tokens (estimate)."
 2. Write the brief, 300 words at most, from the current conversation only:
-   GOAL, DONE (commit hashes, test results), OPEN ITEMS, PING'S LAST ASK (verbatim),
+   GOAL, DONE (commit hashes, test results), OPEN ITEMS, THE USER'S LAST ASK (verbatim),
    CONSTRAINTS (the owner's rules that apply), FILES TOUCHED, optional FOCUS.
 3. Show the brief to the owner under "What the recommender saw", so they can judge its input.
 4. One Agent call: `subagent_type: ping-personal:next-recommender`, prompt = the

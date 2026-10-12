@@ -21,7 +21,11 @@ $couplingChecks = @(
     @{ Pat = [regex]::Escape('codex plugin add ping-personal@ping-personal');     Why = 'Codex install command' },
     @{ Pat = [regex]::Escape('check_dual_runtime.py');                            Why = 'dual-runtime drift check' },
     @{ Pat = [regex]::Escape('ping-personal@ping-personal');                     Why = 'correct install key (owner@name)' },
-    @{ Pat = 'NOT\s+`?ping-personal@personal-plugin';                            Why = 'wrong-key warning' }
+    @{ Pat = 'NOT\s+`?ping-personal@personal-plugin';                            Why = 'wrong-key warning' },
+    @{ Pat = [regex]::Escape('refs/remotes/origin/HEAD');                          Why = 'checkout the default branch, not a hard-coded master' },
+    @{ Pat = [regex]::Escape('config.toml.bak-before-');                           Why = 'Codex config backup before the install' },
+    @{ Pat = 'model_reasoning_effort';                                             Why = 'protected Codex config lines checked after each command' },
+    @{ Pat = [regex]::Escape('failed to parse plugin hooks config');               Why = 'Codex hooks parse check in the verify gate' }
 )
 
 $tests = @(

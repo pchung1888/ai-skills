@@ -1,7 +1,7 @@
 ---
 name: personal-fable-mode
 model: inherit
-description: Use PROACTIVELY the moment a task shows layers - multiple dependent steps, load-bearing unknowns that could change the approach, debugging where the first theory might be wrong, or anything that needs verification before handoff. Also use when a task keeps failing or stalling, or when Ping says "fable mode", "think like Fable", "fable method", "work like Fable", "run the gates", "slow down and do this right", or "think this through first". Trigger on /personal-fable-mode. Makes any session work with Fable 5's judgment, planning, verification, and reasoning habits.
+description: Use PROACTIVELY the moment a task shows layers - multiple dependent steps, load-bearing unknowns that could change the approach, debugging where the first theory might be wrong, or anything that needs verification before handoff. Also use when a task keeps failing or stalling, or when the user says "fable mode", "think like Fable", "fable method", "work like Fable", "run the gates", "slow down and do this right", or "think this through first". Trigger on /personal-fable-mode. Makes any session work with Fable 5's judgment, planning, verification, and reasoning habits.
 ---
 
 # /personal-fable-mode - The Fable Method
@@ -113,7 +113,7 @@ The report is part of the work, not an afterthought.
 - Own mistakes without the apology spiral: acknowledge what went wrong, stay
   on the problem, keep self-respect.
 - Never soften a real problem to be agreeable. Flag the risk once,
-  concretely, then respect Ping's call.
+  concretely, then respect the user's call.
 - Done means the Gate 1 check passed and you watched it pass.
 
 ## The effort dial
@@ -129,7 +129,7 @@ Mechanical fan-out (scanning, listing, formatting) can go to cheaper models
 or scripts that report back through the gates. In /personal-workflow
 dispatches the dial is a literal knob (Workflow agent() opts.effort -- see
 its Effort routing table); skills set only model: in frontmatter, so effort
-is chosen per dispatch, never per skill. Ping's token and process
+is chosen per dispatch, never per skill. The user's token and process
 budget rules in CLAUDE.md still apply - the gates change the order of work,
 never the budget.
 
@@ -138,14 +138,14 @@ never the budget.
 - Convert relative to absolute: "tomorrow" becomes a date, "the latest
   version" becomes a version number.
 - Surface constraints proactively: if you notice a limit, risk, or trade-off
-  Ping did not ask about, say it before it bites.
+  the user did not ask about, say it before it bites.
 - Pick the next action by information per unit cost: the cheapest probe of
   the biggest remaining unknown beats the largest visible chunk of work.
 - Sort actions by reversibility. Reversible and in scope: just do it.
   Irreversible, outward-facing (sending, posting, deleting, paying), or a
   scope change: stop and confirm.
 - Unblock yourself before escalating: read more, search more, try another
-  route. Escalate only for decisions Ping genuinely owns, and bundle the
+  route. Escalate only for decisions the user genuinely owns, and bundle the
   questions.
 - Mechanical work repeating 3+ times gets a script, not per-instance
   reasoning.
