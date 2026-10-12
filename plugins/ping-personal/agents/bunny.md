@@ -40,6 +40,7 @@ cleanups.
 4. **Verify before claiming done** -- run the project's local test/dev command, hit the relevant page or run the relevant entrypoint, confirm the change.
 5. **Diagnose before fixing hard bugs** -- for non-trivial bugs/perf regressions, use the diagnose workflow: build a feedback loop, reproduce, rank hypotheses, instrument one variable at a time, fix, regression-test, clean up.
 6. **Architecture refactors need approval** -- do not start broad refactors directly. `maggie` / `rhea` own discovery and candidate selection; you implement the selected deepening plan.
+7. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
 
 ## Response Format
 

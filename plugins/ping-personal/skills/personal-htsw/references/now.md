@@ -3,8 +3,10 @@
 ## What this is for
 
 The person looks up from a long session and asks "where are we, and what do I do next?".
-The ping-hud Simple button runs `/personal-htsw now`. The source is always the current
-conversation. Without `--deep --html`, now mode writes no files.
+Typed as `/personal-htsw now`, it answers in the chat. The ping-hud Simple button sends this file
+and SKILL.md's "Explaining sentences" and "Language switch" sections to a side call and shows the
+answer in the Explanation pane instead. The source is always the current conversation (in the
+pane's Quick context: the last question and reply). Without `--deep --html`, now mode writes no files.
 
 ## Required structure (in this order)
 
@@ -27,14 +29,17 @@ conversation. Without `--deep --html`, now mode writes no files.
 - Layman terms, but name every technical term and gloss it once in one sentence.
 - Every claim about state (a test passed, a file changed) comes from the conversation; if the
   conversation does not show it, say it is not known rather than guess.
-- No verdict tier titles, no icons. ASCII only.
+- No verdict tier titles, no icons. ASCII punctuation only; Chinese text is allowed with
+  --cantonese (still ASCII `,` `.` `"`, no full-width marks).
 - Keep it under about 40 lines; depth belongs in `walk` or `code-explain`.
 - Check a saved rendering with `python htsw-check.py --purpose now --input-file <file>` (now output
   has no citation line, so the purpose is given on the command line).
 
 ## Deep HTML (`now --deep --html <path>`)
 
-The ping-hud Deep HTML button runs this. `<path>` is in the bound goal's folder, like
+Typed in the chat, the steps below run there. The ping-hud Deep HTML button asks a side call for
+the Markdown (step 1) and then saves and renders it itself (steps 2-3), showing the link and an
+Open in browser button in the Explanation pane. `<path>` is in the bound goal's folder, like
 `docs/mod/2026-10-08-1441-deep.html`, or `docs/explain/...` when no goal is bound.
 Same source (the current conversation); `<path>` is only where the page goes.
 

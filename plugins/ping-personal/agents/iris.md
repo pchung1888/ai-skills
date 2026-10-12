@@ -38,6 +38,7 @@ EXTRACTED evidence and NEVER write to source files.
 3. **Tag every claim** -- `EXTRACTED` (file:line evidence), `INFERRED` (state derivation), `BLANK` (state what's needed to verify).
 4. **End every findings file with "New questions raised"** -- surface what the spec missed.
 5. **Install boundary:** If a research tool (e.g. an external CLI) is missing, report `BLANK` / `BLOCKED` and ask the user for install approval. Do not run installer commands without explicit approval.
+6. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
 
 ## Research Toolchain
 

@@ -163,7 +163,7 @@ export function layout(s: HudState | undefined, o: RenderOpts): Row[] | null {
   const act = o.now || 'idle', gl = goals?.[0], tb = taskBar(o.tasks)
   const now: Span[] = [label('Now'), { t: act, d: act === 'idle', keep: act === 'idle' }]
   if (tb) now.push(term ? gap('Tasks ') : { t: '   Tasks ', keep: true }, ...bar('tasks', (100 * tb.done) / tb.total, cells, g, 'blue'), { t: ` ${tb.done}/${tb.total}: `, keep: true }, { t: tb.current, d: true })
-  const cwdShown = !(o.mode === 'compact' || (o.surface === 'terminal' && o.statusLinePresent)) && (o.maxRows ?? 4) >= (o.buttons ? 5 : 4)
+  const cwdShown = !(o.mode === 'compact' || (o.surface === 'terminal' && o.statusLinePresent)) && (o.maxRows ?? 4) >= (o.buttons ? 6 : 4)
   // goals = bound trackers in bind order: the first shows, the rest count as '+N more'; [] shows 'Goal: none'.
   if (gl) {
     const at = tb && cwdShown ? cwd : now
@@ -199,14 +199,15 @@ export function layout(s: HudState | undefined, o: RenderOpts): Row[] | null {
   const edge = (): Span => alert ? { t: g.edge, tone: vTone, keep: true } : { t: ' ', keep: true }
   for (const r of [model, cwd, now, fc]) r.unshift(edge())
   let rows: Row[] = [{ key: 'model', spans: model }, { key: 'cwd', spans: cwd }, { key: 'now', spans: now }, { key: 'forecast', spans: fc, svg }]
-  if (o.buttons) rows.push({ key: 'buttons', spans: [] })
+  if (o.buttons) rows.push({ key: 'buttons', spans: [] }, { key: 'htsw', spans: [] }) // Action row, then HTSW row (register.tsx draws both)
   if (o.mode === 'compact') rows = rows.slice(2)
   else if (o.surface === 'terminal' && o.statusLinePresent) rows = rows.filter(r => r.key !== 'cwd') // statusLine shows cwd, not model / 5h / 7d bars
-  // Drop order: cwd, then Model, then (with Buttons) Forecast, then Buttons; Now always stays.
-  const max = o.maxRows ?? 4, b = o.buttons ? 1 : 0
+  // Drop order: cwd, then Model, then (with buttons) Forecast, then the HTSW row, then the Action row; Now always stays.
+  const max = o.maxRows ?? 4, b = o.buttons ? 2 : 0
   if (max < 4 + b) rows = rows.filter(r => r.key !== 'cwd')
   if (max < 3 + b) rows = rows.filter(r => r.key !== 'model')
-  if (b && max < 3) rows = rows.filter(r => r.key !== 'forecast')
+  if (b && max < 4) rows = rows.filter(r => r.key !== 'forecast')
+  if (b && max < 3) rows = rows.filter(r => r.key !== 'htsw')
   if (b && max < 2) rows = rows.filter(r => r.key !== 'buttons')
   return rows
 }
@@ -220,8 +221,9 @@ const COLOR: Record<string, string> = { ok: 'success', warn: 'warning', bad: 'er
 // Spans -> Box/Text tree; ui is what $.ui.resolve(e) returned for this surface.
 // Where Svg resolves, each span sits in a fixed-width Box (proportional-font safe),
 // desktop bars are solid cell Boxes, and the Svg follows the chip.
-// buttons = the element register.tsx built for this row (it owns the onPress $ calls): the Buttons row, or the mini row.
-export function drawRows(ui: any, rows: Row[], desktop = false, buttons?: any) {
+// buttons = the element register.tsx built for this row (it owns the onPress $ calls): the Action row, or the mini row.
+// htsw = the HTSW row element, drawn where layout put the 'htsw' row.
+export function drawRows(ui: any, rows: Row[], desktop = false, buttons?: any, htsw?: any) {
   const { Box, Text, Svg } = ui
   const text = (r: Row, s: Span, i: number) => (
     <Text key={`${r.key}${s.k ?? i}`} color={s.tone && COLOR[s.tone]} bold={s.b} dimColor={s.d} inverse={s.inv} wrap={s.keep ? undefined : 'truncate-end'}>{s.t}</Text>
@@ -236,7 +238,7 @@ export function drawRows(ui: any, rows: Row[], desktop = false, buttons?: any) {
   const span = (r: Row, s: Span, i: number) => desktop && s.k && /(fill|empty)$/.test(s.k) ? cells(r, s) : Svg ? <Box key={`c${r.key}${i}`} width={s.t.length} flexShrink={s.keep ? 0 : 1}>{text(r, s, i)}</Box> : text(r, s, i)
   return (
     <Box key="hud" flexDirection="column">
-      {rows.map(r => r.key === 'buttons' || r.key === 'mini' ? buttons ?? null : (
+      {rows.map(r => r.key === 'buttons' || r.key === 'mini' ? buttons ?? null : r.key === 'htsw' ? htsw ?? null : (
         <Box key={r.key} flexDirection="row">
           {r.spans.flatMap((s, i) => [span(r, s, i),
             Svg && r.svg && s.svg ? <Svg key={`${r.key}svg`} source={r.svg} alt="5h burn timeline: used so far, projected path to 100%, reset tick" width={160} height={9} /> : null])}

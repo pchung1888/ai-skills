@@ -29,6 +29,10 @@ including `-Json`. The live-fetch tier is validated manually (see Not Covered).
 | F08 | Token leak in output | credential exposure in a shared transcript | code: `token_safety` |
 | F09 | Frontmatter rot (name/model/description) | skill stops triggering | code: `skill_frontmatter` |
 | F10 | Dangling reference to a missing script | skill body points at a file that is not shipped | code: `referential_integrity` |
+| F11 | `-Provider` ignores the mod snapshot or emits the wrong shape | HUD and skill disagree | code: `provider_claude_snapshot`, `provider_all` |
+| F12 | Torn or >15-min-old snapshot used as live | half-written / stale numbers shown as current | code: `torn_snapshot_falls_back`, `old_snapshot_ignored` |
+| F13 | Codex windows misread from rollout logs | wrong Codex quota | code: `provider_codex` |
+| F14 | Default (no `-Provider`) report changed | breaks existing callers | code: `default_output_unchanged` |
 
 Every failure here is deterministic -- nothing is a matter of taste, so there is NO judge.
 

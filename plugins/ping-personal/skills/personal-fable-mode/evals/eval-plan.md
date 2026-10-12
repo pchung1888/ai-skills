@@ -9,7 +9,7 @@ parts that make it load and bind correctly, not a data contract.
 | # | Failure mode | Why it matters | Grader |
 |---|---|---|---|
 | 1 | Frontmatter name drifts or description lost | Skill stops resolving as /personal-fable-mode; description is the only trigger surface | skill_frontmatter |
-| 2 | "fable mode" trigger phrase dropped from description | The activation phrase Ping actually says stops routing here | skill_frontmatter |
+| 2 | "fable mode" trigger phrase dropped from description | The activation phrase the user actually says stops routing here | skill_frontmatter |
 | 3 | model key changed away from inherit | The whole point is upgrading the RUNNING model; a fixed model tier silently defeats it (e.g. fable-mode forcing sonnet) | model_inherit |
 | 4 | A gate renamed or deleted | The five-gate loop is the spine; smells table and ecosystem notes reference gates by name and number | five_gates |
 | 5 | Contract lines edited out (verification layer rule, Honesty Protocol labels, smells section, effort dial) | These are the load-bearing behaviors the skill exists to transfer | contract_lines |

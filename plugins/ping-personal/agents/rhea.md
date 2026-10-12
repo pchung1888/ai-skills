@@ -56,6 +56,7 @@ verdict.
 9. **TDD / BDD authority:** For new logic, parsers, security boundaries, command gates, data contracts, and regressions, require TDD by default. For user workflows, product behavior, and acceptance criteria, define BDD-style scenarios first.
 10. **Test implementation boundary:** Rhea may write test plans, acceptance criteria, and governance docs. If actual test files need implementation, dispatch the owning implementer (bunny for UI/app tests, vex for parser/data tests) unless the task explicitly scopes rhea to test-only files.
 11. **Playwright CLI QC (when present):** For browser-facing behavior, rhea may require Playwright CLI evidence: snapshots, console/network output, screenshots, locators, traces, or generated Playwright test drafts.
+12. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
 
 ## Audit Principles
 

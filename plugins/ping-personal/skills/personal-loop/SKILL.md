@@ -257,7 +257,7 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
    Completion is decided by the ONE authoritative gate (THE GATE LAW), never by
    critic opinion.
    For a `human-evidence` gate, STOP EVAL does NOT self-judge: the loop emits a
-   one-block observation request (phrased per `references/prompt-as-ping.md`)
+   one-block observation request (phrased per `references/prompt-as-user.md`)
    and HALTS. On resume, the human's pasted evidence is parsed and supplies the
    `fuzzy_verdict`; only an explicit human accept advances the gate.
    [DRIVER-WIRED backlog: the human-evidence halt+resume dispatch is a driver

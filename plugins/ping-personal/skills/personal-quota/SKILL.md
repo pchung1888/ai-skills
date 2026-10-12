@@ -19,6 +19,31 @@ usage charts (see `~/.claude/usage-data/report.html`), or Anthropic developer-AP
 questions (the operator has no developer API access -- this skill uses the subscription
 OAuth token, which is a different thing).
 
+## First step: read the live snapshot (any OS)
+
+Before running any script, use your own file tools (Glob, then Read):
+
+1. Glob `~/.claude/live-usage/*.json` and Read the newest one. The ping-hud mod writes it.
+   Use it only if it parses as JSON and `writtenAt` is under 15 min old; a torn (half-written)
+   or invalid file means "no snapshot", so move on. Its `claude[]` entries have the shape
+   `{provider, window (5h|7d), percentUsed, resetsAt, source, ageSec}`.
+2. For Codex, Glob `~/.codex/sessions/**/rollout-*.jsonl`, Read the newest, and take the last
+   line containing `"rate_limits"`: `primary` (window_minutes 300) is 5h, `secondary` (10080) is
+   7d, `resets_at` is epoch seconds; a reset already past means 0%.
+3. Only if that gives no usable numbers (or on Windows, for context %), run `quota.ps1` below.
+   `-Provider claude|codex|all` prints the same entry shape as a JSON array, reading the
+   snapshot first, then the OAuth endpoint, then the ccstatusline cache only if it exists.
+   Default provider is the runtime you are in: in Claude Code report Claude only, in Codex
+   report Codex only; use `-Provider all` only when the user asks for both. With no
+   `-Provider`, quota.ps1 itself picks codex when `CLAUDECODE` is unset and a Codex marker
+   (`CODEX_SANDBOX`, `CODEX_SANDBOX_NETWORK_DISABLED`, `CODEX_THREAD_ID` or `CODEX_HOME`) is
+   set, else the Claude report. `CLAUDECODE=1` in Claude Code is EXTRACTED (seen live); the
+   Codex marker names are INFERRED (not yet seen in a live Codex session).
+
+```powershell
+pwsh -NoProfile -File "${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/quota.ps1" -Provider claude   # codex in Codex; all only on request
+```
+
 ## What this skill does
 
 Runs `${CLAUDE_PLUGIN_ROOT}/skills/personal-quota/quota.ps1`, which resolves the numbers in a

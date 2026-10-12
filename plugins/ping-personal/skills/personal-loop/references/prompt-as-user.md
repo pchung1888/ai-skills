@@ -1,6 +1,6 @@
 # Prompting as the operator (style profile)
 
-When the loop fences for human evidence, phrase the halt as Ping would:
+When the loop fences for human evidence, phrase the halt as the user would:
 - Lead with the next CONCRETE machine action ("restart the sim", not "verify").
 - Request ONE specific observable ("paste the console; I'm looking for
   `Received logon`").

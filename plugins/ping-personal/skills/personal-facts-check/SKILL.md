@@ -34,16 +34,16 @@ No unlabeled claims. A wrong fact is 3x worse than an UNKNOWN.
 1. **Scope.** One sentence: what system/behavior are we establishing facts
    about, and for which upcoming decision. Name the ticket/area.
 2. **Probe before asking.** Read the code, run the read-only queries or
-   commands, check the live system where reachable. Ask Ping only for what
+   commands, check the live system where reachable. Ask the user only for what
    no tool can observe (and record his answer as its own labeled fact,
-   source: "Ping, <date>").
+   source: "the user, <date>").
 3. **Write the doc** to `docs/<area>/facts/<YYYY-MM-DD>-<topic>-facts.md`
    (ticket-shaped areas like `docs/PROJ-690/facts/` are the norm on work
    repos). Structure: Scope, Facts table (label, claim, provenance), Open
    UNKNOWNs (each with the probe that would kill it), New questions raised.
 4. **Kill the blanks loop.** For each UNKNOWN whose probe is cheap and
    read-only, run the probe now and upgrade the label. Stop when remaining
-   UNKNOWNs need approval, write access, or Ping.
+   UNKNOWNs need approval, write access, or the user.
 5. **Update mode** (facts doc already exists): re-verify each CONFIRMED-LIVE
    fact that the decision depends on, mark settled discrepancies `RESOLVED`
    with what settled them, and never delete a superseded fact -- strike it

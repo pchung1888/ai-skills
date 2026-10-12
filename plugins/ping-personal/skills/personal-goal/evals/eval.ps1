@@ -226,12 +226,12 @@ print(phase_rows([(1, 'title with | a pipe')]))
                 # Both flags at once is ambiguous, not permissive.
                 python $bw --slug t --area test --branch main --accept-cmd 'pwsh x.ps1' `
                     --accept-match 'OK' --requirement 'ship the thing' `
-                    --text-reviewed 'Ping confirmed 2026-09-18' --text-unreviewed 'also this one' --out $tmp *> $null
+                    --text-reviewed 'the user confirmed 2026-09-18' --text-unreviewed 'also this one' --out $tmp *> $null
                 if ($LASTEXITCODE -ne 8) { throw "accepted both review flags at once" }
                 # The real ack arms, and the answer is recorded for later sessions.
                 python $bw --slug t --area test --branch main --accept-cmd 'pwsh x.ps1' `
                     --accept-match 'OK' --requirement 'ship the thing' `
-                    --text-reviewed 'Ping confirmed 2026-09-18' --out $tmp *> $null
+                    --text-reviewed 'the user confirmed 2026-09-18' --out $tmp *> $null
                 if ($LASTEXITCODE -ne 0) { throw "a real ack was refused; exit $LASTEXITCODE" }
                 $c = Get-Content $tmp -Raw
                 if ($c -notmatch '(?m)^text_review_status:\s*reviewed --') { throw "review status not recorded in the beacon" }

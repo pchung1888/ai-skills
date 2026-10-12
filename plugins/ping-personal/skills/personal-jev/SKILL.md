@@ -1,28 +1,28 @@
 ---
 name: personal-jev
 model: sonnet
-description: Second opinion with a confidence meter from TypeSafe Jev (typed Noul / Choice / Score judgments). ON DEMAND ONLY. TRIGGER on "/personal-jev", "ask jev", "jev this", "what would jev pick", "jev-check this", "which jev type", "noul or choice or score", "jev, are these claims backed". Four modes - Decide (help Ping pick among options an AI offered), Which-tool (recommend Noul vs Choice vs Score and draft the question), Checklist (batch of yes/no checks), Claim check (is each claim supported by the evidence). Never sends raw code, SQL, client names, emails, or secrets; every send is previewed and needs Ping's OK. Do NOT auto-trigger on AskUserQuestion.
+description: Second opinion with a confidence meter from TypeSafe Jev (typed Noul / Choice / Score judgments). ON DEMAND ONLY. TRIGGER on "/personal-jev", "ask jev", "jev this", "what would jev pick", "jev-check this", "which jev type", "noul or choice or score", "jev, are these claims backed". Four modes - Decide (help the user pick among options an AI offered), Which-tool (recommend Noul vs Choice vs Score and draft the question), Checklist (batch of yes/no checks), Claim check (is each claim supported by the evidence). Never sends raw code, SQL, client names, emails, or secrets; every send is previewed and needs the user's OK. Do NOT auto-trigger on AskUserQuestion.
 ---
 
 # /personal-jev
 
-Ask TypeSafe Jev for typed judgments with probabilities, and tell Ping when Jev is split so
+Ask TypeSafe Jev for typed judgments with probabilities, and tell the user when Jev is split so
 the decision is genuinely his. Jev does not generate text; it answers questions you define.
 
 ## Hard rules
 
-1. **On demand only.** Run only when Ping asks. Never on your own initiative.
+1. **On demand only.** Run only when the user asks. Never on your own initiative.
 2. **Abstract the state.** Rewrite everything generically: no source code, SQL, stored proc
    names, table names, client or company names, people, emails, hostnames, GUIDs, or secrets.
    Describe the situation the way you would to an outside consultant under NDA.
-3. **Preview, then OK, then send.** Always run the preview first, show Ping the payload, and
+3. **Preview, then OK, then send.** Always run the preview first, show the user the payload, and
    add `-Send -Approve <fingerprint>` only after he says yes in this turn. The fingerprint is
    printed by the preview; if the payload changes afterwards, the send is refused (exit 6) and
    you must preview again and get a fresh OK. One approval covers the whole batch.
 4. **Batch.** Put every question for one decision (or one checklist) in ONE payload. Jev
    evaluates many questions in parallel in a single call; one approval per batch is the point.
 5. **Report YOUR CALL honestly.** When the script flags `YOUR CALL`, do not recommend. Lay out
-   the tradeoff and say the decision depends on Ping's preference, because Jev's own odds are too close to break the tie.
+   the tradeoff and say the decision depends on the user's preference, because Jev's own odds are too close to break the tie.
 
 ## Write the state as a packet
 
@@ -50,7 +50,7 @@ When options are easy to confuse, use structured criteria: Choice option objects
 
 ## Modes
 
-**Decide** - Ping has options an AI offered and wants a second opinion.
+**Decide** - the user has options an AI offered and wants a second opinion.
 1. `pick`: one `choice` over the options (plus `other`).
 2. Per option, one `score` per dimension, id `<option>__<dimension>`. Default dimensions:
    `safety`, `reversibility`, `cost`. **Order levels worst -> best** so higher is better.
@@ -61,8 +61,8 @@ When options are easy to confuse, use structured criteria: Choice option objects
 4. Report: pick with probability, per-option composites (with their sureness), and YOUR CALL
    items.
 
-**Which-tool** - Ping asks which primitive fits a question. Apply the table above yourself,
-explain the choice in one line, and draft the question JSON. No API call needed unless Ping
+**Which-tool** - the user asks which primitive fits a question. Apply the table above yourself,
+explain the choice in one line, and draft the question JSON. No API call needed unless the user
 asks to confirm with Jev.
 
 **Checklist** - a batch of yes/no checks (e.g. against an abstracted change summary). One
@@ -100,7 +100,7 @@ with `-ReceiptDir`): the state, the questions, the model, the threshold, every a
 its full odds, the composites, and an empty `decision` slot. It is never written inside a repo,
 never holds the key, and is not written when a payload is refused. The path is printed after
 the answers. These receipts are the raw material for later checking how often Jev agrees with
-Ping's final call.
+the user's final call.
 
 ## Where Jev pays off
 
@@ -111,7 +111,7 @@ ask about - that is still a critic's job (Ms.Mario / personal-critic-gate).
 
 ## Limits
 
-- The tripwire only catches obvious identifiers; the preview + Ping's OK is the real gate.
+- The tripwire only catches obvious identifiers; the preview + the user's OK is the real gate.
 - The fingerprint proves the sent payload is the previewed one. It does not prove a human saw
   it - that is still hard rule 3.
 - Pricing, rate limits, and exact error-response shape are unknown (not in the docs read).

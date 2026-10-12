@@ -7,19 +7,14 @@ export const GREEN = '#3fb950', BLUE = '#58a6ff', YELLOW = '#d29922', ORANGE = '
 // What args sees: bound tracker paths of this session, the clock, and this plugin's folder ($.plugin.root).
 export type Ctx = { bound: string[]; nowMs: number; root: string }
 
-// cmd = the command name without plugin prefix; null = no command (Goals opens the pane instead).
+// cmd = the command name without plugin prefix; null = no command (Goals / Agents open their pane instead).
 // plugin = the plugin that owns cmd (default ping-personal). needs 'goal' = hidden until a goal is bound.
-export type Action = { key: string; label: string; color?: string; cmd: string | null; plugin?: string; needs?: 'goal'; args: (c: Ctx) => string }
+// mode = an HTSW-row button: 'pane' opens the Explanation pane, the others run that htsw mode in it.
+export type Action = { key: string; label: string; color?: string; cmd: string | null; plugin?: string; needs?: 'goal'; mode?: 'pane' | 'simple' | 'explain' | 'kid' | 'deep' | 'motion'; args: (c: Ctx) => string }
 
+// The band's Action row.
 export const ACTIONS: Action[] = [
   { key: 'handoff', label: 'Handoff', color: GREEN, cmd: 'personal-handoff', args: c => ['--unattended', ...c.bound.filter(argSafe)].join(' ') },
-  // Explanation levels (DEC-7): Simple = short layman, Explain = fuller chat, Kid = a 10-year-old's analogy.
-  { key: 'simple', label: 'Simple', color: YELLOW, cmd: 'personal-htsw', args: () => 'now' },
-  { key: 'explain', label: 'Explain', color: BLUE, cmd: 'personal-htsw', args: () => 'walk the current conversation' },
-  { key: 'kid', label: 'Kid', color: ORANGE, cmd: 'personal-htsw', args: () => 'baby the current conversation' },
-  // Deep HTML: a per-phase explanation page, rendered with personal-md-to-html (DEC-11).
-  // Saved next to the first bound goal's tracker (the work it explains), else in docs/explain.
-  { key: 'deep', label: 'Deep HTML', color: PURPLE, cmd: 'personal-htsw', args: c => `now --deep --html ${workDir(c.bound)}/${stamp(c.nowMs)}-deep.html` },
   // Plan: html-plan page for the first bound goal, in the arc skin (DEC-12); pack only inlines files near the page.
   { key: 'plan', label: 'Plan', color: PURPLE, cmd: 'html-plan', plugin: 'html-plan', needs: 'goal',
     args: c => `${planSlug(c.bound)} -- plan for the goal tracker ${c.bound[0]}. Style: copy ${c.root}/assets/html-plan-arc.css next to the page and link it after htmlplan.css.` },
@@ -27,6 +22,18 @@ export const ACTIONS: Action[] = [
   { key: 'next', label: 'Next', color: GREEN, cmd: 'personal-next', args: () => 'now' },
   { key: 'agents', label: 'Agents', color: PINK, cmd: null, args: () => '' },
   { key: 'goals', label: 'Goals', color: CYAN, cmd: null, args: () => '' },
+]
+
+// The band's HTSW row: the Explanation pane, the four explanation levels and Motion. Each level answers in the pane,
+// from the last question and reply only (quick mode), so nothing is added to the main chat.
+export const HTSW_ACTIONS: Action[] = [
+  { key: 'pane', label: 'Pane', color: CYAN, cmd: null, mode: 'pane', args: () => '' },
+  { key: 'simple', label: 'Simple', color: YELLOW, cmd: null, mode: 'simple', args: () => '' },
+  { key: 'explain', label: 'Explain', color: BLUE, cmd: null, mode: 'explain', args: () => '' },
+  { key: 'kid', label: 'Kid', color: ORANGE, cmd: null, mode: 'kid', args: () => '' },
+  { key: 'deep', label: 'Deep HTML', color: PURPLE, cmd: null, mode: 'deep', args: () => '' },
+  // Motion (DEC-8): a background subagent makes a 30-second Motion film; the pane shows its link.
+  { key: 'motion', label: 'Motion', color: PINK, cmd: null, mode: 'motion', args: () => '' },
 ]
 
 // A path passed as a command argument: plain path characters only, never starting with '-',

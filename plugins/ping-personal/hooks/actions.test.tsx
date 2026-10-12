@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { ACTIONS, resolveCmd, stamp, planSlug, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN, GRAY } from './hud-actions'
+import { ACTIONS, HTSW_ACTIONS, resolveCmd, stamp, workDir, planSlug, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN, GRAY, PINK } from './hud-actions'
 import { layout } from './hud-render'
 
 const NOW = Date.parse('2026-10-09T16:00:00Z')
@@ -25,16 +25,20 @@ test('ACTIONS: commands and args per button', () => {
   expect(by.handoff.cmd).toBe('personal-handoff')
   const c = (bound: string[]) => ({ bound, nowMs: NOW, root: 'R' })
   expect(by.handoff.args(c(['docs/a/g1-audit-tracker.md']))).toBe('--unattended docs/a/g1-audit-tracker.md')
-  expect(by.simple.args(c([]))).toBe('now')
-  expect(by.explain.args(c([]))).toBe('walk the current conversation')
-  expect(by.kid.args(c([]))).toBe('baby the current conversation')
-  expect(ACTIONS.map(a => a.label)).toEqual(['Handoff', 'Simple', 'Explain', 'Kid', 'Deep HTML', 'Plan', 'Next', 'Agents', 'Goals'])
+  expect(ACTIONS.map(a => a.label)).toEqual(['Handoff', 'Plan', 'Next', 'Agents', 'Goals']) // the Action row (Hide is added when drawn)
   expect(by.next.cmd).toBe('personal-next') // DEC-10: press only, the skill asks with clickable choices
   expect(by.next.args(c([]))).toBe('now')
-  expect([by.deep.color, by.plan.color]).toEqual([PURPLE, PURPLE])
+  expect(by.plan.color).toBe(PURPLE)
   expect(by.goals.cmd).toBe(null)
   expect(by.agents.cmd).toBe(null) // opens the Agents pane, runs no command
-  expect([by.handoff.color, by.explain.color, by.simple.color, by.kid.color]).toEqual([GREEN, BLUE, YELLOW, ORANGE])
+  expect(by.handoff.color).toBe(GREEN)
+})
+
+test('HTSW_ACTIONS: the pane button, the four levels and Motion run no command; each names its mode (DEC-7, DEC-8)', () => {
+  expect(HTSW_ACTIONS.map(a => a.label)).toEqual(['Pane', 'Simple', 'Explain', 'Kid', 'Deep HTML', 'Motion'])
+  expect(HTSW_ACTIONS.map(a => a.mode)).toEqual(['pane', 'simple', 'explain', 'kid', 'deep', 'motion'])
+  expect(HTSW_ACTIONS.every(a => a.cmd === null)).toBe(true)
+  expect(HTSW_ACTIONS.map(a => a.color)).toEqual([CYAN, YELLOW, BLUE, ORANGE, PURPLE, PINK])
 })
 
 test('resolveCmd: exact name, else plugin-prefixed, else undefined', () => {
@@ -51,15 +55,12 @@ test('Handoff args drop a bound path that could add arguments', () => {
     .toBe('--unattended docs/a/g1-audit-tracker.md docs/b/g2-audit-tracker.md')
 })
 
-test('Deep HTML command carries an ET stamped path', () => {
+test('Deep HTML pages: ET stamp, next to the bound goal, else docs/explain', () => {
   expect(stamp(Date.parse('2026-10-08T18:41:00Z'))).toBe('2026-10-08-1441') // EDT
   expect(stamp(Date.parse('2026-12-08T04:05:00Z'))).toBe('2026-12-07-2305') // EST, day before in New York
-  const d = ACTIONS.find(a => a.key === 'deep')!
-  expect(d.cmd).toBe('personal-htsw')
-  expect(d.args({ bound: [], nowMs: Date.parse('2026-10-08T18:41:00Z'), root: 'R' })).toBe('now --deep --html docs/explain/2026-10-08-1441-deep.html')
-  // a bound goal: the page goes in that goal's folder, next to its tracker
-  expect(d.args({ bound: ['docs/mod/ping-hud-v2-audit-tracker.md'], nowMs: Date.parse('2026-10-08T18:41:00Z'), root: 'R' })).toBe('now --deep --html docs/mod/2026-10-08-1441-deep.html')
-  expect(d.args({ bound: ['docs/x y/g-audit-tracker.md'], nowMs: Date.parse('2026-10-08T18:41:00Z'), root: 'R' })).toBe('now --deep --html docs/explain/2026-10-08-1441-deep.html') // not a plain path
+  expect(workDir([])).toBe('docs/explain')
+  expect(workDir(['docs/mod/ping-hud-v2-audit-tracker.md'])).toBe('docs/mod') // the page goes next to the goal's tracker
+  expect(workDir(['docs/x y/g-audit-tracker.md'])).toBe('docs/explain') // not a plain path
 })
 
 test('Plan uses the first bound slug, validated, and links the arc skin', () => {
@@ -105,37 +106,42 @@ test('Plan press runs html-plan with the first bound slug', async ($, on) => {
   await ui.unmount()
 })
 
-test('Buttons row: four colored labels on both surfaces; a button whose command is not listed is hidden', async ($, on) => {
+test('Button rows: Action and HTSW, each labeled; colored labels on both surfaces; an unlisted command is hidden', async ($, on) => {
   bw(on, ['ping-personal:personal-htsw'])
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'ping-personal', surface, component: 'AbovePrompt', props })
-    expect(await ui.find({ key: 'btnexplain' })).toBeDefined()
-    expect(await ui.find({ key: 'btnsimple' })).toBeDefined()
-    expect(await ui.find({ key: 'btngoals' })).toBeDefined()
+    for (const k of ['btnpane', 'btnsimple', 'btnexplain', 'btnkid', 'btndeep', 'btnmotion', 'btngoals', 'btnagents', 'hide']) expect(await ui.find({ key: k })).toBeDefined()
     expect(await ui.find({ key: 'btnhandoff' })).toBeUndefined() // personal-handoff not listed
     const b = await ui.find({ key: 'btnexplain' }) as any
     if (surface === 'terminal') expect(JSON.stringify(b)).toContain(BLUE) // the label's Text child carries the color
     else expect(JSON.stringify(b)).not.toContain(BLUE) // desktop: native button, plain label
     expect((await ui.find({ key: 'btnexplain' }))?.props?.variant).toBeUndefined()
-    const row = await ui.find({ key: 'buttons' }) as any
+    const action = await ui.find({ key: 'buttons' }) as any, htsw = await ui.find({ key: 'htsw' }) as any
+    expect(JSON.stringify(action)).toContain('Action')
+    expect(JSON.stringify(htsw)).toContain('HTSW')
+    expect(JSON.stringify(action)).toContain('btngoals')
+    expect(JSON.stringify(action)).not.toContain('btnsimple') // the levels live in the HTSW row only
+    expect(JSON.stringify(htsw)).toContain('btnsimple')
     if (surface === 'desktop') {
-      expect(row.props.columnGap).toBe(1) // DEC-14 follow-up: Desktop buttons were packed edge to edge
-      expect(JSON.stringify(row)).toContain(BLUE) // the colored chip before Explain
-      expect(JSON.stringify(row)).toContain('\u25cf')
-      expect(JSON.stringify(row)).toContain(CYAN) // Goals chip
-      expect(JSON.stringify(row)).toContain(GRAY) // Hide chip
-    } else expect(row.props.columnGap).toBeUndefined() // terminal keeps its [ a ][ b ] look
+      expect(action.props.columnGap).toBe(1) // DEC-14 follow-up: Desktop buttons were packed edge to edge
+      expect(JSON.stringify(htsw)).toContain(BLUE) // the colored chip before Explain
+      expect(JSON.stringify(action)).toContain('\u25cf')
+      expect(JSON.stringify(action)).toContain(CYAN) // Goals chip
+      expect(JSON.stringify(action)).toContain(GRAY) // Hide chip
+    } else expect(action.props.columnGap).toBeUndefined() // terminal keeps its [ a ][ b ] look
     await ui.unmount()
   }
 })
 
-test('press: runs the command as typed, with bound tracker paths for Handoff', async ($, on) => {
+test('press: Handoff runs its command with bound tracker paths; an HTSW level runs no command', async ($, on) => {
   const w = bw(on, ALL, { 'hudGoals:sid-a': [{ root: 'D:/x', path: 'docs/a/g1-audit-tracker.md' }] })
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('model.complete', () => ({ value: { isAnswered: true, text: 'answer', usage: { input_tokens: 1, output_tokens: 1 } } }))
+  on('fs.read', () => ({ value: '## Explaining sentences\nrules' }))
   const ui = await $.ui.mount({ plugin: 'ping-personal', surface: 'desktop', component: 'AbovePrompt', props })
   await ui.press({ key: 'btnexplain' })
   await ui.press({ key: 'btnhandoff' })
-  expect(w.runs).toContainEqual({ command: 'ping-personal:personal-htsw', args: 'walk the current conversation' })
-  expect(w.runs).toContainEqual({ command: 'ping-personal:personal-handoff', args: '--unattended docs/a/g1-audit-tracker.md' })
+  expect(w.runs).toEqual([{ command: 'ping-personal:personal-handoff', args: '--unattended docs/a/g1-audit-tracker.md' }])
   expect(w.toasts).toEqual([])
   await ui.unmount()
 })
@@ -143,9 +149,9 @@ test('press: runs the command as typed, with bound tracker paths for Handoff', a
 test('press during a turn toasts that it is queued and still hands the run to the engine', async ($, on) => {
   const w = bw(on, ALL, { 'hud:sid-a': { model: 'm', ctxSpark: [], samples: [], turnActive: true, usage: { rateLimits: [] } } })
   const ui = await $.ui.mount({ plugin: 'ping-personal', surface: 'terminal', component: 'AbovePrompt', props })
-  await ui.press({ key: 'btnsimple' })
-  expect(w.toasts.some(t => t.includes('Simple queued'))).toBe(true)
-  expect(w.runs).toContainEqual({ command: 'ping-personal:personal-htsw', args: 'now' })
+  await ui.press({ key: 'btnhandoff' })
+  expect(w.toasts.some(t => t.includes('Handoff queued'))).toBe(true)
+  expect(w.runs).toContainEqual({ command: 'ping-personal:personal-handoff', args: '--unattended' })
   await ui.unmount()
 })
 
@@ -165,14 +171,15 @@ test('Session row: a known session name wins over the short id', async ($, on) =
   await ui.unmount()
 })
 
-test('row drop order with Buttons: cwd, Model, Forecast, then Buttons; Now always stays', () => {
+test('row drop order with the button rows: cwd, Model, Forecast, HTSW, then Action; Now always stays', () => {
   const keys = (maxRows: number, mode?: 'compact') => layout(undefined, { surface: 'desktop', nowMs: NOW, buttons: true, maxRows, mode })!.map(r => r.key)
-  expect(keys(5)).toEqual(['model', 'cwd', 'now', 'forecast', 'buttons'])
-  expect(keys(4)).toEqual(['model', 'now', 'forecast', 'buttons'])
-  expect(keys(3)).toEqual(['now', 'forecast', 'buttons'])
+  expect(keys(6)).toEqual(['model', 'cwd', 'now', 'forecast', 'buttons', 'htsw'])
+  expect(keys(5)).toEqual(['model', 'now', 'forecast', 'buttons', 'htsw'])
+  expect(keys(4)).toEqual(['now', 'forecast', 'buttons', 'htsw'])
+  expect(keys(3)).toEqual(['now', 'buttons', 'htsw'])
   expect(keys(2)).toEqual(['now', 'buttons'])
   expect(keys(1)).toEqual(['now'])
-  expect(keys(12, 'compact')).toEqual(['now', 'forecast', 'buttons'])
+  expect(keys(12, 'compact')).toEqual(['now', 'forecast', 'buttons', 'htsw'])
 })
 
 test('Session row: name first, labels grey and values white; reset label grey, its time white', () => {

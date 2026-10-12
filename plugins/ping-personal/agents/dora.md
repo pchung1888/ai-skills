@@ -45,6 +45,7 @@ machine.
 9. **Progress truthfulness:** Never leave `progress.md` saying work is "In Progress" when the PR claims it is complete.
 10. **TODO truthfulness:** Never leave stale completed TODOs in Active. Move done items to Done; mark deferred items with reason; do not delete unresolved work silently.
 11. **Meaningful commit messages:** Messages like "fix stuff" or "update" are not acceptable. State what changed and why.
+12. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
 
 ## SOP
 

@@ -498,15 +498,21 @@ def check_qa(content, word_count):
 
 def check_now(content):
     """now mode (references/now.md): verdict, an ASCII flowchart, the When / Your job / Time table,
-    a why-this-shape note and a TL;DR of at most 5 bullets; ASCII only; no citation line."""
+    a why-this-shape note and a TL;DR of at most 5 bullets; ASCII plus Chinese text only;
+    no citation line."""
     findings = []
     lines = content.split('\n')
     first = next((l.strip() for l in lines if l.strip()), '')
     if not first:
         findings.append('now: empty rendering (no verdict line)')
-    bad = sorted({c for c in content if ord(c) > 127})
+    # Chinese characters are allowed (--cantonese); any other non-ASCII, including
+    # full-width punctuation, fails.
+    def _cjk(c):
+        o = ord(c)
+        return 0x3400 <= o <= 0x4DBF or 0x4E00 <= o <= 0x9FFF or 0xF900 <= o <= 0xFAFF or 0x20000 <= o <= 0x3134F
+    bad = sorted({c for c in content if ord(c) > 127 and not _cjk(c)})
     if bad:
-        findings.append('now: non-ASCII characters (now output is ASCII only): ' + ' '.join('U+%04X' % ord(c) for c in bad[:5]))
+        findings.append('now: non-ASCII characters (now output is ASCII plus Chinese text only): ' + ' '.join('U+%04X' % ord(c) for c in bad[:5]))
     blocks = re.findall(r'```[^\n]*\n(.*?)```', content, re.DOTALL)
     if not any('->' in b for b in blocks):
         findings.append('now: no flowchart (a fenced block using -> arrows: done -> doing -> next)')

@@ -128,6 +128,48 @@ $tests = @(
         }
     },
     @{
+        Name = 'checker_now_cantonese: --purpose now accepts Chinese text with ASCII punctuation (fixtures/now-good-cantonese.md)'
+        Run = {
+            python $Checker --purpose now --input-file (Join-Path $Fix 'now-good-cantonese.md') *> $null
+            if ($LASTEXITCODE -ne 0) { throw "checker rejected a Cantonese now rendering (exit $LASTEXITCODE)" }
+        }
+    },
+    @{
+        Name = 'explaining_sentences_documented: SKILL.md has the Explaining sentences section with its six rules'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?m)^## Explaining sentences') { throw "SKILL.md has no '## Explaining sentences' section" }
+            foreach ($k in @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed')) {
+                if ($s -notmatch [regex]::Escape($k)) { throw "Explaining sentences rule missing: $k" }
+            }
+        }
+    },
+    @{
+        Name = 'personas_carry_explaining_rules: every persona agent except next-recommender has the six Explaining-sentences rules'
+        Run = {
+            $agents = Join-Path $PSScriptRoot '../../../agents'
+            $rules = @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed')
+            $files = Get-ChildItem (Join-Path $agents '*.md') | Where-Object { $_.BaseName -ne 'next-recommender' }
+            if ($files.Count -lt 8) { throw "expected 8 persona agents, found $($files.Count)" }
+            foreach ($f in $files) {
+                $t = Get-Content $f.FullName -Raw -Encoding utf8
+                if ($t -notmatch [regex]::Escape('**Explaining sentences** (personal-htsw SKILL.md)')) { throw "$($f.Name) has no Explaining sentences line" }
+                foreach ($k in $rules) { if ($t -notmatch [regex]::Escape($k)) { throw "$($f.Name) is missing rule: $k" } }
+            }
+        }
+    },
+    @{
+        Name = 'cantonese_switch_documented: SKILL.md documents --cantonese; now.md allows Chinese text with it'
+        Run = {
+            $s = Get-Content $Skill -Raw; $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            if ($s -notmatch '(?m)^## Language switch -- --cantonese') { throw "SKILL.md has no '## Language switch -- --cantonese' section" }
+            foreach ($k in @('/personal-htsw walk --cantonese', 'technical terms stay in English', 'Punctuation stays ASCII')) {
+                if ($s -notmatch [regex]::Escape($k)) { throw "Language switch section missing: $k" }
+            }
+            if ($n -notmatch [regex]::Escape('Chinese text is allowed with')) { throw "now.md still says ASCII only with no Chinese carve-out" }
+        }
+    },
+    @{
         Name = 'checker_accepts_code_explain_example: htsw-check.py exits 0 on references/examples/code-explain-examples.md'
         Run = {
             $ex = Join-Path $Refs 'examples/code-explain-examples.md'

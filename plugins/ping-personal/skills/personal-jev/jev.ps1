@@ -16,7 +16,7 @@
 #
 # Usage:
 #   pwsh jev.ps1 -Payload q.json                        # preview only (default), prints fingerprint
-#   pwsh jev.ps1 -Payload q.json -Send -Approve <fp>    # after Ping approves that preview
+#   pwsh jev.ps1 -Payload q.json -Send -Approve <fp>    # after the user approves that preview
 #   pwsh jev.ps1 -Payload q.json -Fake a.json           # canned answers, no network (evals)
 #   options: -Threshold 0.6  -Weights w.json  -Json  -ReceiptDir <dir>  -KeyFile <file>
 #
@@ -238,7 +238,7 @@ if ($Send -or ($Fake -and $ReceiptDir)) {
         sent = [bool]$Send; contract = $p.contract; modelRequested = $model; modelAnswered = $resp.model
         threshold = $Threshold; weights = $w; state = $p.state; questions = $p.questions
         answers = $resp.answers; results = $results; composites = $compositeDetail; yourCall = $yourCall
-        decision = $null   # filled in later with Ping's actual call, for agreement tracking
+        decision = $null   # filled in later with the user's actual call, for agreement tracking
     } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $receiptPath
 }
 

@@ -30,7 +30,7 @@ what actually shipped, with evidence.
    - **Closeout comment:** shorter form of the same via
      `addCommentToJiraIssue`.
    - **Screenshots:** if a capture exists on disk, reference it and tell
-     Ping which file to attach (MCP attachment support varies); do not
+     the user which file to attach (MCP attachment support varies); do not
      claim an attachment happened unless the tool result confirms it.
    - **Subtask split:** parse the progress/plan doc's remaining items into
      `createJiraIssue` subtasks under the parent, one per actionable item,
@@ -39,7 +39,7 @@ what actually shipped, with evidence.
 
 ## Boundaries
 
-- Never transition issue status (In Progress -> Done etc.) unless Ping
+- Never transition issue status (In Progress -> Done etc.) unless the user
   explicitly asks -- status is a workflow decision, not a sync.
 - Never create or edit issues outside the resolved key's project.
 - Wording on the ticket is professional register (personal-htsw boss-mode
