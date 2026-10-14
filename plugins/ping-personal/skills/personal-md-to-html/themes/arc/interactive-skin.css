@@ -1,0 +1,22 @@
+/* Arc skin for html-plan blocks inside an md-to-html page. Loaded after vendor/html-plan/htmlplan.css
+   and before the arc theme, so arc headings win. Copied from assets/html-plan-arc.css; keep the two in step. */
+:root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+  --paper: #FAF6F0; --card: #FFFDF9; --sunk: #EEE9E0;
+  --ink: #1F1A17; --ink-2: #3F3833; --ink-3: #6B635A; --line: #D8CFC4; --line-2: rgba(31,26,23,.08);
+  --accent: #B83A20; --accent-soft: #FCE5DD;
+  --green: #2A5F2E; --green-soft: #E8F2EA;
+  --amber: #8A5A10; --amber-soft: #F6ECD8;
+  --red: #8A2E14; --red-soft: #FCE5DD;
+  --blue: #2A5A8A; --blue-soft: #E3ECF4;
+  --purple: #6F4BB8; --purple-soft: #ECE5F5;
+  --float: 0 2px 8px rgba(0,0,0,.08);
+  --serif: "Georgia", "Iowan Old Style", "Charter", serif;
+  --sans: "Georgia", "Iowan Old Style", "Charter", serif;
+  color-scheme: light;
+}
+body { background: var(--paper); color: var(--ink); font-size: 17px; line-height: 1.55; }
+h1 { font: 700 clamp(30px, 4.6vw, 42px)/1.2 var(--serif); padding-bottom: .3em; border-bottom: 1px solid var(--line); letter-spacing: -.01em; }
+h2 { font: 700 27px/1.3 var(--serif); color: var(--ink); }
+h3 { font: 700 20px/1.35 var(--serif); }
+h1 code, h2 code, h3 code { font-family: var(--serif); font-style: italic; color: var(--accent); background: transparent; }
+a { color: var(--accent); }

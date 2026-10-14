@@ -24,7 +24,7 @@ export const MODES: { key: Mode; label: string; color: string; hotkey: string; r
   { key: 'simple', label: 'Simple', color: YELLOW, hotkey: '1', ref: 'now.md', how: 'now mode (short: verdict, small flowchart, your-job table, why this shape, TL;DR)' },
   { key: 'explain', label: 'Explain', color: BLUE, hotkey: '2', ref: 'walk.md', how: 'walk mode (explain it fully, no verdict)' },
   { key: 'kid', label: 'Kid', color: ORANGE, hotkey: '3', ref: 'baby.md', how: 'baby mode (an everyday analogy next to every technical term)' },
-  { key: 'deep', label: 'Deep HTML', color: PURPLE, hotkey: '4', ref: 'now.md', how: 'now --deep mode: write the Markdown of a Deep HTML page as now.md describes (per-phase tables, Glossary, evidence labels, one text flowchart). Return only the Markdown; the pane saves and renders it' },
+  { key: 'deep', label: 'Deep HTML', color: PURPLE, hotkey: '4', ref: 'now.md', how: 'now --deep mode: write the Markdown of a Deep HTML page as now.md describes (interactive: true frontmatter, per-phase tables, Glossary, evidence labels, a flow block and the other html-plan blocks where they fit). Return only the Markdown; the pane saves and renders it' },
   { key: 'motion', label: 'Motion', color: PINK, hotkey: '5', ref: 'walk.md', how: 'walk mode (explain it fully, no verdict)' },
 ]
 export const modeOf = (m: Mode) => MODES.find(x => x.key === m)!
@@ -33,7 +33,19 @@ export const modeOf = (m: Mode) => MODES.find(x => x.key === m)!
 export const RULE_SECTIONS = ['Explaining sentences', 'Language switch']
 
 // Shown under the topic while Quick is on: Quick is the default and the cheap way, so the pane says so.
-export const QUICK_TIP = 'Tip: Quick (default) sends only your last message and my last reply, about 10-15K tokens a press. Use it first; switch Context to Whole chat only for questions about the whole session.'
+// A pane cannot draw a scroll bar (the engine owns its window), so every ping-hud pane shows this hint and
+// the status line shows where the window sits while the person scrolls. A new pane adds its id here.
+export const SCROLL_HINT = 'Scroll: mouse wheel, or click in the pane then arrows / PgUp / PgDn / Home / End.'
+export const PANE_TITLES: Record<string, string> = { [PANE_ID]: 'Explanation', 'hud-goals': 'Goals', 'hud-agents': 'Agents' }
+// Status-line text for a scroll in one of these panes: null for another plugin's pane, undefined (clear it) when all fits.
+export function paneScrollText(id: string, offset: number, bodyRows: number, contentRows: number): string | null | undefined {
+  const title = PANE_TITLES[id]
+  if (!title) return null
+  if (contentRows <= bodyRows) return undefined
+  const first = Math.max(0, Math.min(offset, contentRows - bodyRows)) + 1, last = Math.min(first - 1 + bodyRows, contentRows)
+  return `${title}: rows ${first}-${last} of ${contentRows}${last >= contentRows ? ' (end)' : ''}`
+}
+export const QUICK_TIP ='Tip: Quick (default) sends only your last message and my last reply, about 10-15K tokens a press. Use it first; switch Context to Whole chat only for questions about the whole session.'
 
 export function emptyData(): ExplainData {
   return { earlier: [], next: 1, status: 'Ready. Press a level (1-5) to explain my last reply, or type what to explain first.', boxKey: 0 }

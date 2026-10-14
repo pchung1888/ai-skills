@@ -1,0 +1,74 @@
+/* Interactive md-to-html pages: night colors, sections that open and close, comment boxes,
+   copy buttons, the Respond sheet and quiet "+" comment buttons. Loaded last, so it wins. */
+
+/* Night: the midnight theme for md-to-html parts and matching values for html-plan parts. */
+:root[data-theme="dark"] {
+  --arc-paper: #1A1816; --arc-accent: #E07A60; --arc-ink: #EEECE8; --arc-rule: #3A352F;
+  --arc-code-bg: #0E0C0A; --arc-code-path: #E07A60;
+  --arc-good-bg: #2A3F2E; --arc-good-fg: #B8E0C0; --arc-warn-bg: #3F2820; --arc-warn-fg: #F0BBA8;
+  --arc-muted-bg: #2A2722; --arc-muted-fg: #A8A39A;
+  --paper: #1A1816; --card: #221F1C; --sunk: #141210; --ink: #EEECE8; --ink-2: #D6D2CB; --ink-3: #A8A39A;
+  --line: #3A352F; --line-2: rgba(238,236,232,.08); --accent: #E07A60; --accent-soft: #3F2820;
+  --green: #B8E0C0; --green-soft: #2A3F2E; --amber: #E8C27A; --amber-soft: #3A2E18;
+  --red: #F0BBA8; --red-soft: #3F2820; --blue: #9EC3E8; --blue-soft: #1F2A36;
+  --purple: #C9B3F0; --purple-soft: #2C2440;
+  color-scheme: dark;
+}
+
+/* Each H2 section opens and closes; the arrow is drawn here, not by html-plan's rotated marker. */
+details.lvl > summary { list-style: none; cursor: pointer; padding: 0; font: inherit; color: inherit; }
+details.lvl > summary::-webkit-details-marker { display: none; }
+details.lvl > summary h2 { display: inline; }
+details.lvl > summary::before { content: "\25B8"; display: inline-block; width: 1.1em; color: var(--arc-accent);
+  font: 400 15px/1 sans-serif; vertical-align: .25em; position: static; transform: none; }
+details.lvl[open] > summary::before { content: "\25BE"; }
+
+.theme-btn { position: fixed; top: 10px; right: 12px; z-index: 50; font: 600 13px/1 Georgia, serif; padding: 7px 11px;
+  border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+
+.sc-box { margin: 14px 0 4px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; background: var(--sunk); }
+.sc-head { font: 600 13px/1.4 Georgia, serif; color: var(--ink-3); margin-bottom: 6px; }
+.sc-box textarea, .sc-sheet textarea { width: 100%; box-sizing: border-box; font: 14px/1.45 Georgia, serif; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 7px; }
+.sc-item { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 6px 8px; margin-bottom: 6px;
+  background: var(--card); border-left: 3px solid var(--accent); border-radius: 4px; white-space: pre-wrap; }
+.sc-save, .sc-del, .sc-copy, .sc-respond { font: 600 13px/1 Georgia, serif; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.sc-save { margin-top: 6px; background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.sc-del { font-size: 12px; padding: 3px 7px; color: var(--ink-3); }
+.sc-copybar { display: flex; justify-content: flex-end; margin: 4px 0 10px; }
+.sc-copy { font-size: 12px; padding: 4px 9px; }
+.sc-respond { position: fixed; right: 76px; bottom: 16px; z-index: 60; padding: 10px 16px; font-size: 15px;
+  background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.sc-sheet { position: fixed; inset: auto 16px 16px 16px; max-width: 760px; margin: 0 auto; z-index: 70; padding: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+.sc-sheet textarea { height: 45vh; font: 13px/1.45 ui-monospace, Consolas, monospace; margin-bottom: 8px; }
+.sc-sheet button { margin-right: 8px; }
+
+/* html-plan's "+" comment buttons: always visible but quiet; the accent shows on hover. */
+main .nw-cbtn, main .nw-cbtn:focus { opacity: 1 !important; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--card) !important; border: 1px solid var(--line) !important; color: var(--ink-3) !important;
+  font: 600 15px/22px Georgia, serif; }
+main .nw-cbtn:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+/* Arc refined (owner's pick on the 2026-10-12 design canvas): a big serif page title, a "You asked"
+   card under it, sections as open space instead of boxed cards, small mono numbers beside
+   mid-size serif section titles. Fonts are local stacks: the page makes no outside requests. */
+main { font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif; font-size: 18px; line-height: 1.6; }
+main h1 { font-family: "Newsreader", Georgia, "Iowan Old Style", serif; font-weight: 700; font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.08; letter-spacing: -.01em; margin: 6px 0 16px; padding-bottom: 0; border-bottom: 0; }
+main .eyebrow { font-variant-caps: normal; text-transform: uppercase; letter-spacing: .14em; font-size: 13px; font-weight: 600; }
+main .you-asked { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px 18px; margin: 0 0 28px; }
+main .you-asked .lbl { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding-top: 4px; white-space: nowrap; }
+main .you-asked .q { font-family: "Newsreader", Georgia, serif; font-size: 21px; line-height: 1.4; }
+main details.lvl { border: 0; border-radius: 0; background: transparent; margin: 0; padding: 26px 0 8px; border-top: 1px solid var(--line); }
+main details.lvl > :not(summary) { margin-left: 0; margin-right: 0; }
+main details.lvl > summary h2 { font-family: "Newsreader", Georgia, serif; font-size: 28px; font-weight: 600; margin: 0 0 12px;
+  padding-left: 1.7em; }
+main details.lvl > summary h2::before { font: 600 14px/2.6 "JetBrains Mono", Consolas, monospace; color: var(--arc-accent); }
+main details.lvl > p, main details.lvl > ul, main details.lvl > ol { max-width: 68ch; }
+main h3 { font-family: "Newsreader", Georgia, serif; font-size: 21px; font-weight: 600; }
+main .sc-box { background: transparent; border: 0; border-top: 1px dashed var(--line); border-radius: 0; padding: 14px 0 0; }
+main .sc-save { background: var(--card); border-color: var(--line); color: var(--ink); min-height: 40px; padding: 0 16px; }
+.sc-respond { border-radius: 999px; min-height: 48px; padding: 0 22px; }

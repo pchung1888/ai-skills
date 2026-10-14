@@ -1,7 +1,16 @@
 The release is done; your one job is to run the Codex check.
 
 ```
-[done] build -> [done] release -> [NOW] Codex check -> [next] read report
+[done] build
+   |
+   v
+[done] release
+   |
+   v
+[NOW ] Codex check
+   |
+   v
+[next] read report
 ```
 
 | When | Your job | Time |

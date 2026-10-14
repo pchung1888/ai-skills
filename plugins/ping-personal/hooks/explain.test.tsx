@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { cutSections, parsePath, sliceLines, startTopic, park, reopen, clearAll, addAnswer, buildPrompt, costOf, costLine, shouldLock, questionText, emptyData, filmUrl, motionPrompt, finishMotion, motionSubject, motionAsk, motionAskSubject, motionDispatch, EARLIER_MAX, QUICK_TIP, PANE_ID } from './hud-explain'
+import { cutSections, parsePath, sliceLines, startTopic, park, reopen, clearAll, addAnswer, buildPrompt, costOf, costLine, shouldLock, questionText, emptyData, filmUrl, motionPrompt, finishMotion, motionSubject, motionAsk, motionAskSubject, motionDispatch, EARLIER_MAX, QUICK_TIP, PANE_ID, SCROLL_HINT, paneScrollText } from './hud-explain'
 import { EXPLAIN_FIRST, EXPLAIN_FIRST_CONTEXT, FILM_AGENT, FILM_AGENT_SPEC } from './register'
 
 const NOW = Date.parse('2026-10-11T22:00:00Z')
@@ -209,6 +209,8 @@ test('Deep HTML is one press: one side call, then the page is saved and rendered
   expect(md.replace(/\\/g, '/')).toContain('docs/explain/2026-10-11-1800-deep.md') // the engine hands paths over in the OS shape
   expect(w.writes[md]).toBe('ANSWER-1')
   expect(w.runs.some(a => a[0] === 'python' && String(a[1]).endsWith('md-to-html.py') && a.includes('--out'))).toBe(true)
+  // Open in browser sits in the control row with New topic, not under the long answer.
+  expect(JSON.stringify(await p.find({ key: 'xc' } as any))).toContain('xopen')
   await p.press({ key: 'xopen' })
   expect(w.runs.some(a => a[0] === 'cmd' && a[2] === 'start')).toBe(true)
   await p.unmount()
@@ -405,4 +407,29 @@ test('session start registers the film agent locked to ToolSearch, Artifact and 
   expect([...r.tools].sort()).toEqual(['Artifact', 'ArtifactData', 'ToolSearch'])
   expect(r).toMatchObject({ model: 'sonnet', background: true, omitClaudeMd: true })
   expect(FILM_AGENT_SPEC.description).toContain('"ping-hud Motion:" request')
+})
+
+test('paneScrollText: rows shown in a ping-hud pane; nothing for another plugin; cleared when it all fits', () => {
+  expect(paneScrollText(PANE_ID, 40, 40, 210)).toBe('Explanation: rows 41-80 of 210')
+  expect(paneScrollText('hud-goals', 170, 40, 210)).toBe('Goals: rows 171-210 of 210 (end)')
+  expect(paneScrollText('hud-agents', 999, 40, 210)).toBe('Agents: rows 171-210 of 210 (end)') // past the end clamps
+  expect(paneScrollText('hud-agents', 0, 40, 30)).toBeUndefined()
+  expect(paneScrollText('other-plugin-pane', 0, 40, 210)).toBeNull()
+})
+
+test('every ping-hud pane shows the scroll hint; the Explanation pane lists the newest answer first', async ($, on) => {
+  let d = startTopic(emptyData(), 'explain', 'my last reply', 'en', 'quick')
+  d = addAnswer(addAnswer(d, 'Explain: one', 'ANS-OLD'), 'two', 'ANS-NEW')
+  xw(on, { 'hudExplain:sid-a': d })
+  const p = await mountX($)
+  expect(await p.find({ type: 'Text', text: SCROLL_HINT })).toBeDefined()
+  const tree = JSON.stringify(await p.find({ key: 'explain' } as any))
+  expect(tree.indexOf('ANS-NEW')).toBeGreaterThan(-1)
+  expect(tree.indexOf('ANS-NEW')).toBeLessThan(tree.indexOf('ANS-OLD'))
+  await p.unmount()
+  for (const id of ['hud-goals', 'hud-agents']) {
+    const q = await $.ui.mount({ plugin: 'ping-personal', surface: 'terminal', component: 'Pane', requestId: id, props: { viewport: { rows: 40, columns: 120 } } as any })
+    expect(await q.find({ type: 'Text', text: SCROLL_HINT })).toBeDefined()
+    await q.unmount()
+  }
 })

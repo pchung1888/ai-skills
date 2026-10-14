@@ -207,6 +207,116 @@ def _golden_pair_test(name: str, base_dir: Path | None = None, optional: bool = 
     return _test
 
 
+PLAN_MD = SKILL / "examples" / "plan-blocks.md"
+
+
+def _render(md_text: str, cwd: Path) -> str:
+    """Render md_text from a temp .md file with cwd as the working folder; return the HTML."""
+    md = cwd / "page.md"
+    md.write_text(md_text, encoding="utf-8")
+    out = cwd / "page.html"
+    subprocess.run([PY, str(RENDERER), str(md), "--out", str(out)], cwd=cwd, capture_output=True, check=True)
+    return out.read_text(encoding="utf-8")
+
+
+def test_plan_blocks() -> str | None:
+    """Every html-plan block renders, the page goes interactive, passes the validator, stays ASCII."""
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "plan.html"
+        if subprocess.run([PY, str(RENDERER), str(PLAN_MD), "--out", str(out)], capture_output=True).returncode:
+            return "renderer failed on examples/plan-blocks.md"
+        html = out.read_text(encoding="utf-8")
+        for tag in ("doc-flow", "doc-calls", "doc-machine", "doc-code", "doc-mock", "doc-note", "doc-ask"):
+            if f"<{tag}" not in html:
+                return f"missing <{tag}>"
+        for needle in ('<script data-vendor="html-plan">', '<style data-vendor="html-plan">', "<main>",
+                       'data-feedback="off"', "md2h-comments:", 'data-theme',
+                       # Respond must not depend on an <h1> and must show its own errors.
+                       "h1 ? h1.textContent : document.title", "Respond could not build the text"):
+            if needle not in html:
+                return f"interactive layer missing: {needle}"
+        if html.count('<details class="lvl" open>') != html.count("<h2"):
+            return "not every H2 section is wrapped in <details>"
+        if "block skipped" in html:
+            return "a demo block was skipped"
+        if any(ord(c) > 127 for c in html):
+            return "interactive page is not pure ASCII"
+        if subprocess.run([PY, str(VALIDATOR), "--input-file", str(out)], capture_output=True).returncode:
+            return "validator failed on the interactive page"
+    return None
+
+
+def test_plain_page_stays_plain() -> str | None:
+    """A page with no html-plan block and no `interactive: true` gets no runtime."""
+    with tempfile.TemporaryDirectory() as td:
+        html = _render("# Plain\n\n```keyrows\na : b\n```\n", Path(td))
+        return "plain page got the interactive layer" if "data-vendor" in html or "<main>" in html else None
+
+
+def test_interactive_frontmatter() -> str | None:
+    with tempfile.TemporaryDirectory() as td:
+        html = _render("---\ninteractive: true\n---\n# Page\n\n## One\n\ntext\n", Path(td))
+        return None if 'data-vendor="html-plan"' in html else "interactive: true did not add the layer"
+
+
+def test_plan_blocks_cannot_break_out() -> str | None:
+    """Block text cannot close its <script> early (any case) or open a script-data comment."""
+    evil = "</ScRiPt><img src=x onerror=alert(1)>\n<!--<script>"
+    md = (f"# P\n\n```flow\na = {evil}\n```\n\n```code-pins\ncode: |\n  {evil.splitlines()[0]}\n  <!--\n```\n")
+    with tempfile.TemporaryDirectory() as td:
+        html = _render(md, Path(td))
+    main = html.split("<main>", 1)[1].split("</main>", 1)[0]
+    opens, closes = main.count('<script type="text/plain">'), len(re.findall(r"</script", main, re.I))
+    if closes != opens:
+        return f"block text closed its <script> early ({opens} opened, {closes} closed)"
+    if "<!--" in main:
+        return "block text opened a script-data comment"
+    return None
+
+
+def test_model_shaped_blocks() -> str | None:
+    """The shapes a model writes without the docs still draw: a plain list as a flow, a note with
+    its tone on the fence line, a "- [x]" list as a decision. A page with no "# Title" gets one."""
+    md = ("---\ntitle: Page title from frontmatter\ninteractive: true\n---\n## One\n\n"
+          "```flow\nFirst step (done)\nSecond step\n```\n\n"
+          "```note warn\nPlain text with no YAML.\n```\n\n"
+          "```ask\nWhat next?\n- [x] Ship it\n- [ ] Wait\n```\n")
+    with tempfile.TemporaryDirectory() as td:
+        html = _render(md, Path(td))
+    main = html.split("<main>", 1)[1]
+    if "block skipped" in main:
+        return "a model-shaped block was skipped"
+    if "s1 = First step (done)" not in main or "s1 -> s2" not in main:
+        return "a plain list did not become a top-to-bottom flow"
+    if '<doc-note tone="warn"><strong>Watch out</strong> Plain text with no YAML.' not in main:
+        return "a note with its tone on the fence line was not drawn"
+    if 'value="o1" checked> Ship it' not in main:
+        return "a - [x] list did not become a decision"
+    if "<h1>Page title from frontmatter</h1>" not in main:
+        return "a page with no # Title did not get one from the frontmatter"
+    with tempfile.TemporaryDirectory() as td:
+        html = _render("---\ninteractive: true\n---\n# T\n\n**You asked:** how does X work?\n\n## One\n\ntext\n", Path(td))
+    if '<div class="you-asked"><div class="lbl">You asked</div><div class="q">how does X work?</div></div>' not in html:
+        return "the **You asked:** line did not become the You-asked card"
+    return None
+
+
+def test_code_pins_refuses_unsafe_paths() -> str | None:
+    """code-pins reads only files inside the working folder, never a secrets file."""
+    with tempfile.TemporaryDirectory() as td:
+        cwd = Path(td) / "repo"
+        cwd.mkdir()
+        (cwd / ".env").write_text("TOKEN=abc\n", encoding="utf-8")
+        (Path(td) / "outside.txt").write_text("outside\n", encoding="utf-8")
+        for path in ("../outside.txt", ".env"):
+            html = _render(f"# P\n\n```code-pins\npath: {path}\nlines: 1-1\n```\n", cwd)
+            if "code-pins block skipped" not in html or "TOKEN=abc" in html or "outside\n" in html:
+                return f"code-pins read {path}"
+        (cwd / "ok.py").write_text("x = 1\n", encoding="utf-8")
+        html = _render("# P\n\n```code-pins\npath: ok.py\nlines: 1-1\n```\n", cwd)
+        return None if "x = 1" in html else "code-pins did not read a normal file"
+
+
 TESTS = [
     ("validator_self_test", test_validator_self_test),
     ("render_diff", test_render_diff),
@@ -228,6 +338,13 @@ TESTS = [
     # Phase 9 — theme system
     ("pos_midnight", _golden_pair_test("midnight")),
     ("pos_accent_override", _golden_pair_test("accent-override")),
+    # htsw-presentation: html-plan blocks and the interactive layer
+    ("pos_plan_blocks", test_plan_blocks),
+    ("pos_plain_page_stays_plain", test_plain_page_stays_plain),
+    ("pos_interactive_frontmatter", test_interactive_frontmatter),
+    ("neg_code_pins_unsafe_paths", test_code_pins_refuses_unsafe_paths),
+    ("neg_plan_blocks_script_breakout", test_plan_blocks_cannot_break_out),
+    ("pos_model_shaped_blocks", test_model_shaped_blocks),
     # Phase 10 — pipeline showcase (lives in docs/personal-md-to-html/, not examples/dashboard/)
     ("pos_sample_plan_as_dashboard", _golden_pair_test("sample-plan-as-dashboard", base_dir=DOCS_DIR, optional=True)),
 ]

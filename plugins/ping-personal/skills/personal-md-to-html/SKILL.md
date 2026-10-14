@@ -66,6 +66,32 @@ chart-line, chart-bar, inline pills `[[TAG]]`).
 | `pilcrow` | Paragraph starting with `¶` renders as italic, indented, accent glyph | `¶ Editorial note here.` as a standalone paragraph |
 | heading meta-pill | Trailing `[[TAG]]` or `[[TAG\|variant]]` in a heading floats right as `.pill-meta` | `## Heading text [[STATUS\|good]]` |
 
+### html-plan blocks and interactive pages
+
+These blocks are drawn in the browser by the html-plan runtime, which md-to-html copies into the
+page (`vendor/html-plan/`, MIT, see its LICENSE). Full demo: `examples/plan-blocks.md`.
+
+| Block | Draws | Syntax |
+|---|---|---|
+| `flow` | Boxes and arrows | `name = Label` lines, a `\| a \| b \|` grid (`.` = empty), then `a -> b : label` |
+| `calls` | A call tree | One call per line, 2 spaces per level, `@ path:line` at the end |
+| `machine` | A state machine | `machine <name> initial <state>`, `state <id> [final]  # text`, a grid, `a -event-> b : label` |
+| `code-pins` | Code with notes on lines | YAML: `path` + `lines: a-b` (read from the working folder, at most 60 lines) or `code` + `start`; `pins: {line: note}` |
+| `terminal` | A dark terminal box | Text; `{g}..{/g}` green, `{r}` red, `{y}` amber, `{dim}` grey, `{b}` bold |
+| `note` | A tinted note box | YAML: `tone` (info, warn, risk, ok, idea), `title`, `body` |
+| `ask` | A decision box | YAML: `id`, `question`, `multi` (true = checkboxes), `options: [{value, label, note, checked}]` |
+
+A page that uses any of these blocks, or sets `interactive: true` in its frontmatter, becomes
+interactive. Each `##` section then opens and closes, ends with a comment box, and a Day/Night
+button sits top right. Code, diagrams, terminal boxes and notes each get a Copy button. Comments
+are saved in the browser. **Respond** copies the decisions and every comment, grouped by section
+and quoted with `> `, ready to paste back to Claude. The page is about 230 KB, because it carries
+the runtime. Pages without these blocks render exactly as before.
+
+`code-pins` never reads outside the folder md-to-html runs in, and never reads `.env`, key or
+secret files; a refused or broken block shows a red note instead of vanishing. To update the
+runtime, run `python vendor/vendor_html_plan.py <html-plan runtime folder>`, which keeps the copy ASCII.
+
 ---
 
 ## Theming

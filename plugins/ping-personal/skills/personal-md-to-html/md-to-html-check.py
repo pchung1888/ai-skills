@@ -62,7 +62,13 @@ ARTIFACT_RES = [
     re.compile(r'<p[^>]*class="[^"]*\bcode-eyebrow\b[^"]*"', re.IGNORECASE),
     re.compile(r'<p[^>]*class="[^"]*\beyebrow\b[^"]*"', re.IGNORECASE),
     re.compile(r'<p[^>]*class="[^"]*\bpilcrow\b[^"]*"', re.IGNORECASE),
+    # html-plan blocks (themes/arc/components/plan_blocks.py)
+    re.compile(r"<doc-(flow|calls|machine|mock|note|ask|code)\b", re.IGNORECASE),
 ]
+
+# The html-plan runtime that md-to-html inlines on interactive pages is third-party code with its
+# own colors; the palette check (#3) skips these blocks. Every other check still sees them.
+VENDOR_BLOCK_RE = re.compile(r'<(style|script) data-vendor="html-plan">.*?</\1>', re.IGNORECASE | re.DOTALL)
 
 SIZE_CAP = 512_000  # 500 KB per spec §4 / §8.1 #4
 
@@ -115,7 +121,7 @@ def run_checks(html: str, size_bytes: int) -> list[str]:
         fails.append("  [1] external stylesheet detected")
     if EXT_SCRIPT_RE.search(html):
         fails.append("  [2] external script detected")
-    for f in check_hex_palette_only(html):
+    for f in check_hex_palette_only(VENDOR_BLOCK_RE.sub("", html)):
         fails.append(f"  [3] {f}")
     if size_bytes > SIZE_CAP:
         fails.append(f"  [4] file size: {size_bytes} bytes (cap {SIZE_CAP})")

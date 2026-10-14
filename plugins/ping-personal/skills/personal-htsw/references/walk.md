@@ -139,7 +139,7 @@ A scannable visual or list. The HOW-THIS-WORKS signature header (section 4) sits
 
 Pick the shape that fits the subject:
 
-- **ASCII flow** (default for non-trivial flow / call-fanout / pipeline) — Unicode box-drawing characters (`│ ─ ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ▼ ►`), wrapped in a plain code block (triple backticks, no language tag). Fits ~90 columns.
+- **ASCII flow** (default for non-trivial flow / call-fanout / pipeline) -- top to bottom, one numbered box per line, a short `|` note and a `v` between steps, plain ASCII, about 60 columns, in a plain code block (triple backticks, no language tag). Never two steps side by side: they wrap in the Explanation pane. See SKILL.md "Diagram syntax".
 - **Table** for state-by-state or input/output mapping (≤ 6 rows)
 - **Numbered checklist** for "to use this, you'd do these N things in order"
 - **Mermaid `flowchart`** ONLY when the target renderer is confirmed to support it AND the diagram has dynamic-layout needs ASCII can't reasonably express. See `references/diagrams.md` for the mermaid syntax subset that survives Confluence's strict plugin.
@@ -147,12 +147,16 @@ Pick the shape that fits the subject:
 Example (ASCII flow):
 
 ```
-User input ──► AJAX POST ──► Browse_ajax.asp ──► clsDAL.RunSP ──► pBrowse<Entity>
-     │              │                │                                   │
-     │              └─ wraps as       └─ reads Request.Form               └─ wraps as
-     │                 form-data         (no QueryString)                    '%' + @filter + '%'
-     │                                                                       in WHERE LastName LIKE
-     └─ typed in #txtSearch                                                  (substring match)
+ 1  User types in #txtSearch
+    |  the page sends it as form-data
+    v
+ 2  Browse_ajax.asp reads Request.Form
+    |  no QueryString
+    v
+ 3  clsDAL.RunSP calls pBrowse<Entity>
+    |  the SP wraps it as '%' + @filter + '%'
+    v
+ 4  WHERE LastName LIKE finds substring matches
 ```
 
 ### 6. The knobs / what would I change (OPTIONAL, usually useful)

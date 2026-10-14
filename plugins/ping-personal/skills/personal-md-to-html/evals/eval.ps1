@@ -27,6 +27,18 @@ $tests = @(
         }
     },
     @{
+        Name = 'vendor_html_plan: copied runtime is ASCII and ships its MIT LICENSE'
+        Run = {
+            $v = Join-Path $SkillDir 'vendor/html-plan'
+            foreach ($f in @('htmlplan.js','htmlplan.css','LICENSE')) {
+                $p = Join-Path $v $f
+                if (-not (Test-Path $p)) { throw "missing vendor/html-plan/$f" }
+                if ([System.IO.File]::ReadAllBytes($p) | Where-Object { $_ -gt 127 } | Select-Object -First 1) { throw "vendor/html-plan/$f is not ASCII; rerun vendor/vendor_html_plan.py" }
+            }
+            if ((Get-Content (Join-Path $v 'LICENSE') -Raw) -notmatch 'MIT License') { throw "vendor LICENSE lost its MIT text" }
+        }
+    },
+    @{
         Name = 'smoke_suite_passes: tests/smoke.py runs fully green (exit 0)'
         Run = {
             if (-not (Test-Path $Smoke)) { throw "tests/smoke.py missing at $Smoke" }

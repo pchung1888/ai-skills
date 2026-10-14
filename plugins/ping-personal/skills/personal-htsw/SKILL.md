@@ -475,20 +475,32 @@ This skill works the same on any project — no project-level rules to lean on. 
 
 The point: a confident wrong answer is way worse than admitting you don't know. If you don't know for sure, say it out loud. The reader will trust you more.
 
-## Diagram syntax — ASCII flowchart is the safer default; mermaid only when target supports it
+## Diagram syntax -- a top-to-bottom ASCII flow; mermaid only when the target supports it
 
-**Default: ASCII flowchart.** It renders in every markdown viewer, every plain-text editor, terminal output, email, and copy-paste destination — because it's just monospace characters. No renderer required. For persisted docs in `docs/` or files a recipient might open in any viewer (including a stripped-down preview, a file:// URL, or grep output), **prefer ASCII over mermaid.** walk.md's canonical example uses ASCII flow exactly for this reason.
+**Default: a top-to-bottom ASCII flow, one box per line, arrows down.** It renders in the chat,
+the Explanation pane, any markdown viewer, a terminal and an email, because it is just monospace
+characters. Side-by-side boxes wrap and break in a narrow pane, so never put two steps on one line.
 
 ```
-User input ──► AJAX POST ──► Browse_ajax.asp ──► clsDAL.RunSP ──► pBrowse<Entity>
-     │              │                │                                   │
-     │              └─ wraps as       └─ reads Request.Form               └─ wraps as
-     │                 form-data         (no QueryString)                    '%' + @filter + '%'
-     │                                                                       in WHERE LastName LIKE
-     └─ typed in #txtSearch                                                  (substring match)
+ 1  User types in #txtSearch
+    |  the page sends it as form-data
+    v
+ 2  Browse_ajax.asp reads Request.Form
+    |  no QueryString
+    v
+ 3  clsDAL.RunSP calls pBrowse<Entity>
+    |  the SP wraps it as '%' + @filter + '%'
+    v
+ 4  WHERE LastName LIKE finds substring matches
 ```
 
-Use Unicode box-drawing characters: `│` `─` `┌` `┐` `└` `┘` `├` `┤` `┬` `┴` `┼` `▼` `►` `──►`. Fit within ~90 columns so monospace previews don't wrap. Wrap the whole block in triple-backticks with no language tag (plain code block) — that locks in monospace rendering everywhere.
+Number each step. Under it, one short `|` line says what moves to the next step, then a `v`.
+Stay within about 60 columns. Use plain ASCII (`|`, `v`, `->`), never Unicode box drawing, and
+wrap the block in triple backticks with no language tag. A branch is a short note on the step
+(`3  ... (on error: go to 6)`), not a second column.
+
+On a Deep HTML page, draw the flow with md-to-html's `flow` block instead: it becomes real boxes
+and arrows (see `references/now.md` "Deep HTML").
 
 **Use mermaid only when:** (a) the target rendering environment is confirmed to support it (GitHub UI, GitLab UI, VS Code with the Mermaid extension installed, Confluence with the mermaid plugin enabled, Mermaid Live Editor), AND (b) the diagram has dynamic-layout needs (very wide fan-out, deep nesting, dense edges) that ASCII can't reasonably express. Inline chat answers in this CLI session render markdown text, NOT mermaid — so even inline mode prefers ASCII.
 
@@ -510,6 +522,8 @@ Output goes inline to the chat. Use the visual elements that fit the mode:
 - No emoji decoration. Icons (🔴/⚠/🟢) and the 🌮 are the only emojis allowed, and only in pr/qa (not boss).
 - One key number per section in bold, max.
 - If you have 6+ bullets, that's a table waiting to happen.
+- A paragraph holds 3 sentences at most. Then start a new bullet or block, so the chat and the
+  Explanation pane stay easy to scan.
 
 ## Length targets
 
