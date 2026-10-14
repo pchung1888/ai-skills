@@ -1194,16 +1194,23 @@ async function xDeepPage($: any, md: string): Promise<{ path?: string; error?: s
   } catch (err: any) { return { error: String(err?.message ?? err) } }
 }
 
-// Opens a page in the default browser. cmd.exe re-parses its argument, so only plain path characters may reach it.
+// A page path as a file:/// link. Spaces and non-ASCII letters become %XX, so the link has no space to cut it.
+const pageUrl = (path: string) => `file:///${encodeURI(path.replace(/\\/g, '/').replace(/^\/+/, ''))}`
+
+// Opens a page in the default browser. cmd.exe re-parses its argument, so only plain URL characters may reach it;
+// encodeURI leaves & ( ) ; and the like as they are, and the check refuses them.
 async function openPage($: any, path: string) {
-  if (!/^[\w.\/:-]+$/.test(path)) { try { $.ui.toast('ping-hud: page path has unusual characters; open it from the link') } catch {}; return }
-  const argv = isWin(path) ? ['cmd', '/c', 'start', '', path.split('/').join('\\')] : [/^\//.test(path) && (await $.fs.exists('/usr/bin/open')) ? 'open' : 'xdg-open', path]
+  const url = pageUrl(path)
+  if (!/^file:\/\/\/[\w.\/:%-]+$/.test(url)) { try { $.ui.toast('ping-hud: page path has unusual characters; open it from the link') } catch {}; return }
+  const argv = isWin(path) ? ['cmd', '/c', 'start', '', url] : [/^\//.test(path) && (await $.fs.exists('/usr/bin/open')) ? 'open' : 'xdg-open', url]
   await $.process.run(argv, { timeoutMs: 10000 }).catch(() => { try { $.ui.toast('ping-hud: could not open the browser') } catch {} })
 }
 
 async function explainPane($: any, e: any) {
   const { Box, Text, Button, Input, Markdown, Link } = $.ui.resolve(e)
   const d = await xData($), lang = await xLang($), scope = await xScope($)
+  let ver = ''
+  try { ver = JSON.parse(String(await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`))).version ?? '' } catch {}
   const save = (v: ExplainData) => xSave($, v)
   const secs = xBusy ? Math.max(0, Math.round(((await $.clock.now()) - xStarted) / 1000)) : 0
   const t = d.topic
@@ -1240,6 +1247,7 @@ async function explainPane($: any, e: any) {
         <Button key="xnew" onPress={async () => save(park(xCancel(await xData($), 'New topic. Type what to explain, or press a level.')))}>New topic</Button>
         <Button key="xall" onPress={async () => save(clearAll(xCancel(await xData($), 'Cleared.')))}>Clear all</Button>
         <Button key="xclose" onPress={() => $.ui.close({ id: PANE_ID })}>Close</Button>
+        {ver ? <Text key="xver" dimColor>{`v${ver}`}</Text> : null}
       </Box>
       {/* Newest answer first, right under the buttons, so a new answer never sits below the fold. */}
       {t?.qa.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => <Box key={`xqa${i}`} flexDirection="column">
@@ -1247,7 +1255,7 @@ async function explainPane($: any, e: any) {
         <Markdown key={`xqm${i}`} text={x.a} />
       </Box>)}
       {t?.page ? <Box key="xp" flexDirection="row">
-        <Text key="xpt">{'Page: '}</Text><Link key="xpl" href={`file:///${t.page.replace(/^\/+/, '')}`}>{t.page}</Link>
+        <Text key="xpt">{'Page: '}</Text><Link key="xpl" href={pageUrl(t.page)}>{t.page}</Link>
       </Box> : null}
       {t?.film ? <Box key="xfilm" flexDirection="row">
         <Text key="xft">{'Film: '}</Text><Link key="xfl" href={t.film}>{t.film}</Link>
