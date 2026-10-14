@@ -110,18 +110,19 @@ test('questionText lists each question with its options', () => {
 // ---- the pane, through the real hooks ----
 
 // Explanation world: store, clock, session, files (SKILL.md and the mode files), model calls and pane opens are faked.
-function xw(on: any, store: Record<string, unknown> = {}, complete?: (w: any, e: any) => any) {
-  const w = { complete: [] as any[], fork: [] as any[], opened: [] as any[], runs: [] as any[][], writes: {} as Record<string, string>, skill: SKILL, answer: 'ANSWER-1' }
+function xw(on: any, store: Record<string, unknown> = {}, complete?: (w: any, e: any) => any, cwd = 'D:/x') {
+  const w = { complete: [] as any[], fork: [] as any[], opened: [] as any[], runs: [] as any[][], toasts: [] as string[], writes: {} as Record<string, string>, skill: SKILL, answer: 'ANSWER-1' }
+  on('ui.toast', (_$: any, e: any) => { w.toasts.push(e.text); return { value: undefined } })
   // A writable store, so a test can read what the hooks saved.
   on('store.get', (_$: any, e: any) => ({ value: store[e.key] }))
   on('store.set', (_$: any, e: any) => { store[e.key] = e.value; return { value: undefined } })
   on('store.delete', (_$: any, e: any) => { delete store[e.key]; return { value: undefined } })
   on('store.keys', () => ({ value: Object.keys(store) }))
   mock.clock(on, { now: NOW })
-  on('session.cwd', () => ({ value: 'D:/x' }))
+  on('session.cwd', () => ({ value: cwd }))
   on('session.id', () => ({ value: 'sid-a' }))
   on('ui.open', (_$: any, e: any) => { w.opened.push(e); return { value: { isPlaced: true } } })
-  on('fs.read', (_$: any, e: any) => ({ value: String(e.path).endsWith('SKILL.md') ? w.skill : String(e.path).endsWith('.md') && String(e.path).includes('references') ? `REF ${e.path}` : `FILE ${e.path}` }))
+  on('fs.read', (_$: any, e: any) => ({ value: String(e.path).endsWith('plugin.json') ? '{ "version": "9.8.7" }' : String(e.path).endsWith('SKILL.md') ? w.skill : String(e.path).endsWith('.md') && String(e.path).includes('references') ? `REF ${e.path}` : `FILE ${e.path}` }))
   on('fs.write', (_$: any, e: any) => { w.writes[e.path] = e.text; return { value: undefined } })
   on('fs.exists', () => ({ value: false }))
   on('process.run', (_$: any, e: any) => { w.runs.push(e.argv); return { value: { exitCode: 0, stdout: '', stderr: '' } } })
@@ -213,6 +214,35 @@ test('Deep HTML is one press: one side call, then the page is saved and rendered
   expect(JSON.stringify(await p.find({ key: 'xc' } as any))).toContain('xopen')
   await p.press({ key: 'xopen' })
   expect(w.runs.some(a => a[0] === 'cmd' && a[2] === 'start')).toBe(true)
+  await p.unmount()
+})
+
+test('Open in browser and the Page link work when the repo path has a space', async ($, on) => {
+  const w = xw(on, {}, undefined, 'D:/work/My Repo/app')
+  const p = await mountX($)
+  await p.press({ key: 'xmdeep' })
+  const url = 'file:///D:/work/My%20Repo/app/docs/explain/2026-10-11-1800-deep.html'
+  expect(JSON.stringify(await p.find({ key: 'xp' } as any))).toContain(url)
+  await p.press({ key: 'xopen' })
+  expect(w.toasts).toEqual([])
+  expect(w.runs.some(a => a[0] === 'cmd' && a[2] === 'start' && a[4] === url)).toBe(true)
+  await p.unmount()
+})
+
+test('Open in browser still refuses a path with a cmd.exe character such as &', async ($, on) => {
+  const w = xw(on, {}, undefined, 'D:/work/R&D/app')
+  const p = await mountX($)
+  await p.press({ key: 'xmdeep' })
+  await p.press({ key: 'xopen' })
+  expect(w.toasts.some(t => t.includes('unusual characters'))).toBe(true)
+  expect(w.runs.some(a => a[0] === 'cmd')).toBe(false)
+  await p.unmount()
+})
+
+test('the control row shows the plugin version read from the manifest', async ($, on) => {
+  xw(on)
+  const p = await mountX($)
+  expect(JSON.stringify(await p.find({ key: 'xc' } as any))).toContain('v9.8.7')
   await p.unmount()
 })
 
