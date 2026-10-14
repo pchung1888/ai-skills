@@ -128,6 +128,33 @@ $tests = @(
         }
     },
     @{
+        Name = 'text_layout_rules: flows run top to bottom with no box drawing; a paragraph holds 3 sentences at most (DEC-1)'
+        Run = {
+            $s = Get-Content $Skill -Raw; $w = Get-Content (Join-Path $Refs 'walk.md') -Raw; $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            if ($s -notmatch 'one box per line, arrows down') { throw "SKILL.md Diagram syntax lost the top-to-bottom rule" }
+            if ($s -notmatch 'A paragraph holds 3 sentences at most') { throw "SKILL.md restraint rules lost the 3-sentence block rule" }
+            if ($n -notmatch 'Never two boxes on one line') { throw "now.md flowchart rule lost 'Never two boxes on one line'" }
+            foreach ($doc in @(@('SKILL.md', $s, '## Diagram syntax'), @('walk.md', $w, 'Example (ASCII flow):'))) {
+                $i = $doc[1].IndexOf($doc[2]); if ($i -lt 0) { throw "$($doc[0]): '$($doc[2])' not found" }
+                $ex = [regex]::Match($doc[1].Substring($i), '(?s)```\r?\n(.*?)```').Groups[1].Value
+                if ($ex -match '[─-╿▶-▼]') { throw "$($doc[0]) flow example uses Unicode box drawing" }
+                if ($ex -notmatch '(?m)^\s*v\s*$') { throw "$($doc[0]) flow example is not top to bottom (no 'v' line)" }
+            }
+        }
+    },
+    @{
+        Name = 'deep_uses_plan_blocks: now.md Deep HTML asks for interactive: true and the flow / code-pins / note / ask blocks'
+        Run = {
+            $n = Get-Content (Join-Path $Refs 'now.md') -Raw
+            foreach ($k in @('interactive: true','`flow` block','`code-pins` block','`note` block','`ask` block','never a text flowchart',
+                             '**You asked:**', '```note warn', '- [x] The recommended option', 'the pane does not send md-to-html''s own docs')) {
+                if ($n -notmatch [regex]::Escape($k)) { throw "now.md Deep HTML section missing: $k" }
+            }
+            $h = Get-Content (Join-Path $SkillDir '../../hooks/hud-explain.ts') -Raw
+            if ($h -notmatch "key: 'deep'[^\n]*interactive: true[^\n]*flow block") { throw "hud-explain.ts Deep button prompt does not ask for interactive: true and a flow block" }
+        }
+    },
+    @{
         Name = 'checker_now_cantonese: --purpose now accepts Chinese text with ASCII punctuation (fixtures/now-good-cantonese.md)'
         Run = {
             python $Checker --purpose now --input-file (Join-Path $Fix 'now-good-cantonese.md') *> $null

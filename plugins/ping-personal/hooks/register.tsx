@@ -3,7 +3,7 @@ import { collect, snapshot, isOld, isSessionFile, withTurn, parseGoal, activity,
 import { layout, drawRows, dur, etTime } from './hud-render'
 import { chip, shouldToast } from './hud-rules'
 import { ACTIONS, HTSW_ACTIONS, resolveCmd, planSlug, workDir, stamp, GRAY, type Action } from './hud-actions'
-import { PANE_ID, MODES, modeOf, emptyData, parsePath, sliceLines, startTopic, park, reopen, clearAll, addAnswer, buildPrompt, costOf, costLine, shouldLock, questionText, motionPrompt, finishMotion, motionSubject, motionAsk, motionAskSubject, motionDispatch, MOTION_BUSY, FILM_RE, QUICK_TIP, type ExplainData, type Mode, type Lang, type Scope, type Ctx } from './hud-explain'
+import { PANE_ID, MODES, modeOf, emptyData, parsePath, sliceLines, startTopic, park, reopen, clearAll, addAnswer, buildPrompt, costOf, costLine, shouldLock, questionText, motionPrompt, finishMotion, motionSubject, motionAsk, motionAskSubject, motionDispatch, MOTION_BUSY, FILM_RE, QUICK_TIP, SCROLL_HINT, paneScrollText, type ExplainData, type Mode, type Lang, type Scope, type Ctx } from './hud-explain'
 import { agentStart, agentTool, agentEnd, agentEndForeground, agentClear, agentGroups, agentCounts, agentHeader, agentLine, asRows, type AgentRow } from './hud-agents'
 import { paneLabel, paneWord, orderRows, slugOfPath, type PaneRow, pathOk, pathKey, normPath, slugOf, goalSlug, matchSlug, clean, beacons, pendingTick, mergeToasts, classify, parseGitLog, type Tracked, type Pending } from './hud-goals'
 
@@ -43,6 +43,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'UserMessage' }, async ($, e, next) => timeRow($, e, await next(e), 'user'))
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => timeRow($, e, await next(e), 'assistant'))
   on('prompt.submit', async ($, e, next) => {
+    try { $.ui.status(undefined) } catch {} // a pane's scroll position is stale once the person moves on
     await noteTime($, 'user', e.text)
     // A sent Motion request: the main model is told to start the film agent (DEC-8), with the brief kept aside.
     const add = await motionAskContext($, String(e.text ?? '')).catch(() => undefined)
@@ -74,6 +75,13 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: 'hud-goals' }, async ($, e) => goalsPane($, e))
   on('ui.render', { component: 'Pane', requestId: 'hud-agents' }, async ($, e) => agentsPane($, e))
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => explainPane($, e))
+  // No scroll-bar element exists, so the status line says where a ping-hud pane's window sits while it scrolls.
+  on('ui.scroll', { component: 'Pane' }, async ($, e, next) => {
+    const r = await next(e)
+    const pos = paneScrollText(e.requestId, e.offset, e.bodyRows, e.contentRows)
+    if (pos !== null) { try { $.ui.status(pos) } catch {} }
+    return r
+  })
   // Focus lock: while the box has focus and text, Up/Down/Tab stay in it (a click on a Button still presses it).
   on('ui.focus', { requestId: PANE_ID }, async ($, e, next) => {
     if (shouldLock(xFocus, xBox, e.origin?.kind, e.element)) return {}
@@ -870,6 +878,7 @@ async function goalsPane($: any, e: any) {
   )
   return (
     <Box key="goals" flexDirection="column">
+      <Text key="gsh" dimColor>{SCROLL_HINT}</Text>
       {rows.map(row)}
       {!rows.length && !hidden.length ? <Text key="none" dimColor>no goal trackers found</Text> : null}
       {hidden.length ? (
@@ -910,6 +919,7 @@ async function agentsPane($: any, e: any) {
   const c = agentCounts(rows, nowMs)
   return (
     <Box key="agents" flexDirection="column">
+      <Text key="ash" dimColor>{SCROLL_HINT}</Text>
       <Text key="ah">{agentHeader(rows, nowMs)}</Text>
       {!rows.length ? <Text key="anone" dimColor>no agents started in this session yet</Text> : null}
       {agentGroups(rows).map(g => (
@@ -1203,6 +1213,7 @@ async function explainPane($: any, e: any) {
   const level = (m: Mode) => async () => { const v = xBox; const cur = await xData($); await save(clearBox(cur)); await runExplain($, m, v) }
   return (
     <Box key="explain" flexDirection="column">
+      <Text key="xsh" dimColor>{SCROLL_HINT}</Text>
       <Text key="xs" color={xBusy ? 'yellow' : 'green'} bold>{xBusy ? `[thinking ${secs}s] ` : ''}{d.status}</Text>
       {d.note ? <Text key="xn" color="red">{d.note}</Text> : null}
       {openQuestion ? <Box key="xq" flexDirection="row">
@@ -1211,7 +1222,7 @@ async function explainPane($: any, e: any) {
       </Box> : null}
       <Text key="xt" dimColor>{t ? `Topic: ${t.subject} (${modeOf(t.mode).label}, ${t.lang === 'yue' ? 'Cantonese' : 'English'}, ${t.scope === 'chat' ? 'whole chat' : 'quick'})` : 'Topic: none yet'}</Text>
       {scope === 'quick' ? <Text key="xtip" dimColor>{QUICK_TIP}</Text> : <Text key="xtip" color="yellow">{'Whole chat re-reads this whole session on every press. Switch back to Quick unless you need it.'}</Text>}
-      <Text key="xl" dimColor>{'Your question (Tab or click to type, Enter = follow-up, Esc = back to main chat):'}</Text>
+      <Text key="xl" dimColor>{'Your question (Tab or click to type; Enter or ask = Explain; for a page, type then press 4 Deep HTML; Esc = back to main chat):'}</Text>
       <Box key="xbf" borderStyle="round" borderColor="cyan" paddingX={1}>
         <Input key={`xbox${d.boxKey}`} placeholder="empty = explain my last reply" submitLabel="ask"
           onInput={(v: string) => { xBox = v }} onSubmit={submit} />
@@ -1224,21 +1235,22 @@ async function explainPane($: any, e: any) {
         {xBusy ? <Button key="xstop" onPress={async () => save(xCancel(await xData($), 'Stopped. The pane will ignore that answer. Finish typing, then press a level or Enter.'))}><Text key="xstt" color="red">Stop</Text></Button> : null}
         <Button key="xlang" onPress={async () => { await $.store.set('hudExplainLang', lang === 'yue' ? 'en' : 'yue').catch(() => undefined); xRedraw($) }}><Text key="xlat" color="magenta">{lang === 'yue' ? 'Language: Cantonese' : 'Language: English'}</Text></Button>
         <Button key="xscope" onPress={async () => { await $.store.set('hudExplainScope', scope === 'chat' ? 'quick' : 'chat').catch(() => undefined); xRedraw($) }}><Text key="xsct" color={scope === 'chat' ? 'yellow' : 'green'}>{scope === 'chat' ? 'Context: Whole chat' : 'Context: Quick'}</Text></Button>
+        {t?.page ? <Button key="xopen" variant="primary" onPress={() => openPage($, t.page!)}>Open in browser</Button> : null}
+        {t?.film ? <Button key="xfopen" variant="primary" onPress={() => openUrl($, t.film!)}>Open film</Button> : null}
         <Button key="xnew" onPress={async () => save(park(xCancel(await xData($), 'New topic. Type what to explain, or press a level.')))}>New topic</Button>
         <Button key="xall" onPress={async () => save(clearAll(xCancel(await xData($), 'Cleared.')))}>Clear all</Button>
         <Button key="xclose" onPress={() => $.ui.close({ id: PANE_ID })}>Close</Button>
       </Box>
-      {t?.qa.map((x, i) => <Box key={`xqa${i}`} flexDirection="column">
+      {/* Newest answer first, right under the buttons, so a new answer never sits below the fold. */}
+      {t?.qa.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => <Box key={`xqa${i}`} flexDirection="column">
         <Text key={`xqq${i}`} bold color="cyan">{`You: ${x.q}`}</Text>
         <Markdown key={`xqm${i}`} text={x.a} />
       </Box>)}
       {t?.page ? <Box key="xp" flexDirection="row">
-        <Text key="xpt">{'Page: '}</Text><Link key="xpl" href={`file:///${t.page.replace(/^\/+/, '')}`}>{t.page}</Link><Text key="xpg">{'  '}</Text>
-        <Button key="xopen" onPress={() => openPage($, t.page!)}>Open in browser</Button>
+        <Text key="xpt">{'Page: '}</Text><Link key="xpl" href={`file:///${t.page.replace(/^\/+/, '')}`}>{t.page}</Link>
       </Box> : null}
       {t?.film ? <Box key="xfilm" flexDirection="row">
-        <Text key="xft">{'Film: '}</Text><Link key="xfl" href={t.film}>{t.film}</Link><Text key="xfg">{'  '}</Text>
-        <Button key="xfopen" onPress={() => openUrl($, t.film!)}>Open film</Button>
+        <Text key="xft">{'Film: '}</Text><Link key="xfl" href={t.film}>{t.film}</Link>
       </Box> : null}
       {d.motion ? <Text key="xmot" color="yellow">{'A Motion film is being made in the background; its link lands in its topic when done.'}</Text> : null}
       {d.earlier.length ? <Box key="xe" flexDirection="row">

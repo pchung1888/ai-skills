@@ -513,9 +513,11 @@ def check_now(content):
     bad = sorted({c for c in content if ord(c) > 127 and not _cjk(c)})
     if bad:
         findings.append('now: non-ASCII characters (now output is ASCII plus Chinese text only): ' + ' '.join('U+%04X' % ord(c) for c in bad[:5]))
+    # A flowchart is a fenced block that runs top to bottom (a line holding only `v` or `|`), or a
+    # Deep HTML `flow` block / older `->` chart.
     blocks = re.findall(r'```[^\n]*\n(.*?)```', content, re.DOTALL)
-    if not any('->' in b for b in blocks):
-        findings.append('now: no flowchart (a fenced block using -> arrows: done -> doing -> next)')
+    if not any('->' in b or re.search(r'(?m)^\s*[v|]\s*$', b) for b in blocks):
+        findings.append('now: no flowchart (a fenced block, top to bottom: boxes joined by | and v lines)')
     if not re.search(r'(?m)^\|\s*When\s*\|\s*Your job\s*\|\s*Time\s*\|', content):
         findings.append("now: no focus table with the columns '| When | Your job | Time |'")
     if not re.search(r'(?im)^(#+\s*|\*\*)why this shape', content):

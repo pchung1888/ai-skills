@@ -1,5 +1,5 @@
 /* Component-scoped styles for arc theme. Loaded after tokens.css.
-   Rules here MUST NOT redefine base element selectors (h1, pre, blockquote, table) —
+   Rules here MUST NOT redefine base element selectors (h1, pre, blockquote, table) -
    those live in tokens.css. Each component gets its own banner-separated section. */
 
 /* === timeline === */
@@ -65,7 +65,7 @@
 }
 .pill-meta { float: right; }
 
-/* Filled pill variants — use Phase 2 semantic tokens (spec §3.2.6). */
+/* Filled pill variants - use Phase 2 semantic tokens (spec sec. 3.2.6). */
 .pill.pill--good {
   background: var(--arc-good-bg);
   color: var(--arc-good-fg);
