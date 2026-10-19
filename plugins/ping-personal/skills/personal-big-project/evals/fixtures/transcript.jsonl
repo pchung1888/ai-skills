@@ -1,0 +1,8 @@
+{"type": "assistant", "timestamp": "2026-10-16T23:20:00.000Z", "message": {"content": [{"type": "tool_use", "name": "AskUserQuestion"}]}}
+{"type": "assistant", "timestamp": "2026-10-17T02:00:00.000Z", "message": {"content": [{"type": "tool_use", "name": "Workflow"}]}}
+{"type": "user", "timestamp": "2026-10-17T01:00:00.000Z", "message": {"content": "how is it going?"}}
+{"type": "user", "timestamp": "2026-10-17T01:07:00.000Z", "message": {"content": "PROJ-123 invoice fixes 30-minute tick (unattended). Never ask"}}
+{"type": "user", "timestamp": "2026-10-17T01:08:00.000Z", "message": {"content": "<task-notification> done"}}
+{"type": "assistant", "timestamp": "2026-10-17T02:30:00.000Z", "message": {"id": "msg_a", "content": [{"type": "text", "text": "tick"}], "usage": {"input_tokens": 5, "output_tokens": 100, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 200}}}
+{"type": "assistant", "timestamp": "2026-10-17T02:30:01.000Z", "message": {"id": "msg_a", "content": [{"type": "tool_use", "name": "Bash"}], "usage": {"input_tokens": 5, "output_tokens": 150, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 200}}}
+{"type": "assistant", "timestamp": "2026-10-17T03:00:00.000Z", "message": {"id": "msg_b", "content": [{"type": "text", "text": "tick"}], "usage": {"input_tokens": 7, "output_tokens": 50, "cache_read_input_tokens": 2000, "cache_creation_input_tokens": 0}}}

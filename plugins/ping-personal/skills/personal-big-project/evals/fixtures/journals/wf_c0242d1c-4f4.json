@@ -1,0 +1,139 @@
+{
+ "workflowName": "proj123-w5-fix-and-final",
+ "status": "completed",
+ "startTime": 1792288238959,
+ "totalTokens": 1708686,
+ "workflowProgress": [
+  {
+   "label": "gate:fee:ping-personal:ms-mario",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792288239052,
+   "durationMs": 127228,
+   "tokens": 68725,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:fee:ping-personal:rhea",
+   "agentType": "ping-personal:rhea",
+   "state": "done",
+   "startedAt": 1792288239075,
+   "durationMs": 57824,
+   "tokens": 77986,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:fee:host-critic",
+   "agentType": "host-critic",
+   "state": "done",
+   "startedAt": 1792288239112,
+   "durationMs": 105496,
+   "tokens": 87162,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:fee:apply",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792288366307,
+   "durationMs": 1748839,
+   "tokens": 177060,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "regression-fix",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792290115157,
+   "durationMs": 4998081,
+   "tokens": 288161,
+   "phaseTitle": "Regression",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "final-matrix",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792295113253,
+   "durationMs": 13396262,
+   "tokens": 95645,
+   "phaseTitle": "Verify",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "final-fix:r1",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792308509529,
+   "durationMs": 1983295,
+   "tokens": 152936,
+   "phaseTitle": "Verify",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "final-matrix:r2",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792310492840,
+   "durationMs": 15264142,
+   "tokens": 101815,
+   "phaseTitle": "Verify",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T10:iris",
+   "agentType": "ping-personal:iris",
+   "state": "done",
+   "startedAt": 1792325757010,
+   "durationMs": 286537,
+   "tokens": 147563,
+   "phaseTitle": "Final",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T10:rhea",
+   "agentType": "ping-personal:rhea",
+   "state": "done",
+   "startedAt": 1792326043588,
+   "durationMs": 560725,
+   "tokens": 150929,
+   "phaseTitle": "Final",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T10:fix",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792326604325,
+   "durationMs": 414477,
+   "tokens": 155611,
+   "phaseTitle": "Final",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T10:owner-report",
+   "agentType": "ping-personal:amanda",
+   "state": "done",
+   "startedAt": 1792327018811,
+   "durationMs": 274539,
+   "tokens": 146050,
+   "phaseTitle": "Final",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "commit",
+   "agentType": "ping-personal:dora",
+   "state": "done",
+   "startedAt": 1792327293359,
+   "durationMs": 21920,
+   "tokens": 59043,
+   "phaseTitle": "Commit",
+   "type": "workflow_agent"
+  }
+ ],
+ "durationMs": 39076297
+}

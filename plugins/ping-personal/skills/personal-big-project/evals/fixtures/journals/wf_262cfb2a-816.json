@@ -1,0 +1,119 @@
+{
+ "workflowName": "proj123-w4-install-test",
+ "status": "completed",
+ "startTime": 1792232359355,
+ "totalTokens": 1628871,
+ "workflowProgress": [
+  {
+   "label": "T7:re-review",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792232359413,
+   "durationMs": 94049,
+   "tokens": 86309,
+   "phaseTitle": "Re-review",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T7-refix",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792232453503,
+   "durationMs": 91107,
+   "tokens": 88902,
+   "phaseTitle": "Re-review",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T8 install on DEVHOST",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792232544620,
+   "durationMs": 442294,
+   "tokens": 155058,
+   "phaseTitle": "Install",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T5b convert and deploy",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792232986926,
+   "durationMs": 3555004,
+   "tokens": 290735,
+   "phaseTitle": "Convert",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T5b convert and deploy:fix",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792236541959,
+   "durationMs": 1604617,
+   "tokens": 142788,
+   "phaseTitle": "Convert",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T6b package",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792238146600,
+   "durationMs": 289160,
+   "tokens": 124147,
+   "phaseTitle": "Package",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T9:matrix:r1",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792238435771,
+   "durationMs": 12162433,
+   "tokens": 109089,
+   "phaseTitle": "Matrix",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T9:fix:r1",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792250598215,
+   "durationMs": 5381999,
+   "tokens": 246389,
+   "phaseTitle": "Matrix",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T9:matrix:r2",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792255980270,
+   "durationMs": 13510549,
+   "tokens": 101548,
+   "phaseTitle": "Matrix",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T9 rollback rehearsal and close",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792269490836,
+   "durationMs": 18652095,
+   "tokens": 221561,
+   "phaseTitle": "Rehearse",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "commit",
+   "agentType": "ping-personal:dora",
+   "state": "done",
+   "startedAt": 1792288142947,
+   "durationMs": 33891,
+   "tokens": 62345,
+   "phaseTitle": "Commit",
+   "type": "workflow_agent"
+  }
+ ],
+ "durationMs": 55817461
+}
