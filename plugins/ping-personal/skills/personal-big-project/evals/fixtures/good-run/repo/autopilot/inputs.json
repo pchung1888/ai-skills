@@ -1,0 +1,25 @@
+{
+ "goal": "PROJ-123 invoice fixes",
+ "repoPath": "..",
+ "branch": "topic/123-fixes",
+ "stateDir": "autopilot",
+ "weeklyCap": 85,
+ "disks": "C:",
+ "minGB": 1,
+ "exclusiveResources": "none",
+ "effort": null,
+ "workerModel": "sonnet",
+ "domainCritic": "ping-personal:iris",
+ "sessionId": "sess-0001",
+ "caps": {
+  "mail": 40
+ },
+ "unattendedSince": "2026-10-16T23:30:00Z",
+ "sessions": [
+  "sess-0001"
+ ],
+ "baseCommit": "0000000000000000000000000000000000000000",
+ "remote": "origin",
+ "remoteTagsAtStart": [],
+ "remoteHeadsAtStart": []
+}

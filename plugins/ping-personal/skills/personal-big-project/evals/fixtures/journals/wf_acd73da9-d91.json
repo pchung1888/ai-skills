@@ -1,0 +1,86 @@
+{
+ "workflowName": "proj123-w1-plan",
+ "status": "completed",
+ "startTime": 1792193505636,
+ "totalTokens": 1438595,
+ "workflowProgress": [
+  {
+   "label": "discover:reports",
+   "state": "done",
+   "startedAt": 1792193505712,
+   "durationMs": 639626,
+   "tokens": 161011,
+   "phaseTitle": "Discover",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "discover:code",
+   "state": "done",
+   "startedAt": 1792193505752,
+   "durationMs": 455846,
+   "tokens": 228171,
+   "phaseTitle": "Discover",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "discover:callers",
+   "state": "done",
+   "startedAt": 1792193505752,
+   "durationMs": 693205,
+   "tokens": 209583,
+   "phaseTitle": "Discover",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "plan:write",
+   "agentType": "ping-personal:amanda",
+   "state": "done",
+   "startedAt": 1792194200523,
+   "durationMs": 393986,
+   "tokens": 171888,
+   "phaseTitle": "Plan",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "critic:ms-mario",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792194594553,
+   "durationMs": 189011,
+   "tokens": 159287,
+   "phaseTitle": "Critique",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "critic:rhea",
+   "agentType": "ping-personal:rhea",
+   "state": "done",
+   "startedAt": 1792194594577,
+   "durationMs": 262656,
+   "tokens": 143774,
+   "phaseTitle": "Critique",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "critic:host",
+   "agentType": "host-critic",
+   "state": "done",
+   "startedAt": 1792194594618,
+   "durationMs": 364900,
+   "tokens": 197090,
+   "phaseTitle": "Critique",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "revise+track",
+   "agentType": "ping-personal:amanda",
+   "state": "done",
+   "startedAt": 1792194959544,
+   "durationMs": 511009,
+   "tokens": 167791,
+   "phaseTitle": "Revise",
+   "type": "workflow_agent"
+  }
+ ],
+ "durationMs": 1964899
+}

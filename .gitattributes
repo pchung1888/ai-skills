@@ -1,2 +1,3 @@
 harness/** -text
 *.sh text eol=lf
+plugins/ping-personal/skills/personal-big-project/evals/fixtures/** -text

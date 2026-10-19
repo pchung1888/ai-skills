@@ -1,0 +1,159 @@
+{
+ "workflowName": "proj123-w2-harness",
+ "status": "completed",
+ "startTime": 1792195526719,
+ "totalTokens": 2371248,
+ "workflowProgress": [
+  {
+   "label": "T0",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792195526792,
+   "durationMs": 204574,
+   "tokens": 94650,
+   "phaseTitle": "Preflight",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:ping-personal:ms-mario",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792195731426,
+   "durationMs": 21639,
+   "tokens": 53522,
+   "phaseTitle": "Preflight",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:ping-personal:rhea",
+   "agentType": "ping-personal:rhea",
+   "state": "done",
+   "startedAt": 1792195731443,
+   "durationMs": 18068,
+   "tokens": 59592,
+   "phaseTitle": "Preflight",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:host-critic",
+   "agentType": "host-critic",
+   "state": "done",
+   "startedAt": 1792195731511,
+   "durationMs": 24525,
+   "tokens": 62205,
+   "phaseTitle": "Preflight",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "gate:record",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792195756042,
+   "durationMs": 28982,
+   "tokens": 62786,
+   "phaseTitle": "Preflight",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "M1",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792195785037,
+   "durationMs": 561025,
+   "tokens": 134176,
+   "phaseTitle": "Author",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T1",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792195785068,
+   "durationMs": 1238702,
+   "tokens": 322399,
+   "phaseTitle": "Author",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H2",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792197023780,
+   "durationMs": 884899,
+   "tokens": 195591,
+   "phaseTitle": "Author",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H3",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792197908691,
+   "durationMs": 1559507,
+   "tokens": 224650,
+   "phaseTitle": "Author",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H4",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792199468209,
+   "durationMs": 598811,
+   "tokens": 196865,
+   "phaseTitle": "Author",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H5",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792200067039,
+   "durationMs": 24246350,
+   "tokens": 341695,
+   "phaseTitle": "Baseline",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H6:ms-mario",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792224313441,
+   "durationMs": 204520,
+   "tokens": 145522,
+   "phaseTitle": "Review",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H6:iris",
+   "agentType": "ping-personal:iris",
+   "state": "done",
+   "startedAt": 1792224517978,
+   "durationMs": 239881,
+   "tokens": 127143,
+   "phaseTitle": "Review",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "H6-fix",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792224757882,
+   "durationMs": 4010884,
+   "tokens": 294991,
+   "phaseTitle": "Review",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "commit",
+   "agentType": "ping-personal:dora",
+   "state": "done",
+   "startedAt": 1792228768775,
+   "durationMs": 23314,
+   "tokens": 55461,
+   "phaseTitle": "Commit",
+   "type": "workflow_agent"
+  }
+ ],
+ "durationMs": 33265339
+}

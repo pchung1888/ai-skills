@@ -1,0 +1,5 @@
+interface:
+  display_name: "Big Project"
+  short_description: "Run a large multi-stage goal unattended (start, resume, status, stop, retro, improve)"
+policy:
+  allow_implicit_invocation: false

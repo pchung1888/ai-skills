@@ -1,0 +1,109 @@
+{
+ "workflowName": "proj123-w3-code",
+ "status": "completed",
+ "startTime": 1792228846757,
+ "totalTokens": 1740629,
+ "workflowProgress": [
+  {
+   "label": "T5a spikes S1-S3",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792228846819,
+   "durationMs": 482312,
+   "tokens": 177779,
+   "phaseTitle": "Spikes",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T2 CReport date helper",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792229329151,
+   "durationMs": 116178,
+   "tokens": 89847,
+   "phaseTitle": "Code",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T4 viewer SystemSettings",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792229329178,
+   "durationMs": 480766,
+   "tokens": 177612,
+   "phaseTitle": "Code",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T3 44 procedures",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792229329178,
+   "durationMs": 617275,
+   "tokens": 221164,
+   "phaseTitle": "Code",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T5a converter + lab conversion",
+   "agentType": "ping-personal:vex",
+   "state": "done",
+   "startedAt": 1792229946480,
+   "durationMs": 431279,
+   "tokens": 155137,
+   "phaseTitle": "Convert+Package",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T6a 6.80 release package",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792229946521,
+   "durationMs": 373969,
+   "tokens": 178141,
+   "phaseTitle": "Convert+Package",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T7:ms-mario",
+   "agentType": "ping-personal:ms-mario",
+   "state": "done",
+   "startedAt": 1792230377785,
+   "durationMs": 290336,
+   "tokens": 176549,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T7:rhea",
+   "agentType": "ping-personal:rhea",
+   "state": "done",
+   "startedAt": 1792230668132,
+   "durationMs": 565175,
+   "tokens": 213690,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "T7-fix",
+   "agentType": "ping-personal:bunny",
+   "state": "done",
+   "startedAt": 1792231233323,
+   "durationMs": 1040518,
+   "tokens": 290725,
+   "phaseTitle": "Gate",
+   "type": "workflow_agent"
+  },
+  {
+   "label": "commit",
+   "agentType": "ping-personal:dora",
+   "state": "done",
+   "startedAt": 1792232273851,
+   "durationMs": 28985,
+   "tokens": 59985,
+   "phaseTitle": "Commit",
+   "type": "workflow_agent"
+  }
+ ],
+ "durationMs": 3456053
+}

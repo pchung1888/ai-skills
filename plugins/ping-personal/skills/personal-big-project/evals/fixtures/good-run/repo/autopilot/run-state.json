@@ -1,0 +1,21 @@
+{
+ "stages": [
+  {
+   "name": "s1-build",
+   "status": "done",
+   "runId": "wf_fixture",
+   "attempt": 1,
+   "tasks": {
+    "T1": {"outcome": "passed", "deferredBy": null, "reason": ""},
+    "T2": {"outcome": "deferred", "deferredBy": "agent", "reason": "one customer has no invoices"}
+   },
+   "passedCountByAttempt": [1]
+  }
+ ],
+ "paused": {"until": null, "resumeScheduled": false},
+ "noProgress": 0,
+ "lastReportedLogRows": 2,
+ "handoffAt": null,
+ "verdict": "PASS (2 of 2 tasks; 1 deferred, 1 by agents)",
+ "closed": null
+}
