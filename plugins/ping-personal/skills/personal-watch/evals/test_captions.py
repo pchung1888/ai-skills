@@ -23,6 +23,9 @@ def main():
     assert captions.video_id("https://www.youtube.com/watch?v=M6mYodf0dJM&t=42s") == "M6mYodf0dJM"
     assert captions.video_id("https://youtu.be/F3lL98Pj90o") == "F3lL98Pj90o"
     assert captions.video_id("BsJGo1wFTvQ") == "BsJGo1wFTvQ"
+    assert captions.video_id("https://www.youtube.com/shorts/BsJGo1wFTvQ") == "BsJGo1wFTvQ"
+    for bad in ("--exec=calc", "../../evil", "https://evil.example/?v=M6mYodf0dJM", "M6mYodf0dJMx"):
+        assert captions.video_id(bad) is None, bad  # anything else never reaches yt-dlp or a file path
     assert all(ord(ch) < 128 for ch in rolling + manual)
     print("CAPTIONS TEST PASS")
 

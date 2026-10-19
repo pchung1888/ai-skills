@@ -233,7 +233,10 @@ def git_setup(state, inputs):
         return repo, "", top
     if os.path.normcase(os.path.realpath(top.strip())) != os.path.normcase(os.path.realpath(repo)):
         return repo, "", f"repoPath {repo} is not the root of a git repo (root is {top.strip()})"
-    return repo, str(inputs.get("remote") or "origin"), ""
+    remote = str(inputs.get("remote") or "origin")
+    if remote.startswith("-"):
+        return repo, "", f"inputs.json remote {remote!r} starts with '-', so git would read it as an option"
+    return repo, remote, ""
 
 
 def check_remote_tags(state, inputs):
