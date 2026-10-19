@@ -45,15 +45,21 @@ def to_text(vtt):
 
 
 def video_id(arg):
-    m = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", arg)
-    return m.group(1) if m else arg
+    """The 11-character id from a YouTube URL or a bare id; None for anything else, so no other text reaches yt-dlp or a path."""
+    if re.fullmatch(r"[\w-]{11}", arg):
+        return arg
+    m = re.match(r"https?://(?:(?:www\.|m\.)?youtube\.com/(?:watch\?(?:.*&)?v=|shorts/)|youtu\.be/)([\w-]{11})(?![\w-])", arg)
+    return m.group(1) if m else None
 
 
 def fetch(arg, out_dir, lang):
     vid = video_id(arg)
+    if not vid:
+        return "FAILED %s: not a YouTube URL or 11-character id" % arg
     cmd = ["yt-dlp", "--skip-download", "--write-subs", "--write-auto-subs", "--sub-langs", lang,
            "--sub-format", "vtt", "--sleep-subtitles", str(SLEEP_BETWEEN_S), "--no-playlist",
-           "--print", "before_dl:%(title)s", "--no-simulate", "-o", os.path.join(out_dir, "%(id)s.%(ext)s"), arg]
+           "--print", "before_dl:%(title)s", "--no-simulate", "-o", os.path.join(out_dir, "%(id)s.%(ext)s"),
+           "--", "https://www.youtube.com/watch?v=" + vid]
     proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     log = proc.stdout + proc.stderr
     vtts = sorted(glob.glob(os.path.join(out_dir, vid + "*.vtt")))
@@ -79,6 +85,9 @@ def main():
     ap.add_argument("--out", required=True, help="a new, empty folder for this run (downloads are untrusted data). Example: <scratchpad>/watch-run-1")
     ap.add_argument("--lang", default="en", help="caption language code. Example: en")
     a = ap.parse_args()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{2,20}", a.lang):
+        print("FAILED setup: --lang must be a caption language code. Example: en")
+        return 1
     if not shutil.which("yt-dlp"):
         print("FAILED setup: yt-dlp is not on PATH. Ask the owner to install it: winget install yt-dlp.yt-dlp")
         return 1

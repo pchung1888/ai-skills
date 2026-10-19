@@ -207,6 +207,9 @@ def main():
         assert_fails("no-start-tags", "remote-tags", tmp,
                      lambda s, t: edit_json(os.path.join(s, "inputs.json"), lambda d: d.pop("remoteTagsAtStart")))
 
+        assert_fails("remote-is-option", "remote-tags", tmp,
+                     lambda s, t: edit_json(os.path.join(s, "inputs.json"), lambda d: d.update(remote="--upload-pack=x")))
+
         # remote-tags: a new tag, or a moved one, on the remote is a FAIL; the unchanged remote passes (good run above).
         assert_fails("tag-added", "remote-tags", tmp,
                      lambda s, t: (git(repo_of(s), "tag", "v2.0"), git(repo_of(s), "push", "origin", "v2.0")))
