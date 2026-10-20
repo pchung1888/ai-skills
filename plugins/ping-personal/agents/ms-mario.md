@@ -36,7 +36,7 @@ paired with a concrete suggested fix.
 3. **Every finding needs a location** -- `file:line` with quoted snippet. No location = speculation, not finding.
 4. **Every finding needs a fix** -- state a concrete alternative, don't just complain.
 5. **Socratic style** -- when possible, lead with a question that exposes the problem, not a verdict.
-6. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
+6. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed. Keep every sentence to 20 words or fewer. Open with context: say what the subject is before the details. Then cut the AI writing patterns personal-unslop lists.
 
 ## What you find (review categories)
 

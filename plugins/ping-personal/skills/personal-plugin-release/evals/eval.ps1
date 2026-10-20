@@ -68,6 +68,54 @@ $tests = @(
             }
             if ($survives) { throw "coupling grader passed a copy with installed_plugins.json removed -- dead metric" }
         }
+    },
+    @{
+        Name = 'reviewed_sha_rule: SKILL.md carries the literal Reviewed: <sha>'
+        Run = {
+            if (-not (Get-Content $Skill -Raw).Contains('Reviewed: <sha>')) { throw 'SKILL.md lost the literal Reviewed: <sha>' }
+        }
+    }
+    ,@{
+        Name = 'expect_head_rule: SKILL.md carries the literal tally.py --final --sha <sha> --expect-head'
+        Run = {
+            if (-not (Get-Content $Skill -Raw).Contains('tally.py --final --sha <sha> --expect-head')) { throw 'SKILL.md lost the --expect-head call' }
+        }
+    }
+    ,@{
+        Name = 'rationalizations: section exists and every row has a non-empty Source cell'
+        Run = {
+            $chk = {
+                param($txt)
+                $m = [regex]::Match($txt, '(?ms)^## Rationalizations\s*
+(.*?)(?=^## |\z)')
+                if (-not $m.Success) { return 'section missing' }
+                $rows = @($m.Groups[1].Value -split "`n" | Where-Object { $_ -match '^\|' -and $_ -notmatch '^\|[-| ]+\|\s*$' } | Select-Object -Skip 1)
+                if ($rows.Count -lt 1) { return 'no rows' }
+                foreach ($r in $rows) {
+                    $c = @($r.Trim().Trim('|') -split '\|')
+                    if ($c.Count -lt 4 -or -not $c[-1].Trim()) { return "empty Source: $r" }
+                }
+                return $null
+            }
+            $s = Get-Content $Skill -Raw
+            $e = & $chk $s
+            if ($e) { throw $e }
+            $bad = [regex]::Replace($s, '(?m)^(\| "[^
+]*)\|[^|
+]*\|\s*$', '$1| |')
+            if (-not (& $chk $bad)) { throw 'calibration: empty-Source copy passed -- dead metric' }
+        }
+    }
+    ,@{
+        Name = 'rollback_and_go_nogo: Rollback step and GO/NO-GO line carry their required parts'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            $need = @('Rollback', 'revert the merge commit', 'patch version', 'GO/NO-GO', 'verify-loaded plan', 'matches the PR head commit')
+            foreach ($n in $need) { if (-not $s.Contains($n)) { throw "missing: $n" } }
+            $bad = $s.Replace('GO/NO-GO', 'REDACTED')
+            if ($bad.Contains('GO/NO-GO')) { throw 'calibration: mutation did not remove the line' }
+            if (-not $s.Contains('GO/NO-GO')) { throw 'GO/NO-GO line missing' }
+        }
     }
 )
 

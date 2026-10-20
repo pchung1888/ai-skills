@@ -162,20 +162,45 @@ $tests = @(
         }
     },
     @{
-        Name = 'explaining_sentences_documented: SKILL.md has the Explaining sentences section with its six rules'
+        Name = 'explaining_sentences_documented: SKILL.md has the Explaining sentences section with its eight rules and the unslop pass'
         Run = {
             $s = Get-Content $Skill -Raw
             if ($s -notmatch '(?m)^## Explaining sentences') { throw "SKILL.md has no '## Explaining sentences' section" }
-            foreach ($k in @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed')) {
+            foreach ($k in @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed', 'Keep every sentence to 20 words or fewer', 'Open with context')) {
                 if ($s -notmatch [regex]::Escape($k)) { throw "Explaining sentences rule missing: $k" }
+            }
+            $sec = [regex]::Match($s, '(?s)## Explaining sentences.*?(?=\r?\n## )').Value
+            if ($sec -notmatch 'personal-unslop') { throw "Explaining sentences section no longer sends readers through personal-unslop" }
+        }
+    },
+    @{
+        Name = 'writing_rule_everywhere: now.md (Deep HTML), personal-goal, personal-handoff and personal-md-to-html carry the writing rule'
+        Run = {
+            $skills = Join-Path $PSScriptRoot '../..'
+            $docs = @((Join-Path $Refs 'now.md'), (Join-Path $skills 'personal-goal/SKILL.md'), (Join-Path $skills 'personal-handoff/SKILL.md'), (Join-Path $skills 'personal-md-to-html/SKILL.md'))
+            foreach ($d in $docs) {
+                $t = (Get-Content $d -Raw) -replace '\s+', ' '
+                foreach ($k in @('htsw Explaining sentences rules (20 words or fewer per sentence, context first)', 'personal-unslop pass')) {
+                    if ($t -notmatch [regex]::Escape($k)) { throw "$d lost the writing rule: $k" }
+                }
             }
         }
     },
     @{
-        Name = 'personas_carry_explaining_rules: every persona agent except next-recommender has the six Explaining-sentences rules'
+        Name = 'checker_sentence_cap: htsw-check.py rejects fixtures/bad-long-sentence.md for rule 7 and accepts fixtures/good-walk-short.md'
+        Run = {
+            $out = (python $Checker --input-file (Join-Path $Fix 'bad-long-sentence.md') 2>&1 | Out-String)
+            if ($LASTEXITCODE -eq 0) { throw "checker ACCEPTED a rendering with 21+ word sentences" }
+            if ($out -notmatch 'over 20 words') { throw "checker failed the long-sentence fixture for some other reason: $out" }
+            $code = Invoke-Checker (Join-Path $Fix 'good-walk-short.md')
+            if ($code -ne 0) { throw "checker rejected the short-sentence walk fixture (exit $code)" }
+        }
+    },
+    @{
+        Name = 'personas_carry_explaining_rules: every persona agent except next-recommender has the eight Explaining-sentences rules'
         Run = {
             $agents = Join-Path $PSScriptRoot '../../../agents'
-            $rules = @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed')
+            $rules = @('Say who does what', 'One idea per sentence', 'Name the term, then say right away what it does', 'Say why it matters', 'Never point at something the reader was not shown', 'plain words must still say what changed', 'Keep every sentence to 20 words or fewer', 'Open with context')
             $files = Get-ChildItem (Join-Path $agents '*.md') | Where-Object { $_.BaseName -ne 'next-recommender' }
             if ($files.Count -lt 8) { throw "expected 8 persona agents, found $($files.Count)" }
             foreach ($f in $files) {

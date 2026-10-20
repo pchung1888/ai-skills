@@ -56,6 +56,10 @@ What it checks (per SKILL.md):
     - NO 🌮
     - No banned words (schema / validation / atomicity / hook / wrapper / JSONL / etc.)
     - Length ≤ 400 words
+
+  all modes (now included):
+    - No explaining sentence over 20 words (paragraph prose and list items;
+      code, tables, headings, blockquotes and the citation line are skipped)
 """
 import argparse
 import re
@@ -98,6 +102,59 @@ def detect_purpose(content):
 
 def count_words(content):
     return len([w for w in re.split(r'\s+', content) if w])
+
+
+# Explaining-sentences rule 7 (SKILL.md): every sentence has 20 words or fewer.
+SENTENCE_WORD_CAP = 20
+
+
+def prose_sentences(content):
+    """Yield (word_count, sentence) for paragraph prose and list items.
+
+    Skips fenced code, table rows, headings, blockquotes, HTML comments, rules
+    and the citation line. A paragraph's wrapped lines join into one unit; each
+    list item starts a new unit. A word is a token with a letter or digit, so
+    icons and arrows do not count.
+    """
+    units, cur, fence = [], [], False
+
+    def flush():
+        if cur:
+            units.append(' '.join(cur))
+            cur.clear()
+
+    for raw in content.splitlines():
+        s = raw.strip()
+        if s.startswith('```'):
+            fence = not fence
+            flush()
+            continue
+        if (fence or not s or s.startswith(('#', '|', '>', '<!--', '_Explaining:'))
+                or set(s) <= set('-*_= ')):
+            flush()
+            continue
+        if re.match(r'^(\d+\.|[-*+])\s', s):
+            flush()
+            s = re.sub(r'^(\d+\.|[-*+])\s+', '', s)
+        cur.append(s)
+    flush()
+    for unit in units:
+        for sentence in re.split(r'(?<=[.!?])\s+', unit):
+            n = sum(1 for w in sentence.split() if re.search(r'[A-Za-z0-9]', w))
+            if n:
+                yield n, sentence
+
+
+def check_sentence_length(content, cap=SENTENCE_WORD_CAP):
+    """Explaining-sentences rule 7: fail when any sentence is over `cap` words."""
+    long = [(n, s) for n, s in prose_sentences(content) if n > cap]
+    if not long:
+        return []
+    n, first = long[0]
+    return [
+        f"FAIL (all): {len(long)} sentence(s) over {cap} words (Explaining sentences rule 7). "
+        f"Split each into two. First ({n} words): \"{first[:160]}\""
+    ]
 
 
 def find_tier_title(content):
@@ -1253,7 +1310,7 @@ def validate_one(content, is_persisted=False, purpose=None):
     purpose = purpose or detect_purpose(content)
     word_count = count_words(content)
     if purpose == 'now':
-        return (purpose, word_count, check_now(content))
+        return (purpose, word_count, check_now(content) + check_sentence_length(content))
     if purpose == 'pr':
         findings = check_pr(content, word_count)
     elif purpose == 'qa':
@@ -1266,6 +1323,7 @@ def validate_one(content, is_persisted=False, purpose=None):
         findings = check_code_explain(content, word_count, is_persisted)
     else:
         findings = check_boss(content, word_count)
+    findings += check_sentence_length(content)
 
     # Flowchart warnings apply to ALL modes (mermaid can appear in PR/QA/walk
     # renderings; boss shouldn't have mermaid but warn anyway for consistency).

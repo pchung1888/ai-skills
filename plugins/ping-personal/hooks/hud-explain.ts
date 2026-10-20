@@ -31,6 +31,13 @@ export const modeOf = (m: Mode) => MODES.find(x => x.key === m)!
 
 // SKILL.md sections every pane answer follows; cut at click time so the pane never keeps its own copy.
 export const RULE_SECTIONS = ['Explaining sentences', 'Language switch']
+// The writing patterns a pane answer or film removes by default (personal-unslop SKILL.md).
+export const UNSLOP_SECTIONS = ['Patterns to detect and fix']
+const UNSLOP_HEAD = 'Writing patterns to remove before you answer (from personal-unslop SKILL.md):'
+function unslopBlock(unslop?: string): string[] {
+  const cut = unslop ? cutSections(unslop, UNSLOP_SECTIONS) : ''
+  return cut ? [UNSLOP_HEAD, cut] : []
+}
 
 // Shown under the topic while Quick is on: Quick is the default and the cheap way, so the pane says so.
 // A pane cannot draw a scroll bar (the engine owns its window), so every ping-hud pane shows this hint and
@@ -111,6 +118,7 @@ export function addAnswer(d: ExplainData, q: string, a: string, page?: string): 
 export type PromptIn = {
   mode: Mode; lang: Lang; scope: Scope; subject: string
   skill: string; ref: string            // SKILL.md and the mode's reference file, as read at click time
+  unslop?: string                       // personal-unslop SKILL.md, as read at click time
   ctx: Ctx; file?: { path: string; text: string }; question?: string
   qa: QA[]; follow?: string
 }
@@ -121,6 +129,7 @@ export function buildPrompt(p: PromptIn): { head: string; body: string } {
   const head = [
     'htsw rules for the Explanation pane (from personal-htsw SKILL.md):',
     cutSections(p.skill, RULE_SECTIONS),
+    ...unslopBlock(p.unslop),
     `Mode reference (personal-htsw references/${m.ref}):`,
     p.ref,
   ].join('\n\n') + '\n\n' // blocks are joined with nothing between them, so the head ends its own paragraph
@@ -144,7 +153,7 @@ export const FILM_PREFIX = 'FILM: '
 
 // The task a background subagent gets for a Motion press. It cannot ask anyone, so it decides the
 // film's style, colors and length itself; its last line carries the film's link for the pane.
-export function motionPrompt(p: { lang: Lang; subject: string; skill: string; ctx: Ctx; file?: { path: string; text: string } }): string {
+export function motionPrompt(p: { lang: Lang; subject: string; skill: string; unslop?: string; ctx: Ctx; file?: { path: string; text: string } }): string {
   const parts = [
     'Make a 30-second Motion film that explains one subject, for the ping-hud Explanation pane. Nobody can answer questions while you work: decide everything yourself and ask nothing.',
     [
@@ -157,6 +166,7 @@ export function motionPrompt(p: { lang: Lang; subject: string; skill: string; ct
     ].join('\n'),
     p.lang === 'yue' ? 'Language: --cantonese. On-screen words in spoken Hong Kong Cantonese; keep code, paths, commands and technical terms in English.' : 'Language: English.',
     'htsw rules for the on-screen words (from personal-htsw SKILL.md):\n\n' + cutSections(p.skill, RULE_SECTIONS),
+    ...unslopBlock(p.unslop),
     `What to explain: ${p.subject}`,
   ]
   if (p.ctx.ask) parts.push(`The user's last message in the main chat:\n${p.ctx.ask}`)

@@ -96,6 +96,40 @@ $tests = @(
                 if ($g -notmatch [regex]::Escape($t)) { throw "field guide lacks '$t'" }
             }
         }
+    },
+    @{
+        Name = 'collision_check: ranking unit test passes; SKILL.md points at the trigger-cases template'
+        Run = {
+            $o = (python (Join-Path $PSScriptRoot 'test_collision_check.py') 2>&1 | Out-String)
+            if ($LASTEXITCODE -ne 0) { throw "test_collision_check.py failed:`n$o" }
+            if (-not (Test-Path (Join-Path $Refs 'templates/trigger-cases-template.md'))) { throw "missing trigger-cases-template.md" }
+            if ((Get-Content $Skill -Raw) -notmatch 'trigger-cases-template') { throw "SKILL.md does not point at trigger-cases-template" }
+        }
+    }
+    ,@{
+        Name = 'rationalizations: section exists and every row has a non-empty Source cell'
+        Run = {
+            $chk = {
+                param($txt)
+                $m = [regex]::Match($txt, '(?ms)^## Rationalizations\s*
+(.*?)(?=^## |\z)')
+                if (-not $m.Success) { return 'section missing' }
+                $rows = @($m.Groups[1].Value -split "`n" | Where-Object { $_ -match '^\|' -and $_ -notmatch '^\|[-| ]+\|\s*$' } | Select-Object -Skip 1)
+                if ($rows.Count -lt 1) { return 'no rows' }
+                foreach ($r in $rows) {
+                    $c = @($r.Trim().Trim('|') -split '\|')
+                    if ($c.Count -lt 4 -or -not $c[-1].Trim()) { return "empty Source: $r" }
+                }
+                return $null
+            }
+            $s = Get-Content $Skill -Raw
+            $e = & $chk $s
+            if ($e) { throw $e }
+            $bad = [regex]::Replace($s, '(?m)^(\| "[^
+]*)\|[^|
+]*\|\s*$', '$1| |')
+            if (-not (& $chk $bad)) { throw 'calibration: empty-Source copy passed -- dead metric' }
+        }
     }
 )
 

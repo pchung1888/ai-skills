@@ -36,9 +36,13 @@ The install key in both runtimes is `ping-personal@ping-personal`, NOT
    `python scripts/check_dual_runtime.py` must print `DUAL RUNTIME CHECK PASS`.
    `pwsh plugins/ping-personal/evals/run-all.ps1` must print `ALL EVALS PASS`
    before any release ships.
+   If a critic-gate final review is cited, refuse its PASS unless its `Reviewed: <sha>` equals
+   the commit being merged (`tally.py --final --sha <sha> --expect-head`, exit 2 = stale); a stale PASS needs a fresh review.
+   An owner's "ship anyway" on a FIX is not blocked.
 3. **PR + merge.** Commit, push the topic branch, open the PR (`gh pr create`),
    and pause for merge unless the user has already said to merge. Never push main
-   directly.
+   directly. GO/NO-GO before merge: checks green, verify-loaded plan ready, and `Reviewed: <sha>`
+   matches the PR head commit; any no is NO-GO.
 4. **Local update -- Claude.** After merge, check out the default branch the remote
    names (`git symbolic-ref --short refs/remotes/origin/HEAD`, e.g. `origin/main` ->
    `main`) and `git pull`; confirm the merge commit is there
@@ -87,6 +91,16 @@ The install key in both runtimes is `ping-personal@ping-personal`, NOT
      with `/hooks` in the Codex CLI.
    Report each gate with evidence (quote the version string found), never with
    "should be installed now".
+9. **Rollback.** If a gate fails: revert the merge commit on a new topic branch through a PR, bump a
+   patch version in all three manifests, reinstall in both runtimes (the Codex backup already exists).
+
+## Rationalizations
+
+| Excuse | Why it is wrong | Do instead | Source |
+|---|---|---|---|
+| "The commands exited 0, so it is installed" | Exit 0 does not prove the new version loaded | Quote the observed version string | `plugins/ping-personal/skills/personal-plugin-release/SKILL.md` Boundaries |
+| "Restore the older config.toml backup" | A restore once reverted the user's model choice | Diff first, ask the user about each change | `plugins/ping-personal/skills/personal-plugin-release/SKILL.md` Boundaries |
+| "Edit installed_plugins.json by hand" | It fakes the gate instead of passing it | Move it via the install/update command | `plugins/ping-personal/skills/personal-plugin-release/SKILL.md` Boundaries |
 
 ## Boundaries
 
@@ -97,6 +111,6 @@ The install key in both runtimes is `ping-personal@ping-personal`, NOT
   move via `codex plugin marketplace ...` and `codex plugin add`.
 - Never restore an older `config.toml` backup without diffing it against the
   current file and asking the user about every changed setting: a restore once reverted
-  his model choice.
+  their model choice.
 - A failed verify-loaded gate is reported as FAILED with the observed state;
   do not claim success because the commands exited 0.

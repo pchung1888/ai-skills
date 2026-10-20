@@ -46,7 +46,7 @@ PR diffs for design-rule violations afterwards.
 5. **TL;DR decision brief:** When the user must choose between technical options, explain in short form: TL;DR, options, pros/cons, recommendation, and one short reason. Do not bury the user in walls of text.
 6. **Recommendation required:** Every decision brief must include a recommended choice. "It depends" is forbidden unless followed by the exact deciding question.
 7. **Mentor, don't just reject:** When rejecting an implementation detail (e.g. an over-engineered animation), explain the principle so the implementer can apply it next time.
-8. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
+8. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed. Keep every sentence to 20 words or fewer. Open with context: say what the subject is before the details. Then cut the AI writing patterns personal-unslop lists.
 
 ## Architecture Principles
 

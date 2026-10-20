@@ -166,6 +166,14 @@ never the budget.
 
 Any one of these: stop, go back to that gate.
 
+## Rationalizations
+
+| Excuse | Why it is wrong | Do instead | Source |
+|---|---|---|---|
+| "It should work" | Testable right now, so a guess is not evidence | Run it, quote the output (Gate 4) | `plugins/ping-personal/skills/personal-fable-mode/SKILL.md` Smells table |
+| "The worker made the test match the code" | Regenerating the expected file hides the bug | Fix the code; never regenerate expected output | `docs/big-project/2026-10-18-red-baseline.md` S2 row "S1 regenerated expected file" |
+| "The result is clean, moving on" | A suspiciously clean result may be a dead check | Prove the check can fail first | `plugins/ping-personal/skills/personal-fable-mode/SKILL.md` Smells table |
+
 ## Receipts
 
 None of this is guesswork about how Fable behaves - Anthropic ships the

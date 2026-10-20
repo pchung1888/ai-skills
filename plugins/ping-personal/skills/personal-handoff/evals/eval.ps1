@@ -38,8 +38,36 @@ $tests = @(
         Name = 'required_sections: Step 0 / Step 2 Write Progress / Step 2.5 Sibling Handoff / Safety Rules'
         Run = {
             $s = Get-Content $Skill -Raw
-            foreach ($h in @('## Step 0','## Step 2: Write the Progress File','## Step 2.5: Sibling Handoff File','## Safety Rules')) {
+            foreach ($h in @('## Step 0','## Step 2: Write the Progress File','## Step 2.5: Write the Handoff File','## Safety Rules')) {
                 if ($s -notmatch [regex]::Escape($h)) { throw "missing required section: $h" }
+            }
+        }
+    },
+    @{
+        # The owner starts the next session with "read the handoff". If the handoff file is
+        # optional or does not lead to the progress file, that session misses the history.
+        Name = 'handoff_is_entry_point: handoff file always written, holds Next Steps, links the progress file, and the progress file links back'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?i)always write `docs/progress/YYYY-MM-DD-<task-slug>-handoff\.md`') { throw "SKILL.md no longer says the handoff file is always written" }
+            $h = Get-Content (Join-Path $SkillDir 'templates/handoff-template.md') -Raw
+            foreach ($k in @('## Read first', '## Next Steps (resume here)', '## Open decisions', '## Suggested skills', '## Quick start for next session')) {
+                if ($h -notmatch [regex]::Escape($k)) { throw "handoff-template.md missing section: $k" }
+            }
+            if ($h -notmatch '-progress\.md') { throw "handoff template does not link the progress file" }
+            if ($h -notmatch '(?m)^Goal beacon: ') { throw "handoff template has no Goal beacon line (a handoff-only read would not bind the goal)" }
+            $p = Get-Content (Join-Path $SkillDir 'templates/progress-template.md') -Raw
+            if ($p -match '(?m)^## Next Steps') { throw "progress template still carries Next Steps (they belong in the handoff file only)" }
+            if ($p -notmatch '(?m)^\*\*Handoff:\*\* .*-handoff\.md') { throw "progress template does not link back to its handoff file" }
+        }
+    },
+    @{
+        Name = 'suggested_skills_rules: SKILL.md says to list goals, loops, workflows and ultracode with their exact start commands, never invented'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch '(?m)^### Suggested skills') { throw "SKILL.md has no Suggested skills rules" }
+            foreach ($k in @('/personal-goal', '/personal-loop', 'Workflow', 'ultracode', 'Never invent an argument or a path')) {
+                if ($s -notmatch [regex]::Escape($k)) { throw "Suggested skills rules missing: $k" }
             }
         }
     },

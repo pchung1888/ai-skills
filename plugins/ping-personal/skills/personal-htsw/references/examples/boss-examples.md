@@ -87,10 +87,10 @@ Plan walkthrough ─►  outcome + shape  ──►  phase table   ──►  AS
 
 The **impact table** in the feature pitch is the single most useful presentation element — three rows showing today vs. after, with a measurable metric each. It is what a sponsor screenshots and forwards.
 
-The **phase-shape table + ASCII phase-bar** in the plan walkthrough do complementary jobs: the table gives the detailed breakdown; the ASCII bar gives the at-a-glance "where can I still back out" view. Sponsors latch onto the ASCII bar; the table is what they refer back to in the follow-up meeting.
+The **phase-shape table + ASCII phase-bar** in the plan walkthrough do complementary jobs. The table gives the detailed breakdown. The ASCII bar gives the at-a-glance "where can I still back out" view. Sponsors latch onto the ASCII bar; the table is what they refer back to in the follow-up meeting.
 
 Banned words self-check: neither rendering uses `schema`, `validation`, `atomicity`, `hook`, `wrapper`, `JSON`, `PowerShell`, `regex`, `API`, `commit`, `merge`, `deploy`. Neither uses 🌮 or warm casual praise. No file paths. No code. No status icons. The visual structure comes from tables, ASCII flow-bars, and headings — not emoji decoration.
 
 **There is no `--clean` variant** — boss is always clean by definition.
 
-**Architecture note:** the session-timeout scenario assumes a web-session model; the pipeline scenario assumes a backend service. The **plan-walkthrough structure** (phase-by-phase, reversible-at-every-step) generalizes to any phased delivery — ML model migrations, schema migrations, vendor switches, framework upgrades. The **impact-at-a-glance table** generalizes too — pick 3 metrics relevant to the sponsor's actual decision (cost per month / users affected / risk reduction / etc.) and show today vs. after.
+**Architecture note:** the session-timeout scenario assumes a web-session model; the pipeline scenario assumes a backend service. The **plan-walkthrough structure** (phase-by-phase, reversible-at-every-step) generalizes to any phased delivery — ML model migrations, schema migrations, vendor switches, framework upgrades. The **impact-at-a-glance table** generalizes too. Pick 3 metrics relevant to the sponsor's actual decision (cost per month / users affected / risk reduction / etc.). Then show today vs. after.

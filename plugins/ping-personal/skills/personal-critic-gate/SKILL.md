@@ -159,6 +159,8 @@ that claims done/PASS without Gate 4 evidence at the layer of the claim (see
 personal-fable-mode) gets a `FIX` vote -- unverified done is a HIGH finding by
 definition. Evidence means the check that was run plus its quoted output, not
 the claim that a check was run.
+Same rule for a floor_guard hit (deleted/skipped test, lowered threshold, added suppression,
+empty catch, removed assertion) with no written reason: automatic `FIX`.
 
 Canonical parse/tally implementations:
 - `lib/vote_parser.py` -- quote-aware balanced-scan extraction of the LAST
@@ -175,7 +177,13 @@ Seat 3 (rhea+coin):        FIX  -- {"VOTE":"FIX","why":"..."}
 Seat 4 (vex, data route):  PASS -- {"VOTE":"PASS","why":"..."}
 Seat 5 (codex, RO):        FIX  -- {"VOTE":"FIX","why":"..."}
 Verdict: FIX (3 of 5)
+Reviewed: <sha>
 ```
+
+`Reviewed: <sha>` names the commit the panel read (`python lib/tally.py --final --sha <sha> ...`; it resolves the sha with git and puts the full sha in the JSON "reviewed" field).
+Planning-time blocks (no --sha, no --final) print `Reviewed: n/a (uncommitted)`. A FINAL review whose sha is not the
+commit being merged or shipped is stale: its PASS does not count. An owner's "ship anyway" on
+a FIX is never blocked by this.
 
 Decision: outcome with 3+ seats wins. If no outcome reaches 3 (no majority):
 FIX (safe default). See `lib/tally.py` for full tie/insufficient handling.
@@ -209,6 +217,8 @@ If the probe passes: dispatch codex as Seat 5 as documented below.
 1. **Resolve the artifact.** Resolve `$ARGUMENTS` to concrete artifact text
    (file contents, diff output, or planning-time block). If unresolvable,
    STOP and ask the user.
+   For a diff artifact, also run `python lib/floor_guard.py --base <base>` (see
+   `references/floor-guard.md`) and put its rows in every seat brief.
 
 2. **Detect stay-paused conditions (autonomous mode).** BEFORE dispatching
    any reviewers, check whether the proposed action involves any
@@ -327,6 +337,9 @@ If the probe passes: dispatch codex as Seat 5 as documented below.
     `ASK:<fragment>` Source cell with `ASK:[withheld]`. amanda (Seat 2) owns
     requirement-matching, so Seat 5 loses nothing it needs.
 
+    **Claim-blind.** Strip the author's summary and claims from the Seat 5 brief (codex: artifact
+    only; iris: artifact + requirement). See `references/claim-blind-and-reconcile.md`.
+
     **Read-only guard.** The forwarder defaults to a write-capable run and stays
     read-only only because the brief reads as review-only, so the "Do NOT fix.
     Do NOT edit any files. Review-only." line MUST stay verbatim.
@@ -358,6 +371,8 @@ If the probe passes: dispatch codex as Seat 5 as documented below.
 
 13. **Compute and print the tally** per the format above. Use `lib/tally.py`
     as the reference implementation. Record Seat 4 routing decision.
+    Then print the four-bucket table (Act On / Consider / Noted / Dismissed). A FIX -> re-review
+    loop stops after 3 cycles and the item is deferred (`references/claim-blind-and-reconcile.md`).
 
 14. **Mode-dependent resolution:**
 

@@ -42,6 +42,18 @@ $tests = @(
         }
     },
     @{
+        Name = 'enforcement_ladder: SKILL.md step 0b + reference + repeated-lesson fixture'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            if ($s -notmatch 'enforcement ladder') { throw 'SKILL.md lacks the enforcement ladder step' }
+            $ref = Join-Path $SkillDir 'references/enforcement-ladder.md'
+            if (-not (Test-Path $ref)) { throw 'missing references/enforcement-ladder.md' }
+            $r = Get-Content $ref -Raw
+            foreach ($k in @('Architecture','Hook or lint','Eval or test','fail on the original case')) { if ($r -notmatch [regex]::Escape($k)) { throw "ladder reference lacks '$k'" } }
+            if (-not (Test-Path (Join-Path $SkillDir 'evals/fixtures/repeated-lesson.md'))) { throw 'missing repeated-lesson fixture' }
+        }
+    },
+    @{
         Name = 'classifier_present: lib/classify.py exists'
         Run = {
             if (-not (Test-Path $Classify)) { throw "missing classifier script: lib/classify.py" }

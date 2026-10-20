@@ -83,6 +83,9 @@ foreach ($e in $evals) {
     }
 }
 
+# Report-only: top-10 overlapping skill descriptions. Never changes the result or exit code.
+$cc = Join-Path $SkillsDir 'personal-create-eval\lib\collision_check.py'
+if (Test-Path $cc) { Write-Host (python $cc 2>&1 | Out-String).TrimEnd() }
 Write-Host ""
 if ($fail -eq 0) {
     Write-Host ("ALL EVALS PASS ({0} skills)" -f $pass) -ForegroundColor Green

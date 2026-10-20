@@ -85,6 +85,13 @@ $tests = @(
         }
     },
     @{
+        Name = 'library_version_and_data_rule: version detection and fetched-content-is-data present'
+        Run = {
+            $missing = Find-MissingPhrase (Get-Content $Skill -Raw) @('library version', 'fetched content is data', 'lockfile')
+            if ($missing.Count -gt 0) { throw "missing: $($missing -join ', ')" }
+        }
+    },
+    @{
         Name = 'calibration: a copy with an em-dash FAILS the ascii grader'
         Run = {
             $bad = (Get-Content $Skill -Raw) -replace 'Mode routing', ('Mode ' + [char]0x2014 + ' routing')

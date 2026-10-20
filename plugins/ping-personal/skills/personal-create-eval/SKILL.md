@@ -74,6 +74,9 @@ every step here). Templates live in `references/templates/`.
    Quote the output; never claim PASS without it.
 10. **Iterate by the loop:** pin a baseline, change ONE lever, rerun the SAME cases, compare
     per-case deltas, lock every new regression as a fixture. Never claim improvement from vibes.
+11. **Write trigger cases** (prompts that should fire the skill, prompts that should stay quiet) from
+    `references/templates/trigger-cases-template.md`, then run `python lib/collision_check.py` to see
+    which descriptions overlap (report only, never fails).
 
 ---
 
@@ -119,6 +122,14 @@ every step here). Templates live in `references/templates/`.
 - **ASCII only** in `.ps1`/`.py` (Windows PowerShell 5.1 cp1252 pitfall): no em-dashes, smart
   quotes, or Unicode arrows. Set `$env:PYTHONIOENCODING='utf-8'` in PowerShell graders.
 
+## Rationalizations
+
+| Excuse | Why it is wrong | Do instead | Source |
+|---|---|---|---|
+| "Loosen the grader so it goes green" | A red grader with a real cause is a finding | Surface the bug, keep the grader | `plugins/ping-personal/skills/personal-create-eval/SKILL.md` Honesty bullet |
+| "Re-implement the target's test suite" | Two suites drift apart | Invoke the existing suite from the eval | `plugins/ping-personal/skills/personal-create-eval/SKILL.md` Wrap, don't duplicate |
+| "A broken script is harmless in an eval" | One reached the real API | Mutation-run the eval and stub the network | `plugins/ping-personal/skills/personal-create-eval/references/how-to-create-an-eval.md` line 511 |
+
 ## Files
 
 ```
@@ -132,5 +143,6 @@ references/
 lib/
   scaffold_eval.py                  CREATE: generate evals/ for a target skill
   audit_eval.py                     ENHANCE: audit eval health across skills
+  collision_check.py                CREATE: rank skill descriptions by word overlap (report only)
 evals/                              this skill's own eval (dogfood)
 ```

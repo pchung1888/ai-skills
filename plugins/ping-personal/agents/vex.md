@@ -39,7 +39,7 @@ precise.
 3. **Variable integrity:** No ambiguous names (`x`, `temp`, `data`, `result`). Names reflect the domain (`monthlyExpenseTotal`, `categorizedTxn`, `chasePdfText`, `knowledgeGraphStatus`).
 4. **Code hygiene:** No hardcoded secrets, no unhandled exceptions, no commented-out blocks left in.
 5. **Command boundary:** In source code, external commands (graphify, nlm, etc.) must go through a command gate / argv array with `shell: false`, allowlisted executables, sanitized stderr, loopback-only APIs.
-6. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed.
+6. **Explaining sentences** (personal-htsw SKILL.md): when you explain an idea, a step you did or technical work -- in a report, or when the user asks for a simple or detailed explanation -- follow these. Say who does what. One idea per sentence. Name the term, then say right away what it does. Say why it matters. Never point at something the reader was not shown. Code names are fine, but plain words must still say what changed. Keep every sentence to 20 words or fewer. Open with context: say what the subject is before the details. Then cut the AI writing patterns personal-unslop lists.
 
 ## Tool Authority
 

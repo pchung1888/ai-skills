@@ -66,7 +66,7 @@ _Explaining: PROJ-1234 · purpose: qa_
 
 ### How this shit works
 
-When a logged-in user clicks "Log out," the backend is supposed to flip `is_active=false` for every session row tied to that user (not just the one tied to the current request), and any subsequent call to `/api/me` from any device should return 401. The critical invariant — and where the spec earned its 🌮 — is the word *every*: the feature is explicitly multi-device, so any test that only exercises a one-session user proves nothing about the all-device behavior.
+A logged-in user clicks "Log out." The backend is supposed to flip `is_active=false` for every session row of that user. That means more than the one row tied to the current request. Any subsequent call to `/api/me` from any device should return 401. The critical invariant - and where the spec earned its 🌮 - is the word *every*. The feature is explicitly multi-device. So any test that only exercises a one-session user proves nothing about the all-device behavior.
 
 **Coverage at a glance:**
 
@@ -89,7 +89,7 @@ When a logged-in user clicks "Log out," the backend is supposed to flip `is_acti
 
 **Edge cases worth probing:**
 - ⚠ Concurrent in-flight request mid-logout. Evidence: the spec doesn't mention concurrent-request semantics; the AC list covers "after logout" but not "during". → ask: should an in-flight request started before logout see pre-logout or post-logout state?
-- ⚠ JWT/cookie validity after logout. Evidence: the spec says `/api/me` returns 401, but doesn't say whether the middleware reads the session table or trusts the JWT signature alone. → next: trace the middleware path before writing test #5; if it trusts JWT only, the feature won't actually invalidate cross-device.
+- ⚠ JWT/cookie validity after logout. Evidence: the spec says `/api/me` returns 401. It doesn't say whether the middleware reads the session table or trusts the JWT signature alone. → next: trace the middleware path before writing test #5; if it trusts JWT only, the feature won't actually invalidate cross-device.
 
 **Regressions to watch:**
 - ⚠ Login flow unaffected. Evidence: logout and login share `sessions` table writes; a typo in a JOIN could break login. → next: add a smoke test for login after the logout change ships.
@@ -119,7 +119,7 @@ _Explaining: bug against PROJ-1234 · purpose: qa_
 
 ### What's actually happening
 
-The logout endpoint is supposed to flip `is_active=false` for *every* session row belonging to the user — that's the all-device wording the spec is built around. Instead, the handler only flips the row for the session that initiated the logout request; the other devices' rows stay `is_active=true`, and the auth middleware on those devices keeps letting requests through. From a user's perspective, clicking "Log out" on their phone leaves them logged in on their laptop, which is the security bug.
+The logout endpoint is supposed to flip `is_active=false` for *every* session row belonging to the user. That's the all-device wording the spec is built around. Instead, the handler only flips the row for the session that initiated the logout request. The other devices' rows stay `is_active=true`. The auth middleware on those devices keeps letting requests through. From a user's perspective, clicking "Log out" on their phone leaves them logged in on their laptop. That is the security bug.
 
 **Jira vs. code — reality check:**
 
@@ -130,14 +130,14 @@ The logout endpoint is supposed to flip `is_active=false` for *every* session ro
 | ⚠ | Logout is idempotent | Untested — primary defect blocks observation | Will test after the 🔴 rows are fixed |
 | ⚠ | Cache invalidation atomicity | Untested — DB write itself is wrong | Will test after the 🔴 rows are fixed |
 
-🔴 **What actually happened:** users who log out from one device remain authenticated on their other devices. `/api/me` happily hands over their data. The logout isn't logging anything out except the device that initiated the click — which is the whole damn point of having "all" in the spec. Security implication: clicking "log out" doesn't log you out.
+🔴 **What actually happened:** users who log out from one device remain authenticated on their other devices. `/api/me` happily hands over their data. The logout isn't logging anything out except the device that initiated the click. That's the whole damn point of having "all" in the spec. Security implication: clicking "log out" doesn't log you out.
 
-⚠ **Most likely cause:** the logout handler's `UPDATE` keys on `session_id` (the current request's session) instead of `user_id` (every session for this user). Single-device logout instead of all-device. Classic — somebody read "logout" and implemented the obvious thing without re-reading the "all devices" part.
+⚠ **Most likely cause:** the logout handler's `UPDATE` keys on `session_id` (the current request's session). It should key on `user_id` (every session for this user). Single-device logout instead of all-device. Classic — somebody read "logout" and implemented the obvious thing without re-reading the "all devices" part.
 
 **Where to look:**
-- 🔴 The logout endpoint handler — find the `UPDATE` statement, check the WHERE clause. Evidence: `SELECT user_id, is_active FROM sessions WHERE user_id = X` after logout shows 1 of N rows updated; the handler is at `handlers/logout.ts` per the routes table. → fix: change the `WHERE` clause from `session_id = :sid` to `user_id = :uid`.
-- ⚠ The session-cache layer (if there is one). Evidence: didn't trace it yet; the DB write itself is wrong, so even if the cache works correctly it's broadcasting incorrect state. → next: after the DB fix lands, verify cache invalidates per-user, not per-session.
-- ⚠ Auth middleware. Evidence: middleware that trusts JWT signature alone (and never reads `is_active`) would still let the bug bite even after the DB fix. → ask: does the middleware consult `sessions.is_active` on every request, or only at JWT-issue time?
+- 🔴 The logout endpoint handler — find the `UPDATE` statement, check the WHERE clause. Evidence: `SELECT user_id, is_active FROM sessions WHERE user_id = X` after logout shows 1 of N rows updated. The handler is at `handlers/logout.ts` per the routes table. → fix: change the `WHERE` clause from `session_id = :sid` to `user_id = :uid`.
+- ⚠ The session-cache layer (if there is one). Evidence: didn't trace it yet. The DB write itself is wrong. So even if the cache works correctly, it's broadcasting incorrect state. → next: after the DB fix lands, verify cache invalidates per-user, not per-session.
+- ⚠ Auth middleware. Evidence: middleware that trusts JWT signature alone (and never reads `is_active`) would still let the bug bite. That holds even after the DB fix. → ask: does the middleware consult `sessions.is_active` on every request, or only at JWT-issue time?
 
 **File the ticket:**
 
@@ -178,10 +178,10 @@ POST-TEST ──►  TL;DR "file it" + HOW-THIS-WORKS + Jira-vs-code table (Stat
                (Mode 2 voice; NO Mode 3, NO 🌮)
 ```
 
-**The TL;DR at top is the load-bearing artifact.** PMs and devs read tier title → TL;DR → done; they only descend into the Jira-vs-code table when they need to fix the rows. The HOW-THIS-WORKS section is the bridge between the verdict and the substance — read three sentences, walk away knowing the shape of the feature or bug.
+**The TL;DR at top is the load-bearing artifact.** PMs and devs read tier title → TL;DR → done. They only descend into the Jira-vs-code table when they need to fix the rows. The HOW-THIS-WORKS section is the bridge between the verdict and the substance. Read three sentences, and walk away knowing the shape of the feature or bug.
 
-**Evidence-and-suggestion in action:** Every ⚠ and 🔴 in the body sections above pairs (evidence: SQL or HTTP observation, file path, quoted spec, or an explicit "the spec doesn't say") with (suggestion: a `→ fix:`, `→ suggestion:`, `→ next:`, or `→ ask:` arrow naming what to do). A bug-writeup without citations is gossip; a bug-writeup with citations is a ticket a dev can act on without playing detective.
+**Evidence-and-suggestion in action:** Every ⚠ and 🔴 in the body sections above pairs two things. One is evidence (SQL or HTTP observation, file path, quoted spec, or an explicit "the spec doesn't say"). The other is a suggestion (a `→ fix:`, `→ suggestion:`, `→ next:`, or `→ ask:` arrow naming what to do). A bug-writeup without citations is gossip. A bug-writeup with citations is a ticket a dev can act on without playing detective.
 
-**Honest protocol in action:** "Most likely cause" not "the cause." "Untested — primary defect blocks observation" not "this is also broken." Don't promote a guess to a fact, and don't claim coverage you don't have.
+**Honest protocol in action:** Write "Most likely cause" not "the cause". Write "Untested — primary defect blocks observation" not "this is also broken". Don't promote a guess to a fact. Don't claim coverage you don't have.
 
-**For non-web sources** (event-sourced systems, mobile apps, ML pipelines): keep the table structure and the Status column; swap the row content for your domain (audit-log says X / kafka topic shows Y / inference latency was Z). The pattern is universal; the vocabulary is replaceable.
+**For non-web sources** (event-sourced systems, mobile apps, ML pipelines): keep the table structure and the Status column. Swap the row content for your domain (audit-log says X / kafka topic shows Y / inference latency was Z). The pattern is universal; the vocabulary is replaceable.
