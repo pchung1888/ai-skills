@@ -71,7 +71,7 @@ _Explaining: PR-rate-limit-v1 · purpose: pr_
 
 ### How this shit works
 
-The new middleware reads the requesting IP from `req.ip`, looks it up in a shared rate-counter, and rejects with `429 Too Many Requests` plus a `Retry-After` header when the IP has made more than `config.RATE_LIMIT_PER_IP` requests in the rolling 60-second window. The counter resets per-IP each window; the response header is computed from the remaining-window time so clients can back off correctly.
+The new middleware reads the requesting IP from `req.ip` and looks it up in a shared rate-counter. It rejects with `429 Too Many Requests` plus a `Retry-After` header. That happens when the IP has made more than `config.RATE_LIMIT_PER_IP` requests in the rolling 60-second window. The counter resets per-IP each window. The response header is computed from the remaining-window time so clients can back off correctly.
 
 **Watch out for:**
 - ⚠ NAT-collision is intrinsic to IP-based limiting — every shared-NAT user counts as one IP. Evidence: `RFC 6585 §4` notes IP-based limiters disadvantage shared-NAT clients. → suggestion: add one sentence to `docs/api.md` flagging this as an expected limitation; no code change needed.
@@ -122,7 +122,7 @@ _Explaining: PR-rate-limit-v1-pass · purpose: pr_
 The middleware keeps a per-IP request count in a module-scope `Map` and resets each entry on a rolling 60-second window. When the count for an IP crosses `config.RATE_LIMIT_PER_IP`, the request short-circuits with `429` plus a computed `Retry-After`. Tests exercise the 99/100/101 boundary plus IP-key isolation. Straightforward implementation, no surprises.
 
 **Watch out for:**
-- ⚠ The counter lives in `middleware/rate-limit.ts:12` as a module-scope `Map`. Evidence: searched for `redis|memcached|cache` in the diff — no shared store referenced. → next: this works fine for the current single-instance deploy; revisit when the service goes multi-instance and file a follow-up ticket then. Not blocking.
+- ⚠ The counter lives in `middleware/rate-limit.ts:12` as a module-scope `Map`. Evidence: searched for `redis|memcached|cache` in the diff — no shared store referenced. → next: this works fine for the current single-instance deploy. Revisit when the service goes multi-instance, and file a follow-up ticket then. Not blocking.
 
 ---
 
@@ -168,7 +168,7 @@ _Explaining: PR-rate-limit-v1-warning · purpose: pr_
 
 ### The flow
 
-The middleware reads `req.ip`, increments a per-IP counter, and rejects with `429 + Retry-After: 60` once the count exceeds the limit. Implementation is functionally correct against AC #1, but the value `100` appears both as `config.RATE_LIMIT_PER_IP` (read on the comparison) and as `const RATE_LIMIT = 100` (declared but unused). Tests cover the basic accept/reject paths but not the exact boundary at 99/100/101 where off-by-one bugs hide. Docs untouched, so external clients hitting the new 429 won't know what changed.
+The middleware reads `req.ip`, increments a per-IP counter, and rejects with `429 + Retry-After: 60` once the count exceeds the limit. Implementation is functionally correct against AC #1. But the value `100` appears twice. One is `config.RATE_LIMIT_PER_IP` (read on the comparison). The other is `const RATE_LIMIT = 100` (declared but unused). Tests cover the basic accept/reject paths but not the exact boundary at 99/100/101 where off-by-one bugs hide. Docs untouched, so external clients hitting the new 429 won't know what changed.
 
 **Watch out for:**
 - ⚠ The value `100` is declared in two places. Evidence: `middleware/rate-limit.ts:8` declares `const RATE_LIMIT = 100`; the comparison on line 21 reads `config.RATE_LIMIT_PER_IP`. The local const is currently unused, but the next person who edits this file will assume both are wired. → fix: delete `const RATE_LIMIT = 100` from `middleware/rate-limit.ts:8`; the codebase already has one source of truth in `config.ts`.
@@ -219,12 +219,12 @@ _Explaining: PR-rate-limit-v1-bad · purpose: pr_
 
 ### Behind the scenes
 
-The middleware exists at `middleware/rate-limit.ts` and the basic 429-on-overflow path is wired up, but there is no test file for it and the `Retry-After` value is the literal string `'60'` rather than a value computed from the remaining window. Worse, the diff also deletes an unrelated `auth-rejects-expired-token` test from `middleware/auth.test.ts` with the commit-message reason "flaky" — scope creep on top of lost coverage. The middleware's behavior at the boundary is currently unfalsifiable.
+The middleware exists at `middleware/rate-limit.ts` and the basic 429-on-overflow path is wired up. But there is no test file for it. The `Retry-After` value is the literal string `'60'` rather than a value computed from the remaining window. Worse, the diff also deletes an unrelated `auth-rejects-expired-token` test from `middleware/auth.test.ts`. The commit-message reason is "flaky". That is scope creep on top of lost coverage. The middleware's behavior at the boundary is currently unfalsifiable.
 
 **Watch out for:**
-- 🔴 **No tests for the new middleware.** Evidence: searched `middleware/` for `rate-limit.test.ts` — no such file exists; the diff adds `rate-limit.ts` without a sibling test. A rate limiter gates every request — shipping it untested is bullshit. → fix: block until at minimum the 99/100/101 boundary + IP isolation + Retry-After correctness exist in a new `middleware/rate-limit.test.ts`.
-- 🔴 **Retry-After is hardcoded to 60.** Evidence: `middleware/rate-limit.ts:24` reads `res.set('Retry-After', '60')`; `RFC 6585 §4` and `RFC 7231 §7.1.3` both specify the value as "the number of seconds until the client can retry," which depends on remaining-window time, not a constant. A client rejected 5 seconds into the window is told "retry in 60" when the budget resets in 55 — straight-up wrong. → fix: compute `Retry-After` from `(windowEnd - Date.now()) / 1000`, return as integer seconds.
-- 🔴 **An unrelated auth test was deleted** with the reason "flaky." Evidence: the diff at `middleware/auth.test.ts` removes the `auth-rejects-expired-token` describe block; commit message says "flaky." That's bullshit on two axes: it's out of scope for a rate-limit PR, and "flaky" is a reason to fix the flake, not delete the test. → fix: restore the deleted block in a follow-up commit on this same branch and open a separate ticket for the flakiness if real.
+- 🔴 **No tests for the new middleware.** Evidence: searched `middleware/` for `rate-limit.test.ts` - no such file exists. The diff adds `rate-limit.ts` without a sibling test. A rate limiter gates every request — shipping it untested is bullshit. → fix: block until at minimum the 99/100/101 boundary + IP isolation + Retry-After correctness exist in a new `middleware/rate-limit.test.ts`.
+- 🔴 **Retry-After is hardcoded to 60.** Evidence: `middleware/rate-limit.ts:24` reads `res.set('Retry-After', '60')`. `RFC 6585 §4` and `RFC 7231 §7.1.3` both specify "the number of seconds until the client can retry". That value depends on remaining-window time, not a constant. A client rejected 5 seconds into the window is told "retry in 60" when the budget resets in 55. Straight-up wrong. → fix: compute `Retry-After` from `(windowEnd - Date.now()) / 1000`, return as integer seconds.
+- 🔴 **An unrelated auth test was deleted** with the reason "flaky." Evidence: the diff at `middleware/auth.test.ts` removes the `auth-rejects-expired-token` describe block. The commit message says "flaky." That's bullshit on two axes. It's out of scope for a rate-limit PR. And "flaky" is a reason to fix the flake, not delete the test. → fix: restore the deleted block in a follow-up commit on this same branch. Open a separate ticket for the flakiness if real.
 
 ---
 
@@ -237,10 +237,10 @@ The middleware exists at `middleware/rate-limit.ts` and the basic 429-on-overflo
 | WARNING | ⚠ | `address these and merge` | ⚠ + 🟢 | Mode 1 + a few ⚠ |
 | BAD | 🔴 | `block this` | 🔴 dominant | Mode 2 + block call |
 
-**The TL;DR at top is the load-bearing artifact.** A busy reviewer reads tier title → TL;DR → done; they only descend into HOW-THIS-WORKS / alignment / table / diff when they need to act on it. **No bottom "Verdict:" line** — the TL;DR at top already carried it.
+**The TL;DR at top is the load-bearing artifact.** A busy reviewer reads tier title → TL;DR → done. They only descend into HOW-THIS-WORKS / alignment / table / diff when they need to act on it. **No bottom "Verdict:" line** — the TL;DR at top already carried it.
 
-**Evidence-and-suggestion in action:** Every ⚠ and 🔴 in the body sections above pairs (evidence: file path + line, RFC reference, or a search-and-found-none statement) with (suggestion: a `→ fix:`, `→ suggestion:`, `→ next:`, or `→ ask:` arrow naming what to do). A claim without a citation is a vibe; a claim with a citation is a fact a reviewer can verify. **You don't get to accuse a dev of doing their job wrong without showing your work.**
+**Evidence-and-suggestion in action:** Every ⚠ and 🔴 in the body sections above pairs two things. One is evidence (file path + line, RFC reference, or a search-and-found-none statement). The other is a suggestion (a `→ fix:`, `→ suggestion:`, `→ next:`, or `→ ask:` arrow naming what to do). A claim without a citation is a vibe; a claim with a citation is a fact a reviewer can verify. **You don't get to accuse a dev of doing their job wrong without showing your work.**
 
-**Honest protocol in action:** If you don't know whether `requireRole` throws or returns, say "I can't tell from the diff — read `requireRole.ts` before approving." Don't make up the answer.
+**Honest protocol in action:** Say you don't know whether `requireRole` throws or returns. Write "I can't tell from the diff — read `requireRole.ts` before approving." Don't make up the answer.
 
 **For non-HTTP sources** (mobile app, batch job, ML pipeline): swap the rate-limit scenario for your domain's equivalent failure mode. The icon contract + voice rules + table patterns + HOW-THIS-WORKS section + evidence contract all stay; the vocabulary changes.

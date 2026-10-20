@@ -4,6 +4,7 @@ import { EXPLAIN_FIRST, EXPLAIN_FIRST_CONTEXT, FILM_AGENT, FILM_AGENT_SPEC } fro
 
 const NOW = Date.parse('2026-10-11T22:00:00Z')
 const SKILL = '# htsw\n\n## Explaining sentences -- humanized\nRULE-A say who does what\n\n## Language switch -- --cantonese\nRULE-B spoken Cantonese\n\n## Other\nNOT-SENT'
+const UNSLOP = '# Unslop\n\nUNSLOP-INTRO-NOT-SENT\n\n## Patterns to detect and fix\n\n### Style\n\n13. UNSLOP-RULE-13 no em dash\n\n## Later\nUNSLOP-LATER-NOT-SENT'
 
 // ---- pure logic ----
 
@@ -111,7 +112,7 @@ test('questionText lists each question with its options', () => {
 
 // Explanation world: store, clock, session, files (SKILL.md and the mode files), model calls and pane opens are faked.
 function xw(on: any, store: Record<string, unknown> = {}, complete?: (w: any, e: any) => any, cwd = 'D:/x') {
-  const w = { complete: [] as any[], fork: [] as any[], opened: [] as any[], runs: [] as any[][], toasts: [] as string[], writes: {} as Record<string, string>, skill: SKILL, answer: 'ANSWER-1' }
+  const w = { complete: [] as any[], fork: [] as any[], opened: [] as any[], runs: [] as any[][], toasts: [] as string[], writes: {} as Record<string, string>, skill: SKILL, unslop: UNSLOP, answer: 'ANSWER-1' }
   on('ui.toast', (_$: any, e: any) => { w.toasts.push(e.text); return { value: undefined } })
   // A writable store, so a test can read what the hooks saved.
   on('store.get', (_$: any, e: any) => ({ value: store[e.key] }))
@@ -122,7 +123,7 @@ function xw(on: any, store: Record<string, unknown> = {}, complete?: (w: any, e:
   on('session.cwd', () => ({ value: cwd }))
   on('session.id', () => ({ value: 'sid-a' }))
   on('ui.open', (_$: any, e: any) => { w.opened.push(e); return { value: { isPlaced: true } } })
-  on('fs.read', (_$: any, e: any) => ({ value: String(e.path).endsWith('plugin.json') ? '{ "version": "9.8.7" }' : String(e.path).endsWith('SKILL.md') ? w.skill : String(e.path).endsWith('.md') && String(e.path).includes('references') ? `REF ${e.path}` : `FILE ${e.path}` }))
+  on('fs.read', (_$: any, e: any) => ({ value: String(e.path).endsWith('plugin.json') ? '{ "version": "9.8.7" }' : String(e.path).includes('personal-unslop') ? w.unslop : String(e.path).endsWith('SKILL.md') ? w.skill :String(e.path).endsWith('.md') && String(e.path).includes('references') ? `REF ${e.path}` : `FILE ${e.path}` }))
   on('fs.write', (_$: any, e: any) => { w.writes[e.path] = e.text; return { value: undefined } })
   on('fs.exists', () => ({ value: false }))
   on('process.run', (_$: any, e: any) => { w.runs.push(e.argv); return { value: { exitCode: 0, stdout: '', stderr: '' } } })
@@ -150,6 +151,28 @@ test('a level press answers in the pane through a quick Sonnet call with the las
   expect(await p.find({ type: 'Markdown', text: 'ANSWER-1' } as any)).toBeDefined()
   expect(await p.find({ type: 'Text', text: 'Last press: 3K new + 5K cached tokens in, 700 out, 0.0 s' })).toBeDefined()
   await p.unmount()
+})
+
+test('unslop by default: a press sends the personal-unslop pattern list in the cached head; a missing file sends no block', async ($, on) => {
+  const w = xw(on)
+  const p = await mountX($)
+  await p.press({ key: 'xmsimple' })
+  const head = headOf(w.complete[0])
+  expect(head).toContain('Writing patterns to remove before you answer (from personal-unslop SKILL.md):')
+  expect(head).toContain('UNSLOP-RULE-13')
+  expect(head).not.toContain('UNSLOP-INTRO-NOT-SENT')
+  expect(head).not.toContain('UNSLOP-LATER-NOT-SENT')
+  w.unslop = ''
+  await p.press({ key: 'xmkid' })
+  expect(headOf(w.complete[1])).not.toContain('personal-unslop')
+  expect(headOf(w.complete[1])).toContain('RULE-A') // the htsw rules still go
+  await p.unmount()
+})
+
+test('motionPrompt carries the unslop patterns for the on-screen words when given, and nothing when not', () => {
+  const ctx = { ask: 'ASK-1' }
+  expect(motionPrompt({ lang: 'en', subject: 's', skill: SKILL, unslop: UNSLOP, ctx })).toContain('UNSLOP-RULE-13')
+  expect(motionPrompt({ lang: 'en', subject: 's', skill: SKILL, ctx })).not.toContain('personal-unslop')
 })
 
 test('drift guard: every press reads the htsw rules from SKILL.md at click time, never a copy', async ($, on) => {

@@ -44,7 +44,11 @@ python -I ${CLAUDE_SKILL_DIR}/scripts/captions.py <url-or-id> [...] --out <sessi
 It fetches one video at a time (parallel requests make YouTube answer 429) and prints `OK`,
 `NO-CAPTIONS`, `RATE-LIMITED` or `FAILED` per video. For RATE-LIMITED videos, start one background
 retry of only those after a 5-minute cool-down (`sleep 300 && python -I ... --out <same folder>`),
-carry on with the others, and add them when the retry finishes. Done when every video has a line.
+carry on with the others, and add them when the retry finishes. After 2 RATE-LIMITED results for the
+same video (the 5-minute retry included), stop retrying: say YouTube is throttling this machine's
+caption downloads, and offer that the user can paste a summary from another tool, labelled INFERRED because
+such summaries can invent details. If yt-dlp warns it is older than 90 days, tell the user to run
+`winget upgrade yt-dlp.yt-dlp` (never run it yourself). Done when every video has a line.
 
 **Step 2. Read.** Each OK line gives the word count. A transcript of up to about 6,000 words (about
 8K tokens, roughly 40 minutes of speech) is cheaper to read directly than to hand to a subagent.

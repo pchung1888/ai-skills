@@ -118,6 +118,67 @@ def test_escalate_raises_in_tally():
     _assert(raised, "ESCALATE must raise ValueError in the 5-seat tally, not silently become ABSTAIN")
 
 
+def _run_tally(extra, votes):
+    import subprocess
+    return subprocess.run([sys.executable, str(LIB_DIR / "tally.py")] + extra + ["--votes"] + votes,
+                          capture_output=True, text=True, cwd=str(SKILL_DIR))
+
+
+def _head():
+    import subprocess
+    return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                          cwd=str(SKILL_DIR)).stdout.strip()
+
+
+def test_reviewed_sha():
+    """--sha resolves to the full sha; PASS, FIX and PAUSED all carry it; stdout is one JSON object."""
+    import json
+    head = _head()
+    pv = ['{"VOTE":"PASS"}'] * 5
+    fv = ['{"VOTE":"FIX"}'] * 3 + ['{"VOTE":"PASS"}'] * 2
+    for want, extra, votes in [("PASS", [], pv), ("FIX", [], fv), ("PAUSED", ["--stay-paused"], pv)]:
+        r = _run_tally(["--sha", head[:10], "--final"] + extra, votes)
+        _assert(r.returncode == 0, f"{want}: exit {r.returncode}: {r.stderr}")
+        out = json.loads(r.stdout)
+        _assert(out["verdict"] == want, f"expected {want}; got {out['verdict']}")
+        _assert(out["reviewed"] == f"Reviewed: {head}", f"{want}: reviewed field {out['reviewed']}")
+    _assert(tally_votes([_v("PASS")] * 5, sha="x")["reviewed"] == "Reviewed: x", "dict field")
+
+
+def test_reviewed_sha_refusals():
+    """Bad, option-like or empty (final) sha is an error; planning-time with no sha prints n/a."""
+    import json
+    pv = ['{"VOTE":"PASS"}'] * 5
+    for bad in (["--sha", "deadbeefnotacommit"], ["--sha=-x"], ["--final"], ["--final", "--sha", ""]):
+        r = _run_tally(bad, pv)
+        _assert(r.returncode == 1 and r.stdout == "", f"{bad}: expected exit 1, empty stdout; got {r.returncode}")
+    r = _run_tally([], pv)
+    _assert(json.loads(r.stdout)["reviewed"] == "Reviewed: n/a (uncommitted)", "missing n/a")
+
+
+def test_expect_head():
+    """--expect-head: same repo fresh, same repo stale, a second repo, and no --sha is refused."""
+    import json, subprocess, tempfile
+    pv = ['{"VOTE":"PASS"}'] * 5
+    head = _head()
+    r = _run_tally(["--sha", head, "--final", "--expect-head"], pv)
+    _assert(r.returncode == 0 and json.loads(r.stdout)["stale"] is False, f"fresh: {r.returncode} {r.stdout}")
+    with tempfile.TemporaryDirectory() as d:
+        def git(*a):
+            return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                                  capture_output=True, text=True, cwd=d).stdout.strip()
+        git("init", "-q")
+        git("commit", "-q", "--allow-empty", "-m", "one")
+        old = git("rev-parse", "HEAD")
+        r = _run_tally(["--sha", old, "--expect-head", "--repo", d], pv)
+        _assert(r.returncode == 0 and json.loads(r.stdout)["stale"] is False, f"repo2 fresh: {r.returncode}")
+        git("commit", "-q", "--allow-empty", "-m", "two")
+        r = _run_tally(["--sha", old, "--expect-head", "--repo", d], pv)
+        _assert(r.returncode == 2 and json.loads(r.stdout)["stale"] is True, f"stale: {r.returncode} {r.stdout}")
+    r = _run_tally(["--expect-head"], pv)
+    _assert(r.returncode == 1 and r.stdout == "", f"no --sha: {r.returncode}")
+
+
 TESTS = [
     ("B5a_fix_majority", test_b5a_fix_majority),
     ("B5b_pass_majority", test_b5b_pass_majority),
@@ -128,6 +189,9 @@ TESTS = [
     ("B5g_five_seat_normal", test_b5g_five_seat_normal),
     ("B5h_invalid_counted_as_abstain", test_b5h_invalid_counted_as_abstain),
     ("ESCALATE_raises_in_tally", test_escalate_raises_in_tally),
+    ("reviewed_sha", test_reviewed_sha),
+    ("reviewed_sha_refusals", test_reviewed_sha_refusals),
+    ("expect_head", test_expect_head),
 ]
 
 pass_count = 0

@@ -147,7 +147,9 @@ The intended workflow for producing a dashboard-enriched HTML doc:
 1. **Run an upstream skill** (`superpowers:writing-plans`, `htsw`, `brainstorming`, etc.)
    to generate the Markdown source document.
 2. **Open the Markdown output** and insert dashboard fences where tables, lists, or callouts
-   would improve readability. No special tooling — the fences are just fenced code blocks
+   would improve readability. Writing rule: prose you write or add follows the htsw
+   Explaining sentences rules (20 words or fewer per sentence, context first) and the
+   personal-unslop pass. Leave text you only convert, such as someone else's document, as it is. No special tooling — the fences are just fenced code blocks
    with custom language identifiers.
 3. **Render with one command:**
    ```bash

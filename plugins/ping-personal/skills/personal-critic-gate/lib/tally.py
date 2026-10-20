@@ -33,27 +33,33 @@ Tie/insufficient handling:
 Priority in absence of strict majority: BLOCK > FIX > PASS.
 Rationale: the gate is a safety device; when uncertain, pick the more cautious verdict.
 
-Exits 0 and prints verdict JSON.
+Exits 0 and prints one verdict JSON object; its "reviewed" field reads
+"Reviewed: <full sha>" (--sha, resolved by git) or "Reviewed: n/a (uncommitted)".
+--final makes --sha mandatory. --expect-head (needs --sha; --repo <path>, default cwd) adds
+"stale": true/false (--sha vs HEAD of that repo) and exits 2 when stale. Exits 1 if --sha does not resolve or starts with "-".
 Exits 1 on input error.
 """
 
 import json
 import sys
 import argparse
+import subprocess
 
 PRIORITY = ["BLOCK", "FIX", "PASS"]
 VALID_VOTES = {"PASS", "FIX", "BLOCK", "ABSTAIN"}
 
 
-def tally_votes(vote_objects: list[dict], stay_paused: bool = False) -> dict:
+def tally_votes(vote_objects: list[dict], stay_paused: bool = False, sha: str = "") -> dict:
     """
     Compute the panel verdict from a list of vote dicts.
     Each dict must have a "VOTE" key.
     Returns a result dict with keys: verdict, counts, notes.
     """
+    reviewed = f"Reviewed: {sha}" if sha else "Reviewed: n/a (uncommitted)"
     if stay_paused:
         return {
             "verdict": "PAUSED",
+            "reviewed": reviewed,
             "counts": {},
             "notes": "stay-paused flag forced PAUSED verdict",
         }
@@ -101,10 +107,33 @@ def tally_votes(vote_objects: list[dict], stay_paused: bool = False) -> dict:
 
     return {
         "verdict": verdict,
+        "reviewed": reviewed,
         "counts": {k: v for k, v in counts.items() if v > 0},
         "effective_votes": effective_votes,
         "notes": notes,
     }
+
+
+def resolve_sha(sha: str, repo: str = None) -> str:
+    """Return the full commit sha for `sha`, or raise ValueError. Runs git in `repo` (default: cwd)."""
+    if sha.startswith("-"):
+        raise ValueError(f"--sha must not start with '-': {sha!r}")
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--verify", "--end-of-options", sha + "^{commit}"],
+            capture_output=True, text=True, timeout=30, cwd=repo,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"cannot run git to resolve --sha: {exc}")
+    full = out.stdout.strip()
+    if out.returncode != 0 or len(full) < 40:
+        raise ValueError(f"--sha does not resolve to a commit here: {sha!r}")
+    return full
+
+
+def head_sha(repo: str = None) -> str:
+    """Return the full sha of HEAD in `repo` (default: cwd), or raise ValueError."""
+    return resolve_sha("HEAD", repo)
 
 
 def parse_vote_line(line: str, seat_num: int) -> dict:
@@ -139,7 +168,42 @@ def main() -> int:
         action="store_true",
         help="Force PAUSED verdict regardless of votes (Stay-Paused List hit).",
     )
+    parser.add_argument(
+        "--sha",
+        default="",
+        help="Commit the panel reviewed; printed as 'Reviewed: <sha>'. "
+        "Omit for planning-time blocks (prints 'Reviewed: n/a (uncommitted)').",
+    )
+    parser.add_argument(
+        "--final",
+        action="store_true",
+        help="Final review: --sha is required (an empty sha is an error).",
+    )
+    parser.add_argument(
+        "--expect-head",
+        action="store_true",
+        help="Requires --sha. Adds \"stale\": true when --sha is not HEAD of --repo; exit 2 if stale.",
+    )
+    parser.add_argument(
+        "--repo",
+        default=None,
+        help="Repo path for --sha and --expect-head (default: current directory).",
+    )
     args = parser.parse_args()
+
+    stale = None
+    try:
+        if args.expect_head and not args.sha:
+            raise ValueError("--expect-head needs --sha <commit>")
+        if args.sha:
+            args.sha = resolve_sha(args.sha, args.repo)
+            if args.expect_head:
+                stale = args.sha != head_sha(args.repo)
+        elif args.final:
+            raise ValueError("a final review needs --sha <commit>")
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
 
     vote_objects = []
 
@@ -155,9 +219,11 @@ def main() -> int:
         print("ERROR: no votes provided", file=sys.stderr)
         return 1
 
-    result = tally_votes(vote_objects, stay_paused=args.stay_paused)
+    result = tally_votes(vote_objects, stay_paused=args.stay_paused, sha=args.sha)
+    if stale is not None:
+        result["stale"] = stale
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0
+    return 2 if stale else 0
 
 
 if __name__ == "__main__":

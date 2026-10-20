@@ -201,6 +201,27 @@ $tests = @(
                 Where-Object { [IO.File]::ReadAllBytes($_.FullName) | Where-Object { $_ -gt 127 } | Select-Object -First 1 }
             if ($bad) { throw "non-ASCII bytes in: $($bad.Name -join ', ')" }
         }
+    },
+    @{
+        Name = 'reviewed_sha_rule: SKILL.md carries the literal Reviewed: <sha>'
+        Run = {
+            if (-not (Get-Content $Skill -Raw).Contains('Reviewed: <sha>')) { throw 'SKILL.md lost the literal Reviewed: <sha>' }
+        }
+    }
+    ,@{
+        Name = 'expect_head_rule: SKILL.md carries the literal tally.py --final --sha <sha> --expect-head'
+        Run = {
+            if (-not (Get-Content $Skill -Raw).Contains('tally.py --final --sha <sha> --expect-head')) { throw 'SKILL.md lost the --expect-head call' }
+        }
+    }
+    ,@{
+        Name = 'fixtures_lf: eval fixtures contain no CR bytes (.gitattributes eol=lf)'
+        Run = {
+            $bad = Get-ChildItem (Join-Path $PSScriptRoot 'fixtures') -Recurse -File |
+                Where-Object { $_.FullName -notmatch '__pycache__' } |
+                Where-Object { [IO.File]::ReadAllBytes($_.FullName) -contains 13 }
+            if ($bad) { throw "CR bytes in fixtures: $($bad.Name -join ', ')" }
+        }
     }
 )
 

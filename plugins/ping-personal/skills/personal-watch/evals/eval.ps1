@@ -18,7 +18,11 @@ $Invariants = @(
     'python -I',                      # isolated mode for code reading downloaded files
     'Cite or label',                  # [mm:ss] = EXTRACTED, anything else INFERRED
     'Could not read',                 # honest gaps, never filled from summary sites
-    'one video at a time'             # 429 avoidance
+    'one video at a time',            # 429 avoidance
+    'After 2 RATE-LIMITED results',   # stop retrying after the 5-minute retry also fails
+    'paste a summary',                # honest give-up offer, labelled INFERRED
+    'winget upgrade yt-dlp.yt-dlp',   # old yt-dlp: the user upgrades it, skill never installs
+    '(never run it yourself)'         # never-install rule covers the upgrade too
 )
 function Get-Missing([string]$text) { @($Invariants | Where-Object { -not $text.Contains($_) }) }
 

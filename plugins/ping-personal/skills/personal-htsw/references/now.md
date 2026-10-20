@@ -28,6 +28,8 @@ pane's Quick context: the last question and reply). Without `--deep --html`, now
 ## Rules
 
 - Layman terms, but name every technical term and gloss it once in one sentence.
+- Writing rule: prose follows the htsw Explaining sentences rules (20 words or fewer per
+  sentence, context first) and the personal-unslop pass. This covers the Deep HTML page too.
 - Every claim about state (a test passed, a file changed) comes from the conversation; if the
   conversation does not show it, say it is not known rather than guess.
 - No verdict tier titles, no icons. ASCII punctuation only; Chinese text is allowed with

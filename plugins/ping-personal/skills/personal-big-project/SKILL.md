@@ -24,6 +24,9 @@ its own.
    work, never from a worker saying "passed". NOT-RUN is never PASS.
 3. **Baselines are captured before any change and never re-taken from new code's output.**
    Loosening an assertion needs predicted vs observed written down and a reviewer's sign-off.
+   The stage check also runs `python <critic-gate>/lib/floor_guard.py --base <baseCommit>`
+   (the personal-critic-gate floor-guard reference); a hit is a regression unless a
+   `log/decisions.md` row signs it off.
 4. **Side effects have hard caps** (inputs.json `caps`: mail, pushes, deploys, API calls). Write the
    side-effects row before acting. Never push a tag. Push only to the target branch.
 5. **The user's explicit asks are inputs, not proposals.** Offer a cheaper option once; the default
@@ -165,7 +168,9 @@ agent, phase, needs, commits, resources, and two required fields:
 
 The last stage sets `finalReview: true`: two fresh reviewers, one after the other, report on two
 separate axes that are never merged: Spec (amanda: the diff from baseCommit against GOAL-BRIEF.md)
-and Standards (ms-mario: the repo's standards and conventions). A stage that tests code adds the
+and Standards (ms-mario: the repo's standards and conventions). The final critic-gate verdict must
+carry `Reviewed: <sha>`; refuse a PASS whose sha is not HEAD (`tally.py --final --sha <sha> --expect-head`, exit 2 = stale; an owner's "ship anyway" on a FIX is
+not blocked). A stage that tests code adds the
 tests before the code.
 
 ## Fix, defer or stop (per failing item)

@@ -13,6 +13,22 @@ $Lib      = Join-Path $SkillDir 'lib'
 
 $tests = @(
     @{
+        Name = 'claim_blind_and_reconcile: Seat 5 claim-blind, 3-cycle cap, four buckets documented and pointed to'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            $r = Join-Path $SkillDir 'references/claim-blind-and-reconcile.md'
+            if (-not (Test-Path $r)) { throw "references/claim-blind-and-reconcile.md missing" }
+            if ($s -notmatch 'claim-blind-and-reconcile\.md') { throw "SKILL.md does not point to claim-blind-and-reconcile.md" }
+            if ($s -notmatch '(?i)claim-blind') { throw "SKILL.md lacks claim-blind Seat 5 rule" }
+            if ($s -notmatch '3 cycles') { throw "SKILL.md lacks the 3-cycle cap" }
+            $d = Get-Content $r -Raw
+            foreach ($b in @('Act On','Consider','Noted','Dismissed')) {
+                if ($d -notmatch [regex]::Escape($b)) { throw "bucket '$b' missing from reference" }
+            }
+            if ($d -notmatch '(?i)owner orders are constraints') { throw "Dismissed bucket lacks owner-order rule" }
+        }
+    },
+    @{
         Name = 'unverified_done_rubric: a done-claim without Gate 4 evidence is an automatic FIX (personal-fable-mode anchor)'
         Run = {
             $s = Get-Content $Skill -Raw
@@ -265,6 +281,27 @@ if ($tallyExit -ne 0 -and ($tallyOut -notmatch 'FAIL ')) {
     Write-Host "FAIL tally/test_tally.py (script error)" -ForegroundColor Red
     Write-Host $tallyOut
 }
+
+# -- Behavioral test suite: floor_guard ------------------------------------------
+$LASTEXITCODE = 0
+$fgOut = ''
+try { $fgOut = (python (Join-Path $PSScriptRoot 'test_floor_guard.py') 2>&1 | Out-String) } catch { $fgOut = "$_"; $LASTEXITCODE = 1 }
+$fgExit = $LASTEXITCODE
+$fgLines = 0
+foreach ($ln in ($fgOut -split "`n")) {
+    $ln = $ln.Trim()
+    if ($ln -match '^PASS ') { $fgLines++; $pass++; Write-Host "PASS floor_guard/$($ln.Substring(5))" -ForegroundColor Green }
+    elseif ($ln -match '^FAIL ') { $fgLines++; $fail++; Write-Host "FAIL floor_guard/$($ln.Substring(5))" -ForegroundColor Red }
+}
+if ($fgLines -eq 0 -or ($fgExit -ne 0 -and ($fgOut -notmatch 'FAIL '))) {
+    $fail++
+    Write-Host "FAIL floor_guard/test_floor_guard.py (script error)" -ForegroundColor Red
+    Write-Host $fgOut
+}
+
+# -- Reviewed: <sha> rule must stay in SKILL.md -----------------------------------
+if ((Get-Content (Join-Path $PSScriptRoot '..\SKILL.md') -Raw).Contains('Reviewed: <sha>')) { $pass++; Write-Host "PASS reviewed_sha_rule" -ForegroundColor Green }
+else { $fail++; Write-Host "FAIL reviewed_sha_rule: SKILL.md lost the literal Reviewed: <sha>" -ForegroundColor Red }
 
 if ($fail -eq 0) { Write-Host "EVAL PASS personal-critic-gate ($pass)" -ForegroundColor Green; exit 0 }
 else { Write-Host "EVAL FAIL personal-critic-gate ($fail of $($pass+$fail))" -ForegroundColor Red; exit 1 }

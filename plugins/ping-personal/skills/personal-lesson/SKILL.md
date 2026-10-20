@@ -35,6 +35,13 @@ The check is a fuzzy semantic match, not a literal string match. Read the rules
 files and use judgment. If the lesson merely relates to a hard rule without
 duplicating it (e.g. an "Example" or "Context" elaboration), proceed to Step 1.
 
+### Step 0b -- Seen before? (enforcement ladder)
+
+If the lesson matches an existing stored lesson, do not just append it again. Propose one rung up the
+enforcement ladder (architecture > hook or lint > eval or test > doc) as text for the user, and require the new
+check to fail on the original case before it ships. Details: `references/enforcement-ladder.md`.
+A hard-rule duplicate already stopped at Step 0.
+
 ### Step 1 -- Classify into a domain
 
 Run the deterministic classifier instead of counting by hand:

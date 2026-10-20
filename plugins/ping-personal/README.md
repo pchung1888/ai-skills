@@ -15,7 +15,7 @@ Beacons land under `docs/<slug>/` by default. Override paths via the skill's pre
 
 ### `/personal-handoff`
 
-Session handoff writer. Writes `docs/progress/YYYY-MM-DD-<task>-progress.md` (and optionally a sibling `*-handoff.md` for open decisions) so the next session can resume without losing context. Triggers preparatively on phrases like "save progress", "wrap up the session", "stopping soon", "context limit". Uses the bundled template under `skills/personal-handoff/templates/`.
+Session handoff writer. Writes two linked files in `docs/progress/`: `YYYY-MM-DD-<task>-handoff.md`, the entry point with next steps, open decisions and suggested skills, and `YYYY-MM-DD-<task>-progress.md` with the history and facts. Start the next session with "read the handoff file". Triggers preparatively on phrases like "save progress", "wrap up the session", "stopping soon", "context limit". Uses the bundled template under `skills/personal-handoff/templates/`.
 
 ### `/personal-cache-stats`
 
@@ -100,6 +100,20 @@ CLAUDE.md / AGENTS.md, install or update this plugin) and explains any FAIL line
 Add-rule edits `harness/`, installs, runs the sync check and pushes after you
 approve the diff. A brand-new machine needs the bootstrap command once, before
 the plugin (and so this skill) exists there.
+
+### Adapted from Matt Pocock's skills (MIT)
+
+- `/personal-diagnosing-bugs` -- build a red-capable feedback loop before any theory: an HTTP request to the IIS page, `sqlcmd` for the stored procedure, or a `cscript` COM harness.
+- `/personal-domain-modeling` -- keep `docs/glossary/GLOSSARY.md` and `docs/glossary/decisions/` current while designing; challenge fuzzy terms against the code.
+- `/personal-wizard` -- generate a PowerShell wizard for steps only a person can do, such as an RDP deploy to a QA or client box.
+- `/personal-teach` -- a multi-session learning workspace with a mission, lessons rendered by md-to-html, and learning records.
+- `/personal-grill-me` -- stress-test a plan in rounds of questions, each with a recommended answer; "with docs" also writes `docs/glossary/`.
+- `/personal-wait-what` -- re-pitch the last message: context first, 20-word sentences, the glossary's terms.
+- `/personal-wayfinder` -- chart work too big for one session as a map of decision tickets: Jira for company repos, GitHub issues for personal repos, local Markdown otherwise.
+- Aliases `grill-me`, `grilling`, `grill-with-docs` and `wait-what` forward to the two skills above, so old commands keep working without Matt's plugin.
+
+License text: `THIRD-PARTY-NOTICES.md`.
+
 
 ## Agents -- the role line-up
 

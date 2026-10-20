@@ -316,18 +316,32 @@ works. Each one must read like a person telling you across the desk.
    you have said what the flip or the gate is.
 6. Code names are fine, but plain words must still say what changed. A sentence that is only
    a pile of code names fails.
+7. Keep every sentence to 20 words or fewer. Split a longer one into two. This is the
+   ASD-STE100 Simplified Technical English limit, the core of the `wait-what` skill.
+8. Open with context. The first one to three sentences say what the subject is and why the
+   reader is looking at it. Details come after that.
+
+Then remove the AI writing patterns that `personal-unslop` lists: puffery words, filler,
+stacked hedges, jargon nouns and over-compressed fragments. The ping-hud pane and Motion
+brief send that list along with these rules, so a side call follows it without loading a skill.
 
 | Before | After |
 |---|---|
-| "The fix wraps `root` in `normPath(...)` in two places: the regex test and the `full` mkdir path." | "The fix sends the repo folder name through `normPath`, a small helper that turns every backslash into a forward slash. It does this twice: once before the safety check reads the path, and once before the plugin builds the new folder's path." |
+| "The fix wraps `root` in `normPath(...)` in two places: the regex test and the `full` mkdir path." | "The fix sends the repo folder name through `normPath`, a small helper that turns every backslash into a forward slash. The first time is before the safety check reads the path. The second is before the plugin builds the new folder's path." |
 | "A test that fails without the fix proves it catches this exact bug, so the bug cannot quietly come back." | "I added a test that hands the plugin a backslash folder, the way Windows really does. Then I took the fix out and ran it, and the test failed. So if anyone undoes the fix later, this test goes red and warns them." |
 
 These rules apply wherever htsw runs: the main chat, a subagent, or the Explanation pane.
-Boss mode keeps its polite register and follows these rules too.
+Boss mode keeps its polite register and follows these rules too. They also apply to the
+prose of a Deep HTML page, a Motion film's on-screen words, goal trackers, handoffs and
+pages built with personal-md-to-html.
+
+`htsw-check.py` fails a rendering that has a sentence over 20 words. It counts paragraph
+prose and list items. It skips code blocks, table rows, headings, blockquotes and the
+citation line.
 
 A subagent asked for a simple or detailed explanation runs this skill itself and reports back to
 the main chat in this voice. The persona agents (`agents/*.md`, except the JSON-only
-next-recommender) carry the six rules in short form under their language rule, so a report
+next-recommender) carry the eight rules in short form under their language rule, so a report
 follows them without loading this file. Keep those copies in step: the htsw eval fails when one
 drifts.
 

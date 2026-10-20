@@ -100,6 +100,12 @@ acknowledgement, not a detection.
    first phase, so losing it loses the whole goal.
 9. Print handoff block; stop.
 
+## Writing the tracker
+
+Writing rule: prose follows the htsw Explaining sentences rules (20 words or fewer per
+sentence, context first) and the personal-unslop pass. This covers phase briefs, notes and
+the tracker's own text. The `## Requirement` section is the exception: it keeps the owner's words.
+
 ## After /personal-goal returns
 
 The driving Claude session reads the handoff and runs the per-phase loop.

@@ -6,10 +6,11 @@
 
 ## Target Behavior
 
-personal-handoff captures session state as a structured handoff document at
-`docs/progress/YYYY-MM-DD-<task>-progress.md` (and, when open decisions exist, a sibling
-`-handoff.md`). Progress = WHAT happened; Handoff = WHAT NEXT-YOU NEEDS TO DECIDE. It fires
-preparatively when a limit approaches or the user signals an imminent stop.
+personal-handoff captures session state as two linked files in `docs/progress/`. The
+`-handoff.md` file is always written and is the entry point: next steps, open decisions and
+suggested skills. It links `-progress.md`, which holds history and facts and links back.
+Progress = WHAT happened; Handoff = WHAT next. It fires preparatively when a limit
+approaches or the user signals an imminent stop.
 
 ## Failure Modes
 
@@ -20,6 +21,8 @@ preparatively when a limit approaches or the user signals an imminent stop.
 | F03 | the progress-vs-handoff distinction removed | the two artifacts collapse; "what next" is lost | code |
 | F04 | a required step (Gather / Write Progress / Sibling Handoff / Safety Rules) deleted | the capture procedure breaks | code |
 | F05 | the templates/ directory missing | the skill has no scaffold to render from | code |
+| F06 | handoff file optional again, Next Steps back in progress, or the cross-links dropped | "read the handoff" misses the history or the next steps | code: handoff_is_entry_point |
+| F07 | Suggested skills section dropped, or allowed to invent commands | the next session stops using the goal or workflow, or runs a made-up one | code: suggested_skills_rules |
 
 ## Eval Cases
 

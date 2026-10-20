@@ -1,5 +1,6 @@
-# [Task Name] Progress -- Handoff File
+# [Task Name] Progress -- history and facts
 
+**Handoff:** `docs/progress/YYYY-MM-DD-<task-slug>-handoff.md` -- next steps, open decisions and suggested skills live there.
 **Branch:** `<branch-name>`
 **Plan:** `docs/plans/<plan-file>.md`
 **Issue:** `<ticket-id>` (Jira / GitHub Issue / etc.)
@@ -81,13 +82,6 @@ mechanism rather than build further on it. Say so here explicitly.
 
 ---
 
-## Next Steps (resume here)
-
-1. [Exact next action -- file, command, or step from plan]
-2. [Second action]
-3. [Third action if known]
-
----
 
 ## Key Findings
 

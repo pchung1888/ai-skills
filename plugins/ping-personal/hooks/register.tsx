@@ -1041,10 +1041,16 @@ async function motionAskContext($: any, text: string): Promise<string | undefine
   const { file, warn } = await readSubject($, subject)
   let skill = ''
   try { skill = String(await $.fs.read(`${$.plugin.root}/skills/personal-htsw/SKILL.md`)) } catch {}
+  const unslop = await readUnslop($)
   const ctx = ((await mine($, 'hudExplainCtx').catch(() => undefined)) as Ctx | undefined) ?? {}
-  await note($, 'hudMotionBrief', motionPrompt({ lang, subject, skill, ctx, file }))
+  await note($, 'hudMotionBrief', motionPrompt({ lang, subject, skill, unslop, ctx, file }))
   await xSave($, { ...d, motionTopic: d.topic!.id, status: 'Sent. The main chat is starting the film agent.', note: warn })
   return motionDispatch(FILM_AGENT)
+}
+
+// personal-unslop's pattern list, sent with every pane answer and film brief; empty when the file is missing.
+async function readUnslop($: any): Promise<string> {
+  try { return String(await $.fs.read(`${$.plugin.root}/skills/personal-unslop/SKILL.md`)) } catch { return '' }
 }
 
 // The film agent started: the pane waits for its report (motionDone).
@@ -1106,7 +1112,8 @@ export async function runExplain($: any, mode: Mode | 'follow', text: string, qu
     ref = String(await $.fs.read(`${$.plugin.root}/skills/personal-htsw/references/${modeOf(m).ref}`))
   } catch { await xSave($, { ...d, status: 'Could not read the htsw rules from the plugin folder. Nothing was sent.', note: undefined }); return }
   const ctx = ((await mine($, 'hudExplainCtx').catch(() => undefined)) as Ctx | undefined) ?? {}
-  const { head, body } = buildPrompt({ mode: m, lang: topic.lang, scope: topic.scope, subject: topic.subject, skill, ref, ctx, file, question, qa: follow ? topic.qa : [], follow })
+  const unslop = await readUnslop($)
+  const { head, body } = buildPrompt({ mode: m, lang: topic.lang, scope: topic.scope, subject: topic.subject, skill, ref, unslop, ctx, file, question, qa: follow ? topic.qa : [], follow })
   const run = ++xRun
   xBusy = run; xStarted = await $.clock.now()
   const how = `${topic.lang === 'yue' ? 'Cantonese' : 'English'}, ${topic.scope === 'chat' ? 'whole chat' : 'quick'}`

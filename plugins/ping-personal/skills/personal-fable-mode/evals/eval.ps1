@@ -102,6 +102,31 @@ $tests = @(
             if (-not (Find-BannedChar $bad)) { throw "ascii grader passed a copy containing an em-dash -- dead metric" }
         }
     }
+    ,@{
+        Name = 'rationalizations: section exists and every row has a non-empty Source cell'
+        Run = {
+            $chk = {
+                param($txt)
+                $m = [regex]::Match($txt, '(?ms)^## Rationalizations\s*
+(.*?)(?=^## |\z)')
+                if (-not $m.Success) { return 'section missing' }
+                $rows = @($m.Groups[1].Value -split "`n" | Where-Object { $_ -match '^\|' -and $_ -notmatch '^\|[-| ]+\|\s*$' } | Select-Object -Skip 1)
+                if ($rows.Count -lt 1) { return 'no rows' }
+                foreach ($r in $rows) {
+                    $c = @($r.Trim().Trim('|') -split '\|')
+                    if ($c.Count -lt 4 -or -not $c[-1].Trim()) { return "empty Source: $r" }
+                }
+                return $null
+            }
+            $s = Get-Content $Skill -Raw
+            $e = & $chk $s
+            if ($e) { throw $e }
+            $bad = [regex]::Replace($s, '(?m)^(\| "[^
+]*)\|[^|
+]*\|\s*$', '$1| |')
+            if (-not (& $chk $bad)) { throw 'calibration: empty-Source copy passed -- dead metric' }
+        }
+    }
 )
 
 $pass = 0; $fail = 0
