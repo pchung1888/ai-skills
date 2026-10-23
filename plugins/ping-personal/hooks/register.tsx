@@ -2,7 +2,8 @@ import type { Register } from 'claude-code'
 import { collect, snapshot, isOld, isSessionFile, withTurn, parseGoal, activity, waitingText, spawnAct, parseCodex, codexDays, cacheSum, memText, foldTasks, addTime, findTime, type Times, type HudState, type Goal, type Codex, type Status, type Task, type Bg } from './hud-data'
 import { layout, drawRows, dur, etTime } from './hud-render'
 import { chip, shouldToast } from './hud-rules'
-import { ACTIONS, HTSW_ACTIONS, resolveCmd, planSlug, workDir, stamp, GRAY, type Action } from './hud-actions'
+import { floorReason } from './hud-floor'
+import { ACTIONS, HTSW_ACTIONS, resolveCmd, planSlug, workDir, stamp, bypassLabel, GRAY, type Action } from './hud-actions'
 import { PANE_ID, MODES, modeOf, emptyData, parsePath, sliceLines, startTopic, park, reopen, clearAll, addAnswer, buildPrompt, costOf, costLine, shouldLock, questionText, motionPrompt, finishMotion, motionSubject, motionAsk, motionAskSubject, motionDispatch, MOTION_BUSY, FILM_RE, QUICK_TIP, SCROLL_HINT, paneScrollText, type ExplainData, type Mode, type Lang, type Scope, type Ctx } from './hud-explain'
 import { agentStart, agentTool, agentEnd, agentEndForeground, agentClear, agentGroups, agentCounts, agentHeader, agentLine, asRows, type AgentRow } from './hud-agents'
 import { paneLabel, paneWord, orderRows, slugOfPath, type PaneRow, pathOk, pathKey, normPath, slugOf, goalSlug, matchSlug, clean, beacons, pendingTick, mergeToasts, classify, parseGitLog, type Tracked, type Pending } from './hud-goals'
@@ -56,6 +57,7 @@ export const register: Register = on => {
   })
   on('session.start', async ($, e, next) => {
     await note($, 'hudBg', []) // agents of an earlier process are gone after a (re)start
+    await note($, 'hudBypass', false) // live bypass never outlives a (re)start: the user presses the button again
     await $.command.register({ name: 'personal-hud', description: 'ping-hud band: on, off, compact, mini, goals, agents, explain, motion [what to explain], or glyphs ascii|unicode', argumentHint: 'on|off|compact|mini|goals|agents|explain|motion [subject]|glyphs ascii|unicode' }).catch(() => undefined)
     await $.agent.register(FILM_AGENT_SPEC).catch(() => undefined) // not registered: a Motion press is refused, never widened
     await cmdNames($)
@@ -71,7 +73,7 @@ export const register: Register = on => {
     .catch(($, e, next) => ({ text: `ping-hud: /personal-hud ${String((e as any).args ?? '')} failed (${next.error.kind}${next.error.message ? `: ${next.error.message}` : ''})` }))
   // The session's name (Desktop sidebar or /rename) arrives only on the classic hook inputs.
   on('classic.SessionStart', async ($, e, next) => { await titleNote($, (e as any).session_title); return next(e) }).catch(($, e, next) => next(e))
-  on('classic.UserPromptSubmit', async ($, e, next) => { await titleNote($, (e as any).session_title); return next(e) }).catch(($, e, next) => next(e))
+  on('classic.UserPromptSubmit', async ($, e, next) => { await titleNote($, (e as any).session_title); await notePermMode($, e); return next(e) }).catch(($, e, next) => next(e))
   on('ui.render', { component: 'Pane', requestId: 'hud-goals' }, async ($, e) => goalsPane($, e))
   on('ui.render', { component: 'Pane', requestId: 'hud-agents' }, async ($, e) => agentsPane($, e))
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => explainPane($, e))
@@ -144,6 +146,23 @@ export const register: Register = on => {
     }
     return r
   })
+  // Live bypass (the Bypass button): after every rule and PreToolUse hook has decided,
+  // an ask becomes allow. A deny still refuses, and a call capped at ask by the organization still asks.
+  // The bypass floor (hud-floor.ts) denies disk wipes, deleting the repo or Claude itself, and the like, while
+  // bypass is on: the button's, or the session's own bypassPermissions mode. It applies in every repo.
+  on('tool.check', async ($, e, next) => {
+    const v = await next(e)
+    const live = !!(await mine($, 'hudBypass'))
+    if (live || (await mine($, 'hudPermMode')) === 'bypassPermissions') {
+      const roots = [String(await $.session.cwd().catch(() => '')), String(await $.session.root().catch(() => ''))]
+      const why = floorReason(e.tool, e.input, roots)
+      if (why) return { decision: 'deny', reason: `ping-hud bypass floor: ${why}. Run it yourself if you mean it.` }
+    }
+    if (v.decision !== 'ask' || e.ceiling || !live) return v
+    return { ...v, decision: 'allow', reason: 'ping-hud bypass is on for this session' }
+  }).catch(($, e, next) => next(e)) // a failed check leaves the engine's own verdict, so the call asks as usual
+  // The session's permission mode for the Bypass label, also noted on each prompt (classic.UserPromptSubmit above).
+  on('classic.PostToolUse', async ($, e, next) => { await notePermMode($, e); return next(e) }).catch(($, e, next) => next(e))
   // Goal commands (typed or run through a driver) bind the goal they name.
   on('command.run', async ($, e, next) => {
     await goalCommand($, String(e.command), String(e.args ?? ''))
@@ -164,7 +183,7 @@ export const register: Register = on => {
 // $.store is one file shared by every session on the machine, so per-session keys carry the
 // session id ('hudNow:<id>'). hudMode, hudGlyphs and hudStatusLine stay machine-wide.
 // 'hudGoal' is no longer written; it stays listed so pruneStore clears keys an older version left behind.
-const PER_SESSION = ['hud', 'hudNow', 'hudGoal', 'hudStatus', 'hudStep', 'hudToast', 'hudSeen', 'hudTasks', 'hudBg', 'hudGoals', 'hudGoalRows', 'hudPane', 'hudGoalPending', 'hudGoalToast', 'hudQueue', 'hudTimes', 'hudTitle', 'hudCmds', 'hudAgents', 'hudExplain', 'hudExplainCtx']
+const PER_SESSION = ['hud', 'hudNow', 'hudGoal', 'hudStatus', 'hudStep', 'hudToast', 'hudSeen', 'hudTasks', 'hudBg', 'hudGoals', 'hudGoalRows', 'hudPane', 'hudGoalPending', 'hudGoalToast', 'hudQueue', 'hudTimes', 'hudTitle', 'hudCmds', 'hudAgents', 'hudExplain', 'hudExplainCtx', 'hudBypass', 'hudPermMode']
 async function own($: any, key: string): Promise<string> { return `${key}:${await $.session.id()}` }
 async function mine($: any, key: string): Promise<any> { return $.store.get(await own($, key)) }
 
@@ -685,7 +704,10 @@ async function buttonsRow($: any, ui: any, desktop = false) {
   const names = ((await mine($, 'hudCmds').catch(() => undefined)) as string[] | undefined) ?? []
   const bound = (((await mine($, 'hudGoals').catch(() => undefined)) as Tracked[] | undefined) ?? []).map(t => t.path)
   const { Box, Text, Button } = ui
+  const bypassOn = !!(await mine($, 'hudBypass').catch(() => undefined))
+  const permMode = (await mine($, 'hudPermMode').catch(() => undefined)) as string | undefined
   const shown = ACTIONS.filter(a => (!a.cmd || resolveCmd(names, a.cmd, a.plugin)) && (a.needs !== 'goal' || planSlug(bound)))
+    .map(a => (a.key === 'bypass' ? { ...a, ...bypassLabel(bypassOn, permMode) } : a))
   const hide: Action = { key: 'hide', label: 'Hide', color: GRAY, cmd: null, args: () => '' }
   const go = (a: Action) => () => (a.key === 'hide' ? hideBand($) : press($, a, names))
   const bkey = (a: Action) => (a.key === 'hide' ? 'hide' : `btn${a.key}`)
@@ -732,6 +754,11 @@ function miniRow($: any, ui: any) {
 export async function press($: any, a: Action, names: string[]) {
   try {
     if (a.mode) { await pressHtsw($, a); return }
+    if (a.key === 'bypass') {
+      const on = !!(await mine($, 'hudBypass'))
+      if (!on && (await mine($, 'hudPermMode')) === 'bypassPermissions') { $.ui.toast('ping-hud: this session itself is in bypass mode. Press Shift+Tab to leave it.'); return }
+      await setBypass($, !on); return
+    }
     if (!a.cmd) { await (a.key === 'agents' ? openAgents($) : openGoals($)); return }
     const command = resolveCmd(names, a.cmd, a.plugin)
     if (!command) return
@@ -779,7 +806,7 @@ async function readStatusLine($: any) {
   try { await $.store.set('hudStatusLine', !!(await $.settings.read()).statusLine) } catch {}
 }
 
-const USAGE = 'Usage: /personal-hud on|off|compact|mini | /personal-hud goals | /personal-hud agents | /personal-hud explain | /personal-hud motion [subject] | /personal-hud glyphs ascii|unicode'
+const USAGE = 'Usage: /personal-hud on|off|compact|mini | /personal-hud goals | /personal-hud agents | /personal-hud explain | /personal-hud bypass [off] | /personal-hud motion [subject] | /personal-hud glyphs ascii|unicode'
 
 // The Goals pane's data, kept in hudPane: one parsed row per tracker (path = '<root>/<rel>'), whether hidden rows
 // show, and which row is waiting for its archive confirm.
@@ -944,6 +971,10 @@ export async function hudCommand($: any, args: string): Promise<{ text: string }
     await $.store.set('hudMode', a)
     return { text: `ping-hud: band ${a}` }
   }
+  // Only off here: turning bypass on is the Bypass button alone, a press the model cannot make.
+  if (a === 'bypass' && b === 'off') return { text: await setBypass($, false) }
+  if (a === 'bypass' && b === 'on') return { text: 'ping-hud: bypass turns on from the Bypass button only.' }
+  if (a === 'bypass' && !b) return { text: `ping-hud: bypass is ${(await mine($, 'hudBypass')) ? 'ON' : 'off'} for this session` }
   if (a === 'goals' && !b) return openGoals($)
   if (a === 'agents' && !b) return openAgents($)
   if (a === 'explain' && !b) return openExplain($)
@@ -952,6 +983,32 @@ export async function hudCommand($: any, args: string): Promise<{ text: string }
     return { text: b === 'ascii' ? 'ping-hud: glyphs ascii: terminal bars and edge use # . | (Desktop bars are solid boxes and do not change)' : 'ping-hud: glyphs unicode: terminal bars and edge use block characters (Desktop bars are solid boxes and do not change)' }
   }
   return { text: USAGE }
+}
+
+// Stores the session's own permission mode (Shift+Tab, --dangerously-skip-permissions) for the Bypass label.
+// The engine reports it on each prompt and tool result, so a Shift+Tab change shows after the next one.
+export async function notePermMode($: any, e: any) {
+  const m = typeof e?.permission_mode === 'string' ? e.permission_mode : undefined
+  if (!m || m === (await mine($, 'hudPermMode').catch(() => undefined))) return
+  await note($, 'hudPermMode', m)
+  try { $.ui.invalidate('ui.render') } catch {}
+}
+
+// Turns this session's live bypass on or off, says so in a toast and redraws the button; returns the message.
+export async function setBypass($: any, on: boolean): Promise<string> {
+  // Settings that forbid bypass mode (user, project or managed policy) forbid the live toggle too.
+  // { key } answers that key's value: the permissions object. Settings that cannot be read refuse too.
+  const perms = on ? await $.settings.read({ key: 'permissions' }).then((p: any) => p ?? {}, () => undefined) : {}
+  if (on && (!perms || perms.disableBypassPermissionsMode)) {
+    const text = perms ? 'ping-hud: bypass is off. Settings set permissions.disableBypassPermissionsMode.' : 'ping-hud: bypass is off. The settings could not be read.'
+    try { $.ui.toast(text) } catch {}
+    return text
+  }
+  await note($, 'hudBypass', on)
+  const text = on ?'ping-hud: bypass ON for this session. Asks are allowed; deny rules still refuse.' : 'ping-hud: bypass off. Permission asks are back.'
+  try { $.ui.toast(text) } catch {}
+  try { $.ui.invalidate('ui.render') } catch {}
+  return text
 }
 
 // The one RUNS OUT toast: fires on entering RUNS OUT, at most once per 5h window (keyed by resetsAt).

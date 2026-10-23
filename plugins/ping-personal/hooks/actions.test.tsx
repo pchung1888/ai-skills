@@ -1,17 +1,24 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { ACTIONS, HTSW_ACTIONS, resolveCmd, stamp, workDir, planSlug, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN, GRAY, PINK } from './hud-actions'
+import { ACTIONS, HTSW_ACTIONS, resolveCmd, stamp, workDir, planSlug, bypassLabel, RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN, GRAY, PINK } from './hud-actions'
 import { layout } from './hud-render'
+import { notePermMode, hudCommand, setBypass } from './register'
 
 const NOW = Date.parse('2026-10-09T16:00:00Z')
 const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 95, scroll: { offset: 0, bodyRows: 12 }, view: {} }
 const ALL = ['ping-personal:personal-handoff', 'ping-personal:personal-htsw', 'compact']
 
 // Buttons world: the listed commands are `names`; runs, toasts and pane opens are recorded.
-function bw(on: any, names: string[], store: Record<string, unknown> = {}, sid = 'sid-a') {
-  mock.store(on, { [`hudCmds:${sid}`]: names, ...store }) // as session.start stores it
+// Pass `map` to read the store back after the test (mock.store keeps a private copy).
+function bw(on: any, names: string[], store: Record<string, unknown> = {}, sid = 'sid-a', map?: Record<string, unknown>) {
+  if (map) {
+    Object.assign(map, { [`hudCmds:${sid}`]: names, ...store })
+    on('store.get', (_$: any, e: any) => ({ value: map[e.key] }))
+    on('store.set', (_$: any, e: any) => { map[e.key] = e.value; return { value: undefined } })
+  } else mock.store(on, { [`hudCmds:${sid}`]: names, ...store }) // as session.start stores it
   mock.clock(on, { now: NOW })
   on('session.cwd', () => ({ value: 'D:/x' }))
   on('session.id', () => ({ value: sid }))
+  on('settings.read', () => ({ value: {} })) // no settings forbid bypass
   const w = { runs: [] as { command: string; args: string }[], toasts: [] as string[] }
   on('command.list', () => ({ value: names.map(name => ({ name, description: '' })) }))
   on('command.run', (_$: any, e: any) => { w.runs.push({ command: e.command, args: e.args }); return { text: '' } })
@@ -25,7 +32,7 @@ test('ACTIONS: commands and args per button', () => {
   expect(by.handoff.cmd).toBe('personal-handoff')
   const c = (bound: string[]) => ({ bound, nowMs: NOW, root: 'R' })
   expect(by.handoff.args(c(['docs/a/g1-audit-tracker.md']))).toBe('--unattended docs/a/g1-audit-tracker.md')
-  expect(ACTIONS.map(a => a.label)).toEqual(['Handoff', 'Plan', 'Next', 'Agents', 'Goals']) // the Action row (Hide is added when drawn)
+  expect(ACTIONS.map(a => a.label)).toEqual(['Handoff', 'Plan', 'Next', 'Agents', 'Goals', 'Bypass']) // the Action row (Hide is added when drawn)
   expect(by.next.cmd).toBe('personal-next') // DEC-10: press only, the skill asks with clickable choices
   expect(by.next.args(c([]))).toBe('now')
   expect(by.plan.color).toBe(PURPLE)
@@ -194,4 +201,112 @@ test('Session row: name first, labels grey and values white; reset label grey, i
   expect(model.find(x => x.t === ' reset ')).toMatchObject({ d: true })
   expect(model.find(x => x.t === '20m')?.d).toBeFalsy()
   expect(model.find(x => x.t === '  5h')).toMatchObject({ d: true })
+})
+
+// Bypass (live toggle): the button flips this session's hudBypass; tool.check then turns ask into allow.
+test('Bypass button: off by default, press turns it on (red label, toast), press again turns it off', async ($, on) => {
+  const map: Record<string, unknown> = {}
+  const w = bw(on, ALL, {}, 'sid-a', map)
+  const ui = await $.ui.mount({ plugin: 'ping-personal', surface: 'terminal', component: 'AbovePrompt', props })
+  expect(JSON.stringify(await ui.find({ key: 'btnbypass' }))).toContain('Bypass off')
+  await ui.press({ key: 'btnbypass' })
+  expect(map['hudBypass:sid-a']).toBe(true)
+  expect(JSON.stringify(await ui.find({ key: 'btnbypass' }))).toContain(RED) // red 'Bypass ON' label
+  expect(w.toasts.some(t => t.includes('bypass ON'))).toBe(true)
+  expect(w.runs).toEqual([]) // runs no command
+  await ui.press({ key: 'btnbypass' })
+  expect(map['hudBypass:sid-a']).toBe(false)
+  expect(JSON.stringify(await ui.find({ key: 'btnbypass' }))).toContain('Bypass off')
+  await ui.unmount()
+  expect(bypassLabel(true)).toEqual({ label: 'Bypass ON', color: RED })
+})
+
+test('bypass floor in tool.check: a disk wipe is denied under the button or session bypass, even when core allows', async ($, on) => {
+  const map: Record<string, unknown> = {}
+  bw(on, ALL, { 'hudBypass:sid-a': true }, 'sid-a', map)
+  on('tool.check', () => ({ decision: 'allow' }))
+  const wipe = { tool: 'PowerShell', input: { command: ['Format-Volume', '-DriveLetter', 'D'].join(' ') } }
+  const r: any = await $.tool.check(wipe as any)
+  expect(r.decision).toBe('deny')
+  expect(r.reason).toContain('bypass floor')
+  map['hudBypass:sid-a'] = false
+  map['hudPermMode:sid-a'] = 'bypassPermissions' // started with --dangerously-skip-permissions
+  expect(((await $.tool.check(wipe as any)) as any).decision).toBe('deny')
+  map['hudPermMode:sid-a'] = 'auto' // no bypass: the floor stays out of the way
+  expect(((await $.tool.check(wipe as any)) as any).decision).toBe('allow')
+  expect(((await $.tool.check({ tool: 'Bash', input: { command: 'ls' } } as any)) as any).decision).toBe('allow')
+})
+
+test('Bypass label names the real session mode; red whenever asks are skipped', () => {
+  expect(bypassLabel(false, 'auto')).toEqual({ label: 'Bypass off (auto)', color: GRAY })
+  expect(bypassLabel(false, 'plan').label).toBe('Bypass off (plan)')
+  expect(bypassLabel(false, 'bypassPermissions')).toEqual({ label: 'Bypass ON (session)', color: RED })
+  expect(bypassLabel(true, 'auto')).toEqual({ label: 'Bypass ON', color: RED }) // the button wins over the mode
+  expect(bypassLabel(false)).toEqual({ label: 'Bypass off', color: GRAY }) // mode not reported yet
+})
+
+test('Bypass press in a session started in bypass: no toggle, a toast says Shift+Tab', async ($, on) => {
+  const map: Record<string, unknown> = {}
+  const w = bw(on, ALL, { 'hudPermMode:sid-a': 'bypassPermissions' }, 'sid-a', map)
+  const ui = await $.ui.mount({ plugin: 'ping-personal', surface: 'terminal', component: 'AbovePrompt', props })
+  expect(JSON.stringify(await ui.find({ key: 'btnbypass' }))).toContain('Bypass ON (session)')
+  await ui.press({ key: 'btnbypass' })
+  expect(map['hudBypass:sid-a']).toBeUndefined()
+  expect(w.toasts.some(t => t.includes('Shift+Tab'))).toBe(true)
+  await ui.unmount()
+})
+
+test('tool.check under bypass: ask becomes allow; deny and bypass off are left alone', async ($, on) => {
+  const map: Record<string, unknown> = {}
+  bw(on, ALL, { 'hudBypass:sid-a': true }, 'sid-a', map)
+  let core: any = { decision: 'ask', reason: 'hook asked' }
+  on('tool.check', () => core)
+  const check = (extra: any = {}) => $.tool.check({ tool: 'Bash', input: { command: 'ls' }, ...extra } as any) as any
+  expect((await check()).decision).toBe('allow')
+  core = { decision: 'deny', reason: 'deny rule' }
+  expect((await check()).decision).toBe('deny') // deny rules still refuse
+  core = { decision: 'ask' }
+  expect((await check({ ceiling: 'ask' })).decision).toBe('ask') // the organization capped this tool at ask
+  map['hudBypass:sid-a'] = false
+  expect((await check()).decision).toBe('ask')
+})
+
+test('notePermMode stores the mode the engine reports, per session; a missing mode changes nothing', async () => {
+  const map: Record<string, unknown> = {}
+  const $ = { session: { id: async () => 'sid-a' }, store: { get: async (k: string) => map[k], set: async (k: string, v: unknown) => { map[k] = v } }, ui: { invalidate: () => {} } }
+  await notePermMode($, { permission_mode: 'auto' })
+  expect(map['hudPermMode:sid-a']).toBe('auto')
+  await notePermMode($, {})
+  expect(map['hudPermMode:sid-a']).toBe('auto')
+  await notePermMode($, { permission_mode: 'bypassPermissions' })
+  expect(map['hudPermMode:sid-a']).toBe('bypassPermissions')
+})
+
+// A store and settings over plain objects, for the exported helpers called directly.
+const fake = (map: Record<string, unknown>, perms?: unknown) => ({
+  session: { id: async () => 'sid-a' },
+  store: { get: async (k: string) => map[k], set: async (k: string, v: unknown) => { map[k] = v } },
+  settings: { read: async () => perms },
+  ui: { invalidate: () => {}, toast: () => {} },
+})
+
+test('/personal-hud bypass on is refused (button only); bypass off still works', async () => {
+  const map: Record<string, unknown> = { 'hudBypass:sid-a': true }
+  expect((await hudCommand(fake(map), 'bypass on')).text).toContain('Bypass button only')
+  expect(map['hudBypass:sid-a']).toBe(true) // the command changed nothing
+  await hudCommand(fake(map), 'bypass off')
+  expect(map['hudBypass:sid-a']).toBe(false)
+})
+
+test('setBypass refuses to turn on when settings set disableBypassPermissionsMode; off always works', async () => {
+  const map: Record<string, unknown> = {}
+  expect(await setBypass(fake(map, { disableBypassPermissionsMode: 'disable' }), true)).toContain('disableBypassPermissionsMode')
+  expect(map['hudBypass:sid-a']).toBeUndefined()
+  const unreadable = { ...fake(map), settings: { read: async () => { throw new Error('no settings') } } }
+  expect(await setBypass(unreadable, true)).toContain('could not be read') // fails closed
+  expect(map['hudBypass:sid-a']).toBeUndefined()
+  await setBypass(fake(map), true) // no permissions key at all: allowed
+  expect(map['hudBypass:sid-a']).toBe(true)
+  await setBypass(fake(map, { disableBypassPermissionsMode: 'disable' }), false)
+  expect(map['hudBypass:sid-a']).toBe(false)
 })

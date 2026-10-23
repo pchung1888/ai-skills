@@ -1,6 +1,6 @@
 ---
 name: wait-what
-description: Alias of personal-wait-what: re-pitch the last message plainly. Kept so /wait-what reaches ping-personal's version.
+description: Alias of personal-wait-what, to re-pitch the last message plainly. Kept so /wait-what reaches ping-personal's version.
 disable-model-invocation: true
 ---
 
