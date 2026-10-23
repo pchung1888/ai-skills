@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: Alias of personal-grill-me: stress-test a plan in rounds of questions. Kept so /grill-me, and skills that call grill-me, reach ping-personal's version.
+description: Alias of personal-grill-me, to stress-test a plan in rounds of questions. Kept so /grill-me, and skills that call grill-me, reach ping-personal's version.
 disable-model-invocation: false
 ---
 

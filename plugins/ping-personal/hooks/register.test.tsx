@@ -377,14 +377,15 @@ test('a subagent turn.complete drops its hudBg entry and leaves the main turn st
   expect((map['hud:sid-a'] as any).turnActive).toBe(true)
 })
 
-test('session.start clears hudBg left by a previous process', async ($, on) => {
-  const map: Record<string, unknown> = { 'hudBg:sid-a': [{ id: 'a1', act: 'Agent (scan)', tMs: 1 }] }
+test('session.start clears hudBg and live bypass left by a previous process', async ($, on) => {
+  const map: Record<string, unknown> = { 'hudBg:sid-a': [{ id: 'a1', act: 'Agent (scan)', tMs: 1 }], 'hudBypass:sid-a': true }
   memStore(on, map)
   mock.clock(on, { now: NOW })
   on('session.id', () => ({ value: 'sid-a' }))
   on('session.start', () => ({ cwd: 'D:/x' }) as any)
   await $.session.start({ cwd: 'D:/x' } as any)
   expect(map['hudBg:sid-a']).toEqual([])
+  expect(map['hudBypass:sid-a']).toBe(false) // a restart never keeps bypass on
 })
 
 test('a subagent turn.complete between turns settles Now to idle; the last of two leaves waiting', async ($, on) => {

@@ -2,7 +2,7 @@
 import { slugOfPath } from './hud-goals'
 
 // Label colors: hex so the four buttons stay distinct on every theme (DEC-5).
-export const GREEN = '#3fb950', BLUE = '#58a6ff', YELLOW = '#d29922', ORANGE = '#f0883e', PURPLE = '#bc8cff', CYAN = '#39c5cf', GRAY = '#8b949e', PINK = '#f778ba'
+export const GREEN = '#3fb950', BLUE = '#58a6ff', YELLOW = '#d29922', ORANGE = '#f0883e', PURPLE = '#bc8cff', CYAN = '#39c5cf', GRAY = '#8b949e', PINK = '#f778ba', RED = '#f85149'
 
 // What args sees: bound tracker paths of this session, the clock, and this plugin's folder ($.plugin.root).
 export type Ctx = { bound: string[]; nowMs: number; root: string }
@@ -22,7 +22,17 @@ export const ACTIONS: Action[] = [
   { key: 'next', label: 'Next', color: GREEN, cmd: 'personal-next', args: () => 'now' },
   { key: 'agents', label: 'Agents', color: PINK, cmd: null, args: () => '' },
   { key: 'goals', label: 'Goals', color: CYAN, cmd: null, args: () => '' },
+  // Bypass: toggles this session's live bypass (every ask becomes allow; denies still refuse). Label shows the state.
+  { key: 'bypass', label: 'Bypass', color: GRAY, cmd: null, args: () => '' },
 ]
+
+// The Bypass button's label and color: red whenever asks are skipped, by this button or by the session's own mode.
+// mode = the session's permission mode as the engine last reported it (auto, default, plan, bypassPermissions, ...).
+export function bypassLabel(on: boolean, mode?: string): { label: string; color: string } {
+  if (on) return { label: 'Bypass ON', color: RED }
+  if (mode === 'bypassPermissions') return { label: 'Bypass ON (session)', color: RED }
+  return { label: mode ? `Bypass off (${mode})` : 'Bypass off', color: GRAY }
+}
 
 // The band's HTSW row: the Explanation pane, the four explanation levels and Motion. Each level answers in the pane,
 // from the last question and reply only (quick mode), so nothing is added to the main chat.
