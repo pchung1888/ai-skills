@@ -16,6 +16,10 @@ Skill version: <ping-personal version from the plugin cache path>   Coordinator 
 ## Numbers
 <paste the table printed by scripts/retro_metrics.py>
 
+## Scorecard
+<paste the output of scripts/scorecard.py grade: score (coverage), safety flag, each dimension grade;
+then the lowest two dimensions and the owner-feedback rows behind them>
+
 ## Did it match what the owner wanted
 - Owner's score, 1 (missed) to 5 (exactly): <n, or "not asked yet">
 - What surprised the owner: <owner's words, or "not asked yet">
@@ -29,6 +33,12 @@ Skill version: <ping-personal version from the plugin cache path>   Coordinator 
 One row per row of log/skill-friction.md, plus anything the coordinator noticed afterwards.
 | When | Skill step | Problem | Workaround used | Suggested change to the skill |
 |---|---|---|---|---|
+
+## Memory rule vs skill step
+One row per saved owner rule (feedback memory) that disagreed with a step of this skill, from pre-flight
+check 15 and log/skill-friction.md. Write "none" when there was none.
+| Memory rule | Skill step | Which won | Ruled by the owner at the door? |
+|---|---|---|---|
 
 ## Decisions worth remembering
 From log/decisions.md and the critic-gate rows in STATUS.md; judge each with hindsight.

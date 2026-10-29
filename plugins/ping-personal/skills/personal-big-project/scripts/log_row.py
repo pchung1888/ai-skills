@@ -11,15 +11,31 @@ no side effect goes past its cap.
          when the kind has no cap in inputs.json "caps" or the new total would pass the cap. --key names
          one real action: a retry of the same action passes the same key and is not counted twice.
          A retry writes a count-0 row and exits 3 (ALREADY LOGGED); past MAX_REPLAYS retries it is refused.
+         --kind push also needs --ref <branch> when inputs.json "protectedBranches" is not empty, and is
+         refused when that branch is protected (the target branch of an open review request: pushing
+         to it can merge the request). Example: --ref topic/123-fixes
+  python log_row.py status   --state-dir D [--note "stage 2 running"]
+      -> one row in log/status-log.md each time STATUS.md's Now block is rewritten (scorecard: statusGap).
   python log_row.py baseline --state-dir D <repo-relative path> [...]   |   --none
       -> "<sha256>  <path>" lines in baseline-hashes.txt (repo root = inputs.json "repoPath", read from the
          state folder when relative). Hash only files that must not change during the run. --none writes
          "none" for a run with nothing to baseline.
-Exit 0 = written, 2 = refused, 3 = already logged (a retry of a counted action).
+  python log_row.py send     --state-dir D --kind mail --count 2 --note "status mails" --key T5-1 [--retry] -- <command ...>
+      -> the effect row first, then runs the command and exits with its exit code. Refused (exit 2) means the
+         command never ran. A counted key exits 3 without running, unless --retry says the earlier try did
+         not happen. Example command: pwsh -NoProfile -File tests/send-status.ps1
+  python log_row.py usage    --state-dir D
+      -> one line per capped kind: "OK|WARN|FULL <kind> <used> of <cap>"; WARN from 80% of the cap.
+  python log_row.py raise-cap --state-dir D --kind mail --to 400 --note "<the owner's words>"
+      -> the owner's answer to a cap question: sets inputs.json caps.<kind> and adds a log/decisions.md row.
+         Refused below what is already used.
+Exit 0 = written, 2 = refused, 3 = already logged (a retry of a counted action); send exits with its command's code.
 """
 import argparse
 import hashlib
+import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 
@@ -27,8 +43,11 @@ import statefiles
 
 DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")  # fixed English names: the locale never changes them
 MAX_REPLAYS = 2  # retries allowed per --key; more means the action is repeating, not retrying
+WARN_PCT = 80  # usage prints WARN from this share of a cap, so the owner hears before the cap stops a task
 HEADERS = {"run-log.md": "| When | Task | What happened | Evidence |",
-           "side-effects.md": "| When | Kind | Count | Note |"}
+           "side-effects.md": "| When | Kind | Count | Note |",
+           "decisions.md": "| When | Decision | Options | Why | Cost |",
+           "status-log.md": "| When | What |"}
 
 
 def refuse(msg):
@@ -62,8 +81,24 @@ def inputs_of(state):
     return inputs
 
 
-def effect(state, kind, count, note, key):
-    caps = inputs_of(state).get("caps")
+def check_push(inputs, ref):
+    protected = [str(b).strip() for b in inputs.get("protectedBranches") or [] if str(b).strip()]
+    if not protected:
+        return
+    if not ref:
+        refuse(f"push needs --ref <branch>: protected branches are {', '.join(protected)}")
+    branch = ref.strip()
+    if branch.startswith("refs/heads/"):
+        branch = branch[len("refs/heads/"):]
+    if branch in protected:
+        refuse(f"{branch} is protected (the target of an open review request); do not push to it")
+
+
+def effect(state, kind, count, note, key, ref=""):
+    inputs = inputs_of(state)
+    if kind == "push":
+        check_push(inputs, ref)
+    caps = inputs.get("caps")
     caps = caps if isinstance(caps, dict) else {}
     if kind not in caps:
         refuse(f"kind '{kind}' has no cap in inputs.json; allowed kinds: {', '.join(sorted(caps)) or 'none'}")
@@ -78,12 +113,56 @@ def effect(state, kind, count, note, key):
             refuse(f"key {key} already retried {replays} times; do not act")
         append_row(path, [now_text(), kind, 0, f"[{key}] replay: {note}"])
         print(f"ALREADY LOGGED: {key} (retry {replays + 1} of {MAX_REPLAYS}, not counted)")
-        sys.exit(3)
-    used = sum(int(r[2]) for r in rows if len(r) > 2 and r[1] == kind and r[2].isdigit())
+        return 3
+    used = used_of(rows, kind)
     if used + count > caps[kind]:
-        refuse(f"{kind}: {used} used + {count} would pass the cap {caps[kind]}; do not act")
+        refuse(f"CAP REACHED: {kind}: {used} used + {count} would pass the cap {caps[kind]}; do not act. "
+               "Stop this task and report it: the coordinator asks the owner by phone to raise the cap or stop")
     append_row(path, [now_text(), kind, count, (f"[{key}] " if key else "") + note])
     print(f"LOGGED {kind} {used + count} of {caps[kind]}")
+    return 0
+
+
+def used_of(rows, kind):
+    return sum(int(r[2]) for r in rows if len(r) > 2 and r[1] == kind and r[2].isdigit())
+
+
+def send(state, kind, count, note, key, ref, retry, command):
+    """Log first, then run the sending command, so a send can never happen before its row exists."""
+    if not command:
+        refuse("send needs the sending command after --. Example: -- pwsh -NoProfile -File send-test.ps1")
+    if effect(state, kind, count, note, key, ref) == 3 and not retry:
+        sys.exit(3)  # counted before; --retry only when the earlier try did not happen
+    sys.stdout.flush()
+    sys.exit(subprocess.run(command).returncode)
+
+
+def usage(state):
+    """One line per capped kind: OK, WARN (80% or more of the cap) or FULL. The tick sends WARN and FULL to the phone."""
+    caps = inputs_of(state).get("caps") or {}
+    rows = statefiles.table_rows(os.path.join(state, "log", "side-effects.md"))
+    for kind, cap in sorted(caps.items()):
+        used = used_of(rows, kind)
+        word = "FULL" if used >= cap else "WARN" if used * 100 >= cap * WARN_PCT else "OK"
+        print(f"{word} {kind} {used} of {cap}")
+
+
+def raise_cap(state, kind, to, note):
+    """The owner's answer to a cap question: set the new cap in inputs.json and log it as a decision."""
+    if to is None or not note:
+        refuse("raise-cap needs --kind, --to and --note (the owner's words)")
+    inputs = inputs_of(state)
+    caps = inputs.get("caps") if isinstance(inputs.get("caps"), dict) else {}
+    used = used_of(statefiles.table_rows(os.path.join(state, "log", "side-effects.md")), kind)
+    if to < used:
+        refuse(f"{kind}: new cap {to} is below the {used} already used")
+    old = caps.get(kind, 0)
+    inputs["caps"] = dict(caps, **{kind: to})
+    with open(os.path.join(state, "inputs.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(inputs, f, indent=2)
+    append_row(os.path.join(state, "log", "decisions.md"),
+               [now_text(), f"{kind} cap {old} -> {to}", "raise the cap or stop", note, f"{used} used so far"])
+    print(f"RAISED {kind} cap {old} -> {to}")
 
 
 def baseline(state, paths, none):
@@ -109,7 +188,7 @@ def baseline(state, paths, none):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("what", choices=["run", "effect", "baseline"])
+    ap.add_argument("what", choices=["run", "effect", "send", "usage", "raise-cap", "status", "baseline"])
     ap.add_argument("paths", nargs="*", help="baseline only: repo-relative files. Example: reports/expected.csv")
     ap.add_argument("--state-dir", required=True, help="state folder. Example: docs/proj-123/autopilot")
     ap.add_argument("--task", help="run: task id, or 'stage' for the stage check. Example: T3")
@@ -120,8 +199,13 @@ def main():
     ap.add_argument("--count", type=int, default=1, help="effect: how many. Example: 1")
     ap.add_argument("--note", default="", help="effect: what and to whom. Example: test statement to the owner")
     ap.add_argument("--key", default="", help="effect: one id per real action, reused by a retry. Example: send-T3-1")
+    ap.add_argument("--ref", default="", help="effect push: the branch pushed to. Example: topic/123-fixes")
+    ap.add_argument("--retry", action="store_true", help="send: run again although the key was counted; only when the earlier try did not happen")
+    ap.add_argument("--to", type=int, help="raise-cap: the new cap. Example: 400")
     ap.add_argument("--none", action="store_true", help="baseline: nothing to baseline in this run")
-    a = ap.parse_args()
+    argv = sys.argv[1:]
+    command = argv[argv.index("--") + 1:] if "--" in argv else []
+    a = ap.parse_args(argv[:argv.index("--")] if "--" in argv else argv)
     if a.what == "run":
         if a.what_file:
             try:
@@ -134,7 +218,19 @@ def main():
     elif a.what == "effect":
         if not a.kind:
             refuse("effect needs --kind")
-        effect(a.state_dir, a.kind, a.count, a.note, a.key)
+        sys.exit(effect(a.state_dir, a.kind, a.count, a.note, a.key, a.ref))
+    elif a.what == "send":
+        if not a.kind:
+            refuse("send needs --kind")
+        send(a.state_dir, a.kind, a.count, a.note, a.key, a.ref, a.retry, command)
+    elif a.what == "status":
+        append_row(os.path.join(a.state_dir, "log", "status-log.md"), [now_text(), a.note or "Now block rewritten"])
+    elif a.what == "usage":
+        usage(a.state_dir)
+    elif a.what == "raise-cap":
+        if not a.kind:
+            refuse("raise-cap needs --kind")
+        raise_cap(a.state_dir, a.kind, a.to, a.note)
     else:
         baseline(a.state_dir, a.paths, a.none)
 

@@ -55,6 +55,17 @@ $Invariants = @(
     'real downstream chain',                 # the done command proves the change end to end
     'scripts/log_row.py',                    # log rows and side effects go through one script
     'Report shape'                           # the user picks the report interval and shape at start
+    "STATUS.md is the owner's one status file",   # one status file; no separate progress file
+    'never a digest',                        # chat gets the full report text
+    'protectedBranches',                     # never push the target of an open review request
+    'feedback memories count as explicit asks', # saved owner rules beat skill steps
+    'reply order is',                        # review replies only after fixes are done and proven
+    'log_row.py send',                       # every send logs first, then runs
+    '"kind": "review"',                      # read-only critics and judges run inside a stage
+    'log/owner-feedback.md',                 # every owner message tagged once; drives the scorecard
+    'the closing ask',                       # the owner score is asked before close, not left to retro mode
+    'scorecard.py trend',                    # improve mode starts from the scored trend
+    'is improved in THAT skill'              # complaints route to the skill at fault
 )
 function Get-Missing([string]$text) {
     @($Invariants | Where-Object { -not $text.Contains($_) })
@@ -82,10 +93,11 @@ $tests = @(
         Run = {
             $text = (Get-ChildItem $SkillDir -Recurse -File -Include *.md, *.js, *.py, *.ps1 |
                 Where-Object { $_.FullName -notmatch '\\(evals|fixtures)\\' } | Get-Content -Raw) -join "`n"
-            $paths = [regex]::Matches($text, '(?<![\w/])(references|scripts)/[\w.-]+\.(md|js|py|ps1)') |
+            $paths = [regex]::Matches($text, '(?<![\w/])(references|scripts)/[\w.-]+\.(md|json|js|py|ps1)\b') |
                 ForEach-Object Value | Sort-Object -Unique
             $gone = @($paths | Where-Object { -not (Test-Path (Join-Path $SkillDir $_)) })
-            $agents = [regex]::Matches($text, 'ping-personal:([a-z-]+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+            # ping-personal:personal-<x> names a skill, not an agent, so it is skipped here.
+            $agents = [regex]::Matches($text, 'ping-personal:(?!personal-)([a-z-]+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
             $gone += @($agents | Where-Object { -not (Test-Path (Join-Path $Agents "$_.md")) } | ForEach-Object { "agent $_" })
             if ($gone) { throw "named but missing: $($gone -join ', ')" }
             if ($paths.Count -lt 5) { throw "only $($paths.Count) file references found; the extractor is broken" }
@@ -108,7 +120,7 @@ $tests = @(
     @{
         Name = 'python self-tests: run_state transitions, check_run fail-closed, retro_metrics parsing'
         Run = {
-            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'), @('test_log_row.py', 'LOG ROW TEST PASS'))) {
+            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'), @('test_log_row.py', 'LOG ROW TEST PASS'), @('test_scorecard.py', 'SCORECARD TEST PASS'))) {
                 $out = (python (Join-Path $PSScriptRoot $t[0]) 2>&1) -join "`n"
                 if ($LASTEXITCODE -ne 0 -or $out -notmatch [regex]::Escape($t[1])) { throw "$($t[0]):`n$out" }
             }
@@ -156,7 +168,7 @@ $tests = @(
             $want = @('| Stages (workflows) | 5 |', '| Workflow agents | 57 |', '| Workflow tokens | 8,888,029 |',
                 '15.5 h', '| Ticks (quota-log rows) / pauses | 3 / 1 |', '| 5h window peak | 91% |',
                 '| Skill friction rows (workarounds) | 1 |', '| Goal-brief corrections at the door | 2 |',
-                '| Owner messages while unattended | 1 |', '| Questions asked while unattended | 0 |')
+                '| Owner messages while unattended | 2 |', '| Questions asked while unattended | 0 |')
             $miss = @($want | Where-Object { -not $out.Contains($_) })
             if ($miss) { throw "retro metrics missing: $($miss -join ' ; ')`n$out" }
             # Calibration: one AskUserQuestion after unattendedSince must move the count to 1.

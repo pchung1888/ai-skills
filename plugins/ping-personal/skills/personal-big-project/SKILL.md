@@ -20,6 +20,7 @@ its own.
 1. **Ask only while the user is present.** Before they leave, ask everything (start step 2). After they
    leaves, never ask: the coordinator decides, or a critic gate votes; the choice is built to be easy
    to reverse, logged, and named in the next report. A question nobody answers freezes the run.
+   The one exception is a side-effect cap (rule 4): the tick asks by phone and never waits.
 2. **Pass comes only from the done command's output,** run by a verifier agent that did not do the
    work, never from a worker saying "passed". NOT-RUN is never PASS.
 3. **Baselines are captured before any change and never re-taken from new code's output.**
@@ -27,10 +28,16 @@ its own.
    The stage check also runs `python <critic-gate>/lib/floor_guard.py --base <baseCommit>`
    (the personal-critic-gate floor-guard reference); a hit is a regression unless a
    `log/decisions.md` row signs it off.
-4. **Side effects have hard caps** (inputs.json `caps`: mail, pushes, deploys, API calls). Before acting,
-   run `scripts/log_row.py effect`; it refuses a kind with no cap and a total past the cap. Never push a tag. Push only to the target branch.
-5. **The user's explicit asks are inputs, not proposals.** Offer a cheaper option once; the default
-   stays what they asked for.
+4. **Side effects have hard caps** (inputs.json `caps`: mail, pushes, deploys, API calls). Every sending
+   command runs through `scripts/log_row.py send ... -- <command>`, which logs the count first and refuses
+   past the cap, so no send happens before its row exists (`effect` alone is for actions with no command).
+   At the cap only that task stops; the tick asks the owner by phone to raise the cap or stop, and the rest of
+   the run keeps going. Never push a tag. Push only to the target branch,
+   never to a branch in inputs.json `protectedBranches` (the target of an open review request, pre-flight check 14).
+5. **The owner's explicit asks are inputs, not proposals.** Offer a cheaper option once; the default
+   stays what they asked for. Their saved feedback memories count as explicit asks: when one conflicts
+   with a step of this skill, the memory wins and the conflict goes into `log/skill-friction.md`.
+   Pre-flight check 15 lists those conflicts before they leave.
 6. **Every timestamp comes from a real clock.** Owner-facing text uses `Day MM-DD HH:MM` local.
    Log rows come from `scripts/log_row.py`, which reads the clock; an agent with no shell gets the
    time in its brief.
@@ -43,7 +50,9 @@ its own.
    reporter; critic gate seats run one after another. One exception: the final judge review runs
    all five seats in one message, because no stage runs then. Exclusive resources (a
    database, IIS, one browser) are declared per task and never shared inside a parallel group.
-9. **State lives in files.** STATUS.md and run-state.json are enough to resume after a crash, a
+9. **State lives in files.** Each rewrite of STATUS.md's Now block is followed by
+   `scripts/log_row.py status --note "<what changed>"`, so the scorecard can show the file stayed current.
+   STATUS.md and run-state.json are enough to resume after a crash, a
    compaction or a new session. Only `run_state.py` writes run-state.json.
 10. **Log every decision and every workaround.** Each decision the coordinator makes that a script
     did not dictate goes into `log/decisions.md` (`| Day MM-DD HH:MM | decision | options | why | cost |`);
@@ -51,6 +60,14 @@ its own.
     `log/skill-friction.md` (`| Day MM-DD HH:MM | skill step | what did not fit | what I did instead |`).
     The retro and the next version of the skill learn from these rows; an unlogged one is lost.
 11. ASCII only in every file. Agent findings carry EXTRACTED / INFERRED / UNKNOWN labels.
+12. **Every owner message gets one row in `log/owner-feedback.md`** as it arrives:
+    `| Day MM-DD HH:MM | class | skill | missed what | like | quote |`. Class is exactly one of setup,
+    steer, fix (they caught a miss), complaint (about a message or report), premature (the run said
+    done while work remained), praise, answer, score (the like cell holds 1-5). Skill names the skill
+    at fault: big-project, copilot-talk, critic-judge, reporting, or other:<name>. The quote stays on
+    one line and never leaves the repo. check_run's owner-feedback check counts the rows against the
+    transcript, so a skipped complaint fails the run. These rows drive the run's scorecard
+    ([references/scorecard.json](references/scorecard.json)).
 
 ## The shape (fixed parts; the coordinator decides inside them)
 
@@ -67,8 +84,11 @@ The tick dies if Claude exits. Pre-flight warns the user, and STATUS.md always h
 ## Which agent for which job
 
 The coordinator picks per task and may use any installed agent or built-in type that fits better;
-`generate.py` refuses an agent that does not exist, a task given to an agent without the Write tool
-(ms-mario is a critic seat only), and a committing task given to an agent without a shell.
+`generate.py` refuses an agent that does not exist, a task given to an agent without the Write tool,
+and a committing task given to an agent without a shell. A read-only agent (ms-mario, a judge seat,
+Explore) runs inside a stage as a review step (`"kind": "review"` in the stage spec): it returns
+findings, `run_state.py` saves them to `reviews/<id>.md` and counts the open HIGH ones, so a judge
+review before the plan or between stages is part of a stage, resumable and in the task table.
 
 | Job | Default agent | Model / effort |
 |---|---|---|
@@ -112,7 +132,7 @@ final review and check_run all diff against them. Done when each row has a value
 | Away window | Fri 19:00 -> Mon 08:00 |
 | Phone channel | PushNotification on, Slack channel name or none |
 | Scope fences | files never to touch; what counts as shipped code; protected branches |
-| Side-effect caps | {"mail": 300, "push": 20}; push target branch; no deploys |
+| Side-effect caps | {"mail": 300, "push": 20}; push target branch; no deploys. Give headroom: about 2x the plan's expected count, mail at least 300, so a retry or a re-run does not hit the cap |
 | Resources | exclusive resources; disks to watch with minimum free GB |
 | Budget | weekly % at which to stop starting new stages |
 | Report shape | `report` in inputs.json: every 15 or 30 minutes; plain (12 lines) or copilot (narrated, for a 3-4 h weekday run they follow on the phone); full task list yes or no; task ids yes or no |
@@ -126,7 +146,9 @@ stop when no decision is left that a worker would have to guess. Call the Skill 
 when a branch needs deeper questioning. Cover what done looks like to them on Monday, what is out of scope, and what would
 disappoint them even if every test passes. Always ask which real downstream chain proves the change
 works (example: a release feeds the next system, which feeds retention). The done command runs
-that chain end to end, or the brief says why it cannot; unit checks alone missed one in a past run. Then write `GOAL-BRIEF.md` in the state folder: the goal
+that chain end to end, or the brief says why it cannot; unit checks alone missed one in a past run. When the goal answers review comments, the reply order is
+fixed, not asked: no reply goes out until every fix is done, checked and pushed (the REPLY ORDER rule in
+the STATUS.md template). Ask only whether they want a different order. Then write `GOAL-BRIEF.md` in the state folder: the goal
 in their words, done-on-Monday, out of scope, disappointments to avoid, every decision with its
 answer, and the line `Corrections before approval: <n>`. Show it and ask them to approve or correct
 it; each correction round adds one to n. Copy the decisions verbatim into STATUS.md "Owner
@@ -134,7 +156,8 @@ decisions". Done when the user approves the brief.
 
 **Step 3. State folder.** Create STATUS.md from the template, `plan.md`, `tasks.csv` (header
 `id,stage,what,estimate,added`), `reports/`, and `log/` with `run-log.md`, `quota-log.md`, `side-effects.md`,
-`skill-friction.md`, `decisions.md` (header rows as in rule 10 and the template), then run
+`skill-friction.md`, `decisions.md`, `owner-feedback.md`, `status-log.md` (header rows as in rules 10
+and 12 and the template), then run
 `python ${CLAUDE_SKILL_DIR}/scripts/run_state.py init --state-dir <state-dir> --stages s1-plan,...`.
 Done when every file exists and is writable.
 
@@ -216,8 +239,12 @@ The next action is CHECK: run
 `python ${CLAUDE_SKILL_DIR}/scripts/check_run.py --state-dir <state-dir> --transcript <this session's .jsonl>`
 (every required state file present, inputs valid, real-clock log times, plain reports, no table
 row lost, side effects within caps, baselines untouched, verdict matching the outcomes, no question
-asked while away) and record `checked pass` or `checked fail <names>`. A failed check is never
-hidden: the verdict gains "RUN CHECK FAIL (<names>)". Then CLOSE: write RETRO.md (Feedback loop),
+asked while away, one owner-feedback row per owner message, an owner score) and record `checked pass`
+or `checked fail <names>`. A failed check is never hidden: the verdict gains "RUN CHECK FAIL (<names>)".
+Before CLOSE, the closing ask: in chat and by phone, ask the owner for a 1-5 score, what they had to catch
+themselves, whether all the work they wanted is done, and show them the owner-feedback tags to correct.
+Their answer is a score row (rule 12). If they are away, close as "awaiting owner score"; the owner-score
+check stays FAIL until retro mode records it. Then CLOSE: write RETRO.md (Feedback loop),
 push one phone message and delete the tick, because later ticks would only repeat "done" and
 spend tokens.
 
@@ -244,14 +271,18 @@ keep running.
   not dispatch agents.
 - **stop `<state-dir>`:** TaskStop the running stage, `run_state.py record close owner-stop`, write
   OWNER-REPORT.md and RETRO.md, delete the tick.
-- **retro `<state-dir>`:** The user is back. Ask them two questions: how well the result matched what
-  they wanted (1 missed to 5 exactly), and what surprised them. Add both answers, verbatim, to RETRO.md
+- **retro `<state-dir>`:** The owner is back. If the closing ask got no score, ask it now (a score row,
+  rule 12), and ask what surprised them. Add both answers, verbatim, to RETRO.md
   under "Did it match what the owner wanted". When their surprise names something the skill missed,
-  add it as proposed change 1. Then copy RETRO.md again to the retro folder.
-- **improve:** run in the plugin repo. Read every file in `~/.claude/big-project-retros/`, group
-  the friction rows, decision rows and proposed changes by skill step, and rank them by how many runs
-  hit them and what they cost. Then use the skill-creator-plus skill in REFINE mode on this skill,
-  changing nothing until the user picks which changes to make.
+  add it as proposed change 1. Re-run the metrics with `--json` and the export (Feedback loop steps 2-3).
+- **improve:** run in the plugin repo. Start from
+  `python ${CLAUDE_SKILL_DIR}/scripts/scorecard.py trend --dir ~/.claude/big-project-retros`: the
+  owner scores over time, the largest gaps (weight x (5 - grade)) of the newest run, and owner
+  complaints by skill. Then read every retro in that folder, group the friction rows, decision rows
+  and proposed changes by the skill they name, and rank them by gap, by how many runs hit them and
+  what they cost. A group that names another skill (personal-copilot-talk, personal-critic-judge, ...)
+  is improved in THAT skill. Use the skill-creator-plus skill in REFINE mode on each named skill,
+  changing nothing until the owner picks which changes to make.
 
 ## Feedback loop (every run)
 
@@ -259,7 +290,10 @@ Each run is also a test of this skill, so each run leaves evidence for the next 
 
 1. During the run: rule 10's decision and friction rows, plus critic votes and steering rules in STATUS.md.
 2. At the closing actions: run `python ${CLAUDE_SKILL_DIR}/scripts/retro_metrics.py --state-dir
-   <state-dir> --transcript <this session's .jsonl>`. Agents rarely report their own friction, so
+   <state-dir> --transcript <this session's .jsonl> --json <state-dir>/metrics.json --goal-kind
+   "<kind of goal, no project names>" --skill-version <version>`, then
+   `scripts/scorecard.py grade --metrics <state-dir>/metrics.json` for the run's score, coverage and
+   safety flag; paste both into RETRO.md "Scorecard". Agents rarely report their own friction, so
    one fresh ping-personal:iris reads the transcripts in its "Transcript sample for the retro"
    list and reports the friction nobody logged. Then amanda drafts RETRO.md from
    [references/retro-template.md](references/retro-template.md) around the numbers, the two logs and
@@ -267,19 +301,25 @@ Each run is also a test of this skill, so each run leaves evidence for the next 
    read it. RETRO.md only proposes; the user picks what changes (improve mode), because an automated
    fixer chases false positives.
 3. Copy RETRO.md to `~/.claude/big-project-retros/<YYYY-MM-DD>-<goal-slug>.md`, outside every repo,
-   so retros from all projects collect in one place.
+   so retros from all projects collect in one place. Export the metrics with `scripts/scorecard.py
+   export --metrics <state-dir>/metrics.json --to ~/.claude/big-project-retros --name
+   <YYYY-MM-DD>-<goal-slug> --inputs <state-dir>/inputs.json`: it refuses any quote, any key outside
+   its allow-list and any match of inputs.json `scrubPatterns` (ticket ids, client and server names),
+   so only numbers and short tokens leave the repo.
 4. End OWNER-REPORT.md with one line: run `/personal-big-project retro <state-dir>` to rate this run.
 5. When the user has a few retros, they run `improve` in the plugin repo.
 
 ## Reporting
 
-- The tick rebuilds PROGRESS.md with `scripts/build_table.py` (from tasks.csv, every session's
-  journals, run-state.json and the run log) at no token cost; contract in
-  [references/reporter-brief.md](references/reporter-brief.md).
+- STATUS.md is the owner's one status file. The tick rebuilds its Tasks section with
+  `scripts/build_table.py` (from tasks.csv, every session's journals, run-state.json and the run
+  log) at no token cost: every task, with status, started and finished times and ADDED remarks.
+  There is no separate progress file. Contract in [references/reporter-brief.md](references/reporter-brief.md).
 - The reporter is amanda, fresh each time, on sonnet at low effort, reading only state files, and
   runs only when run_state.py says the run log changed.
-- In chat, paste a 3-line digest and the report's path; PushNotification the first sentence; post the
-  full report to the user's Slack channel when one is set.
+- In chat, paste the full report text and its path, never a digest; PushNotification its first
+  sentence; post the full report to the owner's Slack channel when one is set. In copilot shape the
+  reporter loads the personal-copilot-talk skill first, so chat gets real copilot text.
 
 ## References
 

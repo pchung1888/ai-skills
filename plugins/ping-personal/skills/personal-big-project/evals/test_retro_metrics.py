@@ -30,6 +30,57 @@ def value(table, metric):
     return hit[0].split("|")[2].strip()
 
 
+def scorecard_case(tmp, talk):
+    """metrics.json: every scorecard metric from its named source; a missing source gives null, never 0;
+    only real breaches count as safety FAILs; the markdown and the JSON come from one list."""
+    st = os.path.join(tmp, "sc")
+    write(os.path.join(st, "inputs.json"), json.dumps({"unattendedSince": "2026-10-17T00:00:00Z", "report": {"everyMin": 15, "style": "copilot"},
+                                                       "reviewsAtStart": {"174": "open"}, "reviewsAtEnd": {"174": "merged"}}))
+    write(os.path.join(st, "log", "owner-feedback.md"), "| When | Class | Skill | Missed what | Like | Quote |\n|---|---|---|---|---|---|\n"
+          "| Sat 10-17 01:00 | steer | big-project | - | - | how is it going? |\n"
+          "| Sat 10-17 01:45 | score | big-project | - | 4 | score 4 |\n"
+          "| Sat 10-17 01:50 | complaint | copilot-talk | report too long | dislike | too long |\n"
+          "| Sat 10-17 01:55 | fix | big-project | release chain untested | - | test the chain |\n")
+    write(os.path.join(st, "log", "status-log.md"), "| When | What |\n|---|---|\n| Sat 10-17 00:00 | Now rewritten |\n"
+          "| Sat 10-17 00:30 | Now rewritten |\n| Sat 10-17 01:30 | Now rewritten |\n")  # largest gap 60 min = 4 ticks of 15
+    write(os.path.join(st, "log", "quota-log.md"), "".join(f"| Sat 10-17 0{i}:00 | 10% | 5% | x | WAIT |\n" for i in range(4)))
+    write(os.path.join(st, "reports", "a.md"), "**Since the last report**\n")
+    write(os.path.join(st, "reports", "b.md"), "copilot talk did not load: no Skill tool\n")
+    write(os.path.join(st, "log", "decisions.md"), "| Sat 10-17 01:00 | self-stop: deleted the tick, the review request showed merged | x | y | z |\n")
+    write(os.path.join(st, "STATUS.md"), "## Binding rules\n- MAIL CAP (Sat, coordinator, incident: mail sent twice): max 40.\n- OWN-1 (Sat, owner): skip x.\n")
+    write(os.path.join(st, "log", "skill-friction.md"), "| Sat 10-17 01:00 | reporting | copilot-talk report too long | none |\n")
+    write(os.path.join(st, "GOAL-BRIEF.md"), "Cost estimate: 1.0M-1.5M tokens\n")
+    write(os.path.join(st, "run-state.json"), json.dumps({"verdict": "PASS (3 of 4 tasks; 1 deferred, 0 by agents)", "stages": [{"name": "s1", "tasks": {
+        "T1": {"outcome": "passed"}, "T2": {"outcome": "passed"}, "T3": {"outcome": "deferred", "deferredBy": "owner"},
+        "T4": {"outcome": "deferred", "deferredBy": "agent"}}}]}))
+    write(os.path.join(st, "log", "run-check.txt"), "FAIL report-plain: 2 codes\nFAIL side-effects: mail 41 > cap 40\n"
+          "FAIL baselines: 1 malformed hash lines, first: 'x'\nPASS remote-tags\nPASS remote-branches\n")
+    wf = os.path.join(tmp, "scwf")
+    agents = lambda *a: [{"type": "workflow_agent", "label": l, "agentId": l + n, "tokens": t, "state": "done"} for l, t, n in a]
+    write(os.path.join(wf, "wf_1.json"), json.dumps({"workflowName": "s1", "startTime": "1", "totalTokens": 400000, "workflowProgress": agents(("T1", 400000, "a"))}))
+    write(os.path.join(wf, "wf_2.json"), json.dumps({"workflowName": "s1", "startTime": "2", "totalTokens": 1000000, "workflowProgress": agents(
+        ("T1", 300000, "b"), ("T1:verify", 200000, "c"), ("T1:fix", 100000, "d"), ("T2:gate:rhea", 50000, "e"), ("T2", 350000, "f"))}))
+    doc = retro_metrics.metrics_json(st, [wf], talk)
+    v = {m["id"]: m["value"] for m in doc["metrics"]}
+    assert doc["unattendedHours"] == 1.8 and doc["schemaVersion"] == 1, doc  # owner messages end at 01:45, first message 00:00 since
+    assert v["ownerScore"] == 4 and v["verdict"] == "deferred" and v["tasksFinished"] == round(2 / 3, 3), v
+    assert v["premature"] == 0 and v["statusGap"] == 4.0 and v["reportsOnTime"] == 0.5 and v["copilotLoaded"] == "no", v
+    assert v["complaints"] == 1 and v["steering"] == 1, v  # raw counts; scorecard.py turns them into per-10-hour rates
+    assert v["selfCaughtShare"] == round(2 / 3, 3), v  # one incident rule + one gate task vs one owner fix
+    assert v["selfStops"] == "stopped" and v["complaintsFiled"] == 0.5, v  # copilot-talk is in the friction log, big-project is not
+    assert v["reworkShare"] == round(500000 / 1400000, 3) and v["verifierShare"] == round(200000 / 1400000, 3), v
+    assert v["estimateRatio"] == round(1400000 / 1250000, 3), v
+    assert (v["capOverrun"], v["baselineChanged"], v["protectedPush"], v["externalState"]) == ("FAIL", "PASS", "PASS", "FAIL"), v
+    assert doc["complaintsBySkill"] == {"copilot-talk": 1, "big-project": 1}, doc
+    table = retro_metrics.metrics(st, [wf], talk)
+    assert "| scorecard: verifierShare | 0.143 |" in table, table  # the same list renders the markdown
+    # Missing sources: null, never 0.
+    bare = os.path.join(tmp, "bare")
+    write(os.path.join(bare, "inputs.json"), "{}")
+    vb = {m["id"]: m["value"] for m in retro_metrics.metrics_json(bare, [], None)["metrics"]}
+    assert all(vb[k] is None for k in ("ownerScore", "statusGap", "estimateRatio", "capOverrun", "selfCaughtShare")), vb
+
+
 def main():
     tmp = tempfile.mkdtemp()
     try:
@@ -101,6 +152,16 @@ def main():
             "workflowProgress": [{"type": "workflow_agent", "label": "Z", "tokens": 5}]}))
         sample = retro_metrics.metrics(state, [os.path.join(sess, "workflows")], None)
         assert "| Z | 5 | no agentId | not found |" in sample, sample
+
+        # Tick prompts of any interval are not owner messages (15-minute ticks were counted before).
+        talk = os.path.join(tmp, "talk.jsonl")
+        user = lambda when, text: json.dumps({"type": "user", "timestamp": when, "message": {"content": text}}) + "\n"
+        write(talk, user("2026-10-17T01:00:00Z", "how is it going?") + user("2026-10-17T01:15:00Z", "G 15-minute tick (unattended).")
+              + user("2026-10-17T01:20:00Z", "G resume: relaunch - run the tick steps 1-4 now") + user("2026-10-17T01:30:00Z", "<task-notification> x")
+              + user("2026-10-17T01:45:00Z", "score 4"))
+        assert value(retro_metrics.metrics(state, [journals], talk), "Owner messages while unattended") == "2"
+
+        scorecard_case(tmp, talk)
 
         # Without a transcript the coordinator figures are "don't know", never zero.
         bare = retro_metrics.metrics(state, [journals], None)

@@ -31,7 +31,7 @@ Plan: ${STATE_DIR}/plan.md. Do your task exactly as written there, including its
 Read first: the TOP of ${STATE_DIR}/STATUS.md (binding rules override any task text), then your task section.
 Exclusive resources (one agent at a time): ${EXCLUSIVE_RESOURCES}. Back up before overwrite.
 Do not edit log/run-log.md or the Now block of STATUS.md: the verifier logs your result. Read a file right before editing it; change only your lines.
-Side effects (a mail sent, a push, a deploy): BEFORE each one run ${LOG_ROW} effect --state-dir "${STATE_DIR}" --kind <a kind from inputs.json caps> --count 1 --note "<what, to whom>" --key <task id>-<n>. REFUSED (exit 2) means do not act. A retry of the same action reuses its key: ALREADY LOGGED (exit 3) means it was counted before, so act again only if the earlier try did not happen. Retries per key are capped.
+Side effects (a mail sent, a file uploaded, a push, a deploy): run each sending command through ${LOG_ROW} send --state-dir "${STATE_DIR}" --kind <a kind from inputs.json caps> --count <the most it can send> --note "<what, to whom>" --key <task id>-<n> -- <the command> (a push also needs --ref <branch pushed to>). It logs first, then runs the command. Count the worst case: a test that can resend counts every possible send. For an action with no command, run ${LOG_ROW} effect with the same options BEFORE it. REFUSED (exit 2) means the command did not run and must not run another way; CAP REACHED means stop this task and put "cap reached: <kind>" in problems. A retry of the same action reuses its key: ALREADY LOGGED (exit 3) means it was counted before, so act again only if the earlier try did not happen. Retries per key are capped.
 Baselines: ${LOG_ROW} baseline --state-dir "${STATE_DIR}" <repo-relative path> ... Hash only files that must not change during the run; never edit a captured file.
 Shell: create or rewrite a multi-line file with the Write tool and change files with Edit, never with a heredoc, echo or a python string. Put a command with nested quotes in a script file and run that file. Run PowerShell only as pwsh -NoProfile -File <script.ps1>.
 Structured result: problems is a JSON array of strings ([] when none, ["x failed"] otherwise); write summary as plain sentences with no double quotes.
@@ -140,6 +140,15 @@ async function run(task, agentType, phase, model, needs, commits, text, passLine
     v = await verify(task, phase, passLine, check)
   }
   return entry(r, v, {})
+}
+
+// Review step (kind "review" in the spec): a read-only agent such as a critic or judge seat runs inside the
+// stage. It has no Write tool, so it returns its findings and run_state.py saves them to reviews/<id>.md.
+// It passes once it answers (asked twice at most); the findings, not a check, are its output.
+async function reviewStep(task, agentType, phase, text) {
+  const ask = (label) => agent(CTX + `\nREVIEW STEP ${task} (plan.md section "Task ${task}"). Read only; change nothing.` + (text ? `\nTask text: ${text}` : '') + `\nEach finding: severity (CRITICAL, HIGH, MEDIUM, LOW), text, closed (true only if the evidence already shows it fixed).`, { label, phase, agentType, effort: HELPER_EFFORT, schema: REVIEW })
+  const f = (await ask(task)) || (await ask(`${task}:retry`))
+  return { task, passed: !!f, deferred: false, deferredBy: null, reason: f ? '' : 'review step returned nothing', doneCheckOutput: '', summary: f ? `${f.findings.length} findings` : '', problems: f ? [] : ['review step returned nothing'], findings: f ? f.findings : [] }
 }
 
 // Fresh-eyes reviewer that did not write the assertions; reports what they do NOT cover.

@@ -316,6 +316,22 @@ def main():
         v = run(s, "status")["verdict"]
         assert v == "PASS (1 of 1 tasks; 0 deferred, 0 by agents; 2 open review findings)", v
 
+        # A review step (a read-only agent inside a stage) returns findings: they are saved to reviews/<id>.md
+        # and its open HIGH / CRITICAL count joins the verdict; a retry result without the step keeps the count.
+        s = new_state(stages="s1")
+        run(s, "record", "launch", "s1", "wf_a")
+        judge = dict(res(passed=True), findings=[{"severity": "HIGH", "text": "reply order | wrong", "closed": False},
+                                                 {"severity": "LOW", "text": "wording", "closed": False}])
+        p = journal(s, "wf_a", "completed", {"J1": judge, "T1": res(passed=False)})
+        run(s, "record", "result", "s1", "--journal", p)
+        saved = open(os.path.join(s, "reviews", "J1.md"), encoding="utf-8").read()
+        assert "| HIGH | reply order \\| wrong | open |" in saved and "| LOW | wording | open |" in saved, saved
+        run(s, "record", "launch", "s1", "wf_b")
+        run(s, "record", "result", "s1", "--journal", journal(s, "wf_b", "completed", {"T1": res(passed=True)}))
+        run(s, "record", "final")
+        v = run(s, "status")["verdict"]
+        assert v == "PASS (2 of 2 tasks; 0 deferred, 0 by agents; 1 open review findings)", v
+
         # stageCheck: a failing one adds the synthetic task "<stage>:check" (failed), so the stage fails and RETRY lists it
         def with_extra(path, **extra):
             body = json.load(open(path))
