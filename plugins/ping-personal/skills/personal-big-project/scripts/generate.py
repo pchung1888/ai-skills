@@ -29,6 +29,9 @@ inputs.json (written at start step 1; read by every script). Example:
   report: the report shape the user chose at start. Example: {"everyMin": 15, "style": "copilot", "taskList": true, "ids": true}
          everyMin: tick and report interval, 10, 15, 20, 30 or 60 (default 30); style: "plain" (default) or
          "copilot" (narrated, for short weekday runs); taskList: add the full task list; ids: allow task ids.
+  protectedBranches: branches no agent may push, from pre-flight check 14: the target branch of every open
+         review request (pushing to it can merge the request). log_row.py effect --kind push refuses them.
+         Example: ["feature/123"]
 
 Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in parallel. Example:
   {"name": "s3-build", "summary": "spikes, then parallel code, then fresh-eyes review",
@@ -48,9 +51,17 @@ Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in para
         <state-dir>/plan.md (example: "## Task T3 - install"), else this fails naming the task.
   check: REQUIRED. The task's own fast, scoped check command (one test file, one script), never the full done
         command. The verifier runs this command. Example: "python -m pytest tests/test_invoice.py -q".
+        Two tasks with the same check (and passLine), or a check equal to stageCheck.command, are refused:
+        such a check stays FAIL until the last task is done. sharedCheck: true on both tasks allows it
+        when each task alone makes the check pass.
   estimateK: REQUIRED. Expected context size of the task in thousands of tokens; over 100 is refused.
   passLine: optional exact last line the done-check must print; the task passes only if the verifier
         passed AND its last line, trimmed, equals this.
+  kind: "task" (default) or "review". A review step is a read-only agent (ms-mario, a judge seat, Explore,
+        codex:codex-rescue) that returns findings inside the stage; run_state.py saves them to reviews/<id>.md
+        and counts the open HIGH/CRITICAL ones. It has no check, passLine, needs or commits, needs no Write
+        tool, and passes once it answers. Example: {"id": "J1", "agent": "ping-personal:ms-mario",
+        "phase": "Judge", "kind": "review", "text": "judge the plan against GOAL-BRIEF.md", "estimateK": 30}
   reviewer: agent for the fresh-eyes review (default ping-personal:iris).
 Per spec (optional):
   stageCheck: {"command": "<full done command>", "passLine": "<exact last line>"}. After every task, one verifier
@@ -108,6 +119,9 @@ def load_inputs(state_dir):
             or report.get("style", "plain") not in ("plain", "copilot"):
         fail(f"inputs.json report: everyMin one of {REPORT_EVERY}, style 'plain' or 'copilot'")
     inputs["report"] = report
+    protected = inputs.get("protectedBranches", [])
+    if not isinstance(protected, list) or not all(isinstance(b, str) and b.strip() for b in protected):
+        fail("inputs.json protectedBranches: a list of branch names. Example: [\"feature/123\"]")
     return inputs
 
 
@@ -191,17 +205,24 @@ def check_task(t, n, state_dir):
             fail(f"step {n} has a task without '{k}'")
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,16}", str(t["id"])):
         fail(f"task id {t['id']!r}: use 1-16 letters, digits, '-' or '_' (it goes into a shell command). Example: T3")
-    check_agent(t["agent"], f"task {t['id']}")
+    kind = t.get("kind", "task")
+    if kind not in ("task", "review"):
+        fail(f"task {t['id']}: kind must be 'task' or 'review'")
+    review = kind == "review"
+    check_agent(t["agent"], f"task {t['id']}", critic=review)
+    if review and (t.get("commits") or t.get("needs") or "check" in t or "passLine" in t):
+        fail(f"review step {t['id']}: a review step only returns findings; it takes no commits, needs, check or "
+             "passLine (put it in an earlier step than the tasks that use its findings)")
     no_write = t["agent"] in READ_ONLY_AGENTS or \
         (t["agent"] not in OTHER_AGENTS and "Write" not in (agent_tools(t["agent"]) or "Write"))
-    if no_write:
+    if no_write and not review:
         fail(f"task {t['id']}: agent {t['agent']} has no Write tool, so it cannot write its output; "
-             "give a critic or review task to ping-personal:rhea or ping-personal:iris")
+             "give it to an agent with Write, or make it a review step (kind: review)")
     if not t.get("text") and not has_plan_heading(state_dir, t["id"]):
         fail(f"task {t['id']} has no 'text' and {state_dir}/plan.md has no heading containing 'Task {t['id']}'")
     if "passLine" in t and not (isinstance(t["passLine"], str) and t["passLine"].strip()):
         fail(f"task {t['id']}: passLine must be a non-empty string")
-    if not (isinstance(t.get("check"), str) and t["check"].strip()):
+    if not review and not (isinstance(t.get("check"), str) and t["check"].strip()):
         fail(f"task {t['id']} has no 'check': give its own fast, scoped check command (one test file, one script), "
              "never the full done command")
     est = t.get("estimateK")
@@ -220,6 +241,23 @@ def check_task(t, n, state_dir):
             (t["agent"] not in OTHER_AGENTS and "Bash" not in (agent_tools(t["agent"]) or "Bash"))
         if no_bash:
             fail(f"task {t['id']}: commits is true but agent {t['agent']} has no Bash tool")
+
+
+def check_checks(tasks, stage_check):
+    """Each task's check must be able to pass from that task's own work. The same check on two tasks, or
+    the stage's full done command as a task check, stays FAIL until the last task is done, so the first
+    task fails, the stage stops and the retry repeats every task (about 1.2M tokens in one run)."""
+    full = (stage_check or {}).get("command", "").strip() if isinstance(stage_check, dict) else ""
+    seen = {}
+    for t in (t for t in tasks if t.get("kind") != "review"):
+        key = (t["check"].strip(), str(t.get("passLine", "")).strip())
+        if full and key[0] == full:
+            fail(f"task {t['id']}: its check is the stage's full done command; give the task its own scoped check")
+        if key in seen and not (t.get("sharedCheck") and seen[key].get("sharedCheck")):
+            fail(f"tasks {seen[key]['id']} and {t['id']} have the same check; a shared check stays FAIL until both "
+                 "are done, so the first one fails. Give each its own scoped check, or set sharedCheck: true on both "
+                 "when each one alone makes it pass")
+        seen.setdefault(key, t)
 
 
 def stage_body(spec, state_dir):
@@ -251,6 +289,10 @@ def stage_body(spec, state_dir):
             needs = [x for x in t.get("needs", []) if x in step_of]  # ids outside this spec already passed
             if any(step_of[x] >= n for x in needs):
                 fail(f"task {t['id']} needs a task in the same or a later step")
+            if t.get("kind") == "review":  # read-only agent: findings only, no verifier, no commit
+                calls.append(f"reviewStep({json.dumps(t['id'])}, {json.dumps(t['agent'])}, {json.dumps(t['phase'])}, "
+                             f"{json.dumps(t.get('text', ''))})")
+                continue
             model = "WORKER_MODEL" if t.get("model", "worker") == "worker" else "undefined"
             calls.append(f"run({json.dumps(t['id'])}, {json.dumps(t['agent'])}, {json.dumps(t['phase'])}, {model}, "
                          f"{json.dumps(needs)}, {json.dumps(bool(t.get('commits')))}, {json.dumps(t.get('text', ''))}, "
@@ -268,6 +310,7 @@ def stage_body(spec, state_dir):
             fail("stageCheck must be {\"command\": \"<full done command>\", \"passLine\": \"<exact last line>\"}")
         lines += ["phase('Stage check')",
                   f"await stageCheck({json.dumps(sc['command'])}, {json.dumps(sc.get('passLine', ''))})", ""]
+    check_checks([t for group in steps for t in group], sc)
     review = spec.get("review")
     final = spec.get("finalReview")
     if final is not None and not isinstance(final, bool):

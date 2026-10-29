@@ -28,7 +28,9 @@ Inputs read from <state-dir>/inputs.json: weeklyCap, disks, minGB, sessions. Sta
 A result's "stageCheck" {passed, lastLine}: a failing one adds the failed task "<stage>:check" (RETRY items
 include it; a later passing stageCheck resolves it). A result's "review" is {findings} or, for a final
 review, {spec: {findings}, standards: {findings}}; open HIGH/CRITICAL are counted per axis and the verdict
-lists them as "spec: N open, standards: M open", never merged.
+lists them as "spec: N open, standards: M open", never merged. A result entry with "findings" is a review
+step (kind "review"): its findings are saved to <state-dir>/reviews/<id>.md and its open HIGH/CRITICAL count
+joins the verdict's open review findings.
 """
 import argparse
 import glob
@@ -149,6 +151,18 @@ def open_high(findings):
                and str(f.get("severity", "")).upper() in ("HIGH", "CRITICAL"))
 
 
+def save_findings(state_dir, tid, findings):
+    """reviews/<step id>.md: a review step's findings, so the coordinator and the owner can read them."""
+    os.makedirs(os.path.join(state_dir, "reviews"), exist_ok=True)
+    rows = ["| Severity | Finding | State |", "|---|---|---|"]
+    for f in findings:
+        if isinstance(f, dict):
+            text = " ".join(str(f.get("text", "")).split()).replace("|", "\\|")
+            rows.append(f"| {str(f.get('severity', '')).upper()} | {text} | {'closed' if f.get('closed') else 'open'} |")
+    with open(os.path.join(state_dir, "reviews", f"{tid}.md"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"# Review step {tid}\n\n" + "\n".join(rows) + "\n")
+
+
 def apply_result(state_dir, st, s, journal):
     j = read_json_safe(journal) if journal else None
     res = (j or {}).get("result")
@@ -168,6 +182,9 @@ def apply_result(state_dir, st, s, journal):
         if tid not in got:  # the stage ended before this task ran
             s["tasks"].setdefault(tid, {"outcome": "not-run", "deferredBy": None, "reason": ""})
     for tid, r in got.items():
+        if isinstance(r.get("findings"), list):  # a review step: keep its findings, count the open ones
+            save_findings(state_dir, tid, r["findings"])
+            s.setdefault("openByStep", {})[tid] = open_high(r["findings"])
         out = "passed" if r.get("passed") else "deferred" if r.get("deferred") else "not-run" if r.get("notRun") else "failed"
         s["tasks"][tid] = {"outcome": out, "deferredBy": r.get("deferredBy") if out == "deferred" else None,
                            "reason": (r.get("reason") or "; ".join(r.get("problems") or []))[:200]}
@@ -239,6 +256,7 @@ def record(state_dir, event, args, journal, now):
         passed = sum(1 for t in tasks if t["outcome"] == "passed")
         by_agents = sum(1 for t in deferred if t["deferredBy"] == "agent")
         open_n = sum(s.get("openFindings", 0) for s in st["stages"] if not s.get("openByAxis"))
+        open_n += sum(sum((s.get("openByStep") or {}).values()) for s in st["stages"])
         by_axis = [s["openByAxis"] for s in st["stages"] if s.get("openByAxis")]
         tail = f"; {open_n} open review findings" if open_n > 0 else ""
         if by_axis:  # never merged: each axis keeps its own count

@@ -17,10 +17,10 @@ INPUTS = {"goal": "PROJ-123 invoice fixes", "repoPath": "D:\\work\\my`repo", "br
           "domainCritic": "ping-personal:iris", "caps": {"mail": 300}, "sessions": [SESSION],
           "baseCommit": "4b8d`3b26", "remote": "origin", "remoteTagsAtStart": [], "remoteHeadsAtStart": []}
 SPEC = {"name": "s3-build", "summary": "spikes, then parallel code",
-        "steps": [{**R, "id": "T5", "agent": "ping-personal:vex", "phase": "Spikes"},
+        "steps": [{**R, "id": "T5", "agent": "ping-personal:vex", "phase": "Spikes", "check": "python spike_t5.py"},
                   [{**R, "id": "T2", "agent": "ping-personal:bunny", "phase": "Code", "commits": True,
                     "resources": ["SQL Server"]},
-                   {**R, "id": "T3", "agent": "ping-personal:vex", "phase": "Code", "model": "inherit",
+                   {**R, "id": "T3", "agent": "ping-personal:vex", "phase": "Code", "model": "inherit", "check": "python check_t3.py",
                     "resources": ["IIS"], "needs": ["T5"]}]],
         "review": "T3"}
 # Fake Workflow API: T1 never verifies; every gate seat call answers VOTES in order (a retry of a null
@@ -36,6 +36,7 @@ async function agent(prompt, o) {
   if (o.label.endsWith(':verify')) return { passed: !o.label.startsWith('T1'), lastLine: process.env.LASTLINE || 'x' }
   if (o.label.includes(':gate:')) { const v = votes[seat++]; if (v === 'null') return null; return { vote: v, instruction: 'i', howToReverse: 'r' } }
   if (o.label.endsWith(':review')) return { findings: [{ severity: 'LOW', text: 't', closed: true }] }
+  if (o.label === 'J1') return { findings: [{ severity: 'HIGH', text: 'j', closed: false }] }
   return { task: o.label, passed: true, doneCheckOutput: '', summary: 's', problems: [] }
 }
 async function parallel(fs) { return Promise.all(fs.map(f => f())) }
@@ -87,19 +88,33 @@ def main():
         tick = open(os.path.join(state, "tick-prompt.txt"), encoding="utf-8").read()
         assert "cron: 7,22,37,52 * * * *" in r.stdout and "15-minute tick" in tick, r.stdout
         assert "Report shape: copilot, with the full task list, task ids allowed" in tick, tick
+        # Copilot reports reach chat in full (never a digest), and the reporter loads the real skill.
+        assert "full report text" in tick and "digest" not in tick.replace("never a digest", ""), tick
+        brief = open(os.path.join(HERE, "..", "references", "reporter-brief.md"), encoding="utf-8").read()
+        assert "Skill tool with `ping-personal:personal-copilot-talk`" in brief, "copilot shape must load the skill"
+        assert "PROGRESS.md" not in brief and "PROGRESS.md" not in tick, "STATUS.md is the one status file"
+        # Caps: the tick reads usage every time and turns the owner's answer into a recorded raise-cap.
+        assert 'log_row.py" usage --state-dir "docs/proj-123/autopilot"' in tick and "raise-cap" in tick, tick
         for bad in ({"everyMin": 7}, {"style": "loud"}, "15"):
             json.dump(dict(INPUTS, report=bad), open(inputs_path, "w"))
             r = gen(state, "tick")
             assert r.returncode != 0 and "inputs.json report" in r.stderr, (bad, r.stderr)
+        for bad in ("feature/759", [""], [7]):  # protectedBranches: a list of branch names
+            json.dump(dict(INPUTS, protectedBranches=bad), open(inputs_path, "w"))
+            r = gen(state, "tick")
+            assert r.returncode != 0 and "protectedBranches" in r.stderr, (bad, r.stderr)
+        json.dump(dict(INPUTS, protectedBranches=["feature/759"]), open(inputs_path, "w"))
+        assert gen(state, "tick").returncode == 0
         json.dump(INPUTS, open(inputs_path, "w"))
 
         r = gen(state, "stage", "--spec", spec)
         assert r.returncode == 0, r.stderr
         js = open(os.path.join(state, "stages", "s3-build.js"), encoding="utf-8").read()
         assert "name: \"proj-123-invoice-fixes-s3-build\"" in js
+        assert "${LOG_ROW} send --state-dir" in js and "CAP REACHED" in js, "workers send only through the log-first wrapper"
         assert "phases: [{ title: \"Spikes\" }, { title: \"Code\" }, { title: \"Review\" }]" in js
         assert "parallel([() => run(\"T2\", \"ping-personal:bunny\", \"Code\", WORKER_MODEL, [], true, \"\", \"\", " + CK + "), " \
-               "() => run(\"T3\", \"ping-personal:vex\", \"Code\", undefined, [\"T5\"], false, \"\", \"\", " + CK + ")])" in js
+               "() => run(\"T3\", \"ping-personal:vex\", \"Code\", undefined, [\"T5\"], false, \"\", \"\", \"python check_t3.py\")])" in js
         assert "const REPO_PATH = \"D:\\\\work\\\\my`repo\"" in js, "values are inserted as JSON strings"
         assert "const EFFORT = undefined" in js and "const WORKER_MODEL = \"sonnet\"" in js
         assert "const HELPER_EFFORT = 'low'" in js and "agentType: 'ping-personal:rhea', model: 'sonnet'" in js
@@ -122,8 +137,8 @@ def main():
         # Behaviour: T1 fails; two seats defer it (L4: the third is not asked); the stage continues.
         # T2 needs T1 -> deferred too (M3: blocked by T1, so a retry never re-runs it); T3 passes.
         flow = {"name": "s4", "summary": "defer", "steps": [
-            {**R, "id": "T1", "agent": "ping-personal:bunny", "phase": "A"},
-            {**R, "id": "T2", "agent": "ping-personal:bunny", "phase": "A", "needs": ["T1"]},
+            {**R, "id": "T1", "agent": "ping-personal:bunny", "phase": "A", "check": "python check_t1.py"},
+            {**R, "id": "T2", "agent": "ping-personal:bunny", "phase": "A", "needs": ["T1"], "check": "python check_t2.py"},
             {**R, "id": "T3", "agent": "ping-personal:bunny", "phase": "B"}], "review": "T3"}
         spec4 = os.path.join(state, "stages", "s4.json")
         json.dump(flow, open(spec4, "w"))
@@ -193,6 +208,23 @@ def main():
         assert "<" + "SKILL_DIR>" not in js6 and "file-checklist" not in out["prompts"]["T3"]
         assert "log_row.py\" effect" in out["prompts"]["T3"] and "Write tool" in out["prompts"]["T3"]
         assert out["r"]["stageCheck"] is None, "no stageCheck in the spec: nothing is returned for it"
+        # A review step: a read-only agent (no Write tool) runs inside the stage and returns findings; the
+        # stage keeps them in results, so run_state.py saves them. It needs no check and may not commit.
+        judged = {"name": "s9", "summary": "judge then fix", "steps": [
+            {"id": "J1", "agent": "ping-personal:ms-mario", "phase": "Judge", "kind": "review", "text": "judge the plan", "estimateK": 30},
+            {**R, "id": "T1", "agent": "ping-personal:bunny", "phase": "Fix", "needs": ["J1"]}]}
+        spec9 = os.path.join(state, "stages", "s9.json")
+        json.dump(judged, open(spec9, "w"))
+        r = gen(state, "stage", "--spec", spec9)
+        assert r.returncode == 0, r.stderr
+        js9 = open(os.path.join(state, "stages", "s9.js"), encoding="utf-8").read()
+        assert 'await reviewStep("J1", "ping-personal:ms-mario", "Judge", "judge the plan")' in js9, js9
+        out9 = run_node(js9)
+        j1 = out9["r"]["results"]["J1"]
+        assert j1["passed"] and j1["findings"][0]["severity"] == "HIGH" and out9["types"]["J1"] == "ping-personal:ms-mario", j1
+        assert "T1" in out9["calls"] and "J1:verify" not in out9["calls"], out9["calls"]  # no verifier for a review step
+        refused(state, spec9, dict(judged, steps=[dict(judged["steps"][0], commits=True)]), "review step J1")
+        refused(state, spec9, dict(judged, steps=[dict(judged["steps"][0], kind="judge")]), "kind")
         # Item 2: the run's base commit is inserted as a JSON string and drives "changed by this run".
         assert 'const BASE_COMMIT = "4b8d`3b26"' in js6
         assert "git diff 4b8d`3b26" in out["prompts"]["T3"]
@@ -260,6 +292,16 @@ def main():
         refused(state, spec, dict(SPEC, reviewer="codex:codex-rescue"), "reviewer")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="general-purpose", passLine="  ")], review=None), "passLine")
         # Items 1+5: check and estimateK are REQUIRED per task and the refusal names the task.
+        # A check that only the last task can make pass: the same check on two tasks, or the stage's full
+        # done command as a task check, is refused; sharedCheck on both tasks allows it.
+        ga, gb = dict(a, agent="general-purpose", text="x"), dict(b, agent="general-purpose", text="x")
+        refused(state, spec, dict(SPEC, steps=[ga, gb], review=None), "tasks T1 and T2 have the same check")
+        refused(state, spec, dict(SPEC, steps=[ga, dict(gb, passLine="ALL OK")], review=None, stageCheck={
+            "command": R["check"], "passLine": "ALL OK"}), "the stage's full done command")
+        json.dump(dict(SPEC, steps=[dict(ga, sharedCheck=True), dict(gb, sharedCheck=True)], review=None), open(spec, "w"))
+        assert gen(state, "stage", "--spec", spec).returncode == 0
+        json.dump(dict(SPEC, steps=[ga, dict(gb, check="python other.py")], review=None), open(spec, "w"))
+        assert gen(state, "stage", "--spec", spec).returncode == 0
         bare = {"id": "T7", "agent": "general-purpose", "phase": "P", "text": "x"}
         refused(state, spec, dict(SPEC, steps=[dict(bare, estimateK=5)], review=None), "task T7 has no 'check'")
         refused(state, spec, dict(SPEC, steps=[dict(bare, check="  ", estimateK=5)], review=None), "task T7 has no 'check'")

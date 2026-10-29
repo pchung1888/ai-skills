@@ -1,11 +1,14 @@
-"""Build <state-dir>/PROGRESS.md, the fixed-row progress table, from the plan's task list, the
-workflow journals and the run log. No LLM involved, so a refresh costs no tokens.
+"""Build the fixed-row task table in the "Tasks" section of <state-dir>/STATUS.md, the owner's one
+status file, from the plan's task list, the workflow journals and the run log. Only the text between
+the tasks:begin and tasks:end lines is rewritten; a STATUS.md without them gets the section appended.
+No LLM involved, so a refresh costs no tokens.
 
 Inputs, all under --state-dir:
   tasks.csv        columns id,stage,what,estimate,added (extra columns are kept). Written by the
                    coordinator from plan.md; this script appends unplanned work as rows with
-                   added=ADDED and never removes or reorders a row, so the table keeps the same shape
-                   all weekend.
+                   added="ADDED Day MM-DD HH:MM - why" and never removes or reorders a row, so the
+                   table keeps the same shape all weekend. The coordinator writes the same remark
+                   for a task it adds by hand. Example: ADDED Thu 10-29 11:51 - owner asked
   log/run-log.md   table rows "| when | task id | what happened | evidence |".
   run-state.json   task outcomes (passed, deferred, failed, not-run) set the Status word when present;
                    the journal state is only the fallback.
@@ -131,7 +134,7 @@ def row_for(n, t, agents, log_lines, outcome=None):
     if any(":gate" in a["label"] for a in agents):
         notes.append("critic gate voted")
     if t["added"]:
-        notes.insert(0, "ADDED")
+        notes.insert(0, t["added"])
     if log_lines:
         notes.append(log_lines[-1][1][:NOTE_CHARS])
     cells = [str(n), t["stage"], t["id"], t["what"], status_of(agents, log_lines, outcome), started, finished,
@@ -139,7 +142,27 @@ def row_for(n, t, agents, log_lines, outcome=None):
     return "| " + " | ".join(c.replace("|", "/") for c in cells) + " |"
 
 
+def write_section(path, lines):
+    """Replace STATUS.md's Tasks section (or append one), atomically, keeping every other line."""
+    text = statefiles.read_text(path) if os.path.exists(path) else ""
+    before, section, after = statefiles.task_section(text)
+    if section is None:
+        before = (text.rstrip("\n") + "\n\n" if text.strip() else "") + "## Tasks\n\n"
+    body = before + statefiles.TASKS_BEGIN + "\n" + "\n".join(lines) + "\n" + statefiles.TASKS_END + after
+    if not body.endswith("\n"):
+        body += "\n"
+    handle, temp_path = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(path)), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as f:
+            f.write(body)
+        os.replace(temp_path, path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
 def build(state_dir, journal_dirs, now=None):
+    now = now or datetime.now()
     tasks_path = os.path.join(state_dir, "tasks.csv")
     tasks, columns = read_tasks(tasks_path)
     agents = read_agents(journal_dirs)
@@ -151,17 +174,15 @@ def build(state_dir, journal_dirs, now=None):
         if a["task"] not in known:
             known.add(a["task"])
             tasks.append({"id": a["task"], "stage": a.get("phaseTitle") or a["workflow"],
-                          "what": a["label"][:60], "estimate": "", "added": "ADDED"})
+                          "what": a["label"][:60], "estimate": "",
+                          "added": f"ADDED {now.strftime('%a %m-%d %H:%M')} - not in the plan, found in the journals"})
     tasks = [{c: t.get(c, "") for c in columns} for t in tasks]
     write_tasks(tasks_path, tasks, columns)
 
     by_task = {}
     for a in agents:
         by_task.setdefault(a["task"], []).append(a)
-    now = now or datetime.now()
     lines = [
-        "# Progress",
-        "",
         f"Built {now.strftime('%a %m-%d %H:%M')} by scripts/build_table.py from tasks.csv, the workflow "
         "journals and log/run-log.md. Times are local, Day MM-DD HH:MM. Rows are never deleted or reordered.",
         "",
@@ -172,14 +193,13 @@ def build(state_dir, journal_dirs, now=None):
               for i, t in enumerate(tasks, 1)]
     added = [t for t in tasks if t["added"]]
     if added:
-        lines += ["", "## Added along the way", ""] + [f"- {t['id']}: {t['what']}" for t in added]
-    lines += ["", "## Task details", ""]
+        lines += ["", "### Added along the way", ""] + [f"- {t['id']}: {t['what']}" for t in added]
+    lines += ["", "### Task details", ""]
     for t in tasks:
         evidence = next((e for _, _, e in reversed(log.get(t["id"], [])) if e and e != "-"), "none yet")
         lines.append(f"- {t['id']}: plan.md section \"Task {t['id']}\"; live log log/run-log.md; evidence {evidence}")
-    out = os.path.join(state_dir, "PROGRESS.md")
-    with open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
+    out = os.path.join(state_dir, "STATUS.md")
+    write_section(out, lines)
     return out
 
 

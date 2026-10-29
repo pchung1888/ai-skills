@@ -5,9 +5,13 @@ Used by build_table.py, check_run.py, retro_metrics.py and run_state.py.
 import glob
 import json
 import os
+import re
 from datetime import datetime, timezone
 
 HEADER_WORDS = {"when", "#", "metric", "id"}  # first-cell words that mark a table's header row
+# STATUS.md "Tasks" section: build_table.py rewrites everything between these two lines.
+TASKS_BEGIN = "<!-- tasks:begin - scripts/build_table.py rewrites this section every tick; do not edit it -->"
+TASKS_END = "<!-- tasks:end -->"
 
 
 def read_text(path):
@@ -56,8 +60,13 @@ def table_rows(path):
     content, never by position, so a file written without a header loses no row."""
     if not os.path.exists(path):
         return []
+    return text_rows(read_text(path))
+
+
+def text_rows(text):
+    """Data rows of the markdown tables in a text (see table_rows)."""
     rows = []
-    for line in read_text(path).splitlines():
+    for line in text.splitlines():
         if not line.lstrip().startswith("|"):
             continue
         cells = split_row(line)
@@ -65,6 +74,39 @@ def table_rows(path):
             continue
         rows.append(cells)
     return rows
+
+
+TICK = re.compile(r"\d+-minute tick")  # the tick prompt names its interval: 15-minute, 30-minute, ...
+# One class per owner message (log/owner-feedback.md), so each message feeds one scorecard metric only.
+OWNER_CLASSES = ("setup", "steer", "fix", "complaint", "premature", "praise", "answer", "score")
+
+
+def is_owner_message(entry):
+    """True for a transcript line the owner typed: a user string that is not a notice, a tick or a resume prompt."""
+    message = entry.get("message") if isinstance(entry.get("message"), dict) else {}
+    content = message.get("content")
+    if entry.get("type") != "user" or not isinstance(content, str) or entry.get("isMeta"):
+        return False
+    head = content.lstrip()[:160]
+    return not head.startswith("<") and not TICK.search(head) and "resume: relaunch" not in head
+
+
+def task_section(text):
+    """(before, section, after) of a STATUS.md text split on the tasks markers; section is None when
+    the file has no complete Tasks section."""
+    start = text.find(TASKS_BEGIN)
+    end = text.find(TASKS_END, start + 1) if start >= 0 else -1
+    if start < 0 or end < 0:
+        return text, None, ""
+    return text[:start], text[start + len(TASKS_BEGIN):end], text[end + len(TASKS_END):]
+
+
+def task_rows(path):
+    """Data rows of the task table inside STATUS.md's Tasks section; [] when the file or section is missing."""
+    if not os.path.exists(path):
+        return []
+    _, section, _ = task_section(read_text(path))
+    return [] if section is None else text_rows(section)
 
 
 def journal_dirs(inputs):

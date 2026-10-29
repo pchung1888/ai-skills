@@ -6,8 +6,8 @@ The tick adds two lines to this brief: "Now: <Day MM-DD HH:MM>" (the reporter ha
 this is her clock) and "Report shape: <shape>" (from inputs.json "report", chosen by the user at start).
 
 ```text
-Read <STATE_DIR>/STATUS.md, the last 40 lines of log/run-log.md, the last 3 lines of
-log/quota-log.md, the previous report, and the progress table.
+Read <STATE_DIR>/STATUS.md (its Tasks section is the task table), the last 40 lines of
+log/run-log.md, the last 3 lines of log/quota-log.md, and the previous report.
 Write <STATE_DIR>/reports/<YYYY-MM-DD-HHMM>.md, named from the "Now:" line; use that time for "now"
 and never guess a time. Follow the "Report shape:" line (shapes below). Plain shape, max 12 lines: what is being worked on now,
 what finished since the last report (do not repeat it), what went wrong and how it is handled,
@@ -24,26 +24,33 @@ Return the report text only.
 Report shapes (the user picks one at start step 1; plain is the default):
 
 - **plain:** the 12-line report above.
-- **copilot:** for a short weekday run that the user follows on their phone. Narrate in the words of the
-  personal-copilot-talk skill (sentences of 20 words or fewer, active voice, one idea each, no
-  semicolons), as a stack of short blocks, each with a bold heading and a `---` line between
-  blocks: **Since the last report** (what finished, with its proof), **Now** (what runs and what it
-  does, in one or two sentences), **Why** (only when a choice was made without the user, with how to
-  reverse it), **Next** (what comes after this). No "Tell me" block: the user is never asked anything.
-- **with the full task list:** add the progress table's id, what, status, started and finished
-  columns for every task, after the other lines.
+- **copilot:** for a short weekday run that the user follows on their phone. Before writing, call the
+  Skill tool with `ping-personal:personal-copilot-talk` and follow its "The words" and "Special
+  cases" sections. Write like a junior developer reporting to a manager, as a stack of short
+  blocks, each with a bold heading and a `---` line between blocks: **Since the last report**
+  (what finished, with its proof), **Now** (what runs and what it does, in one or two sentences),
+  **Why** (only when a choice was made without the user, with how to reverse it), **Next** (what comes
+  after this). Leave out the skill's "Step N" and "Tell me" blocks: the user is never asked anything.
+  If the Skill call fails, write the plain shape and start the report with the line
+  "copilot talk did not load: <error>", so the coordinator logs it in log/skill-friction.md.
+- **with the full task list:** after the other lines, every row of the STATUS.md Tasks section in
+  phone shape: one line per task, no table, status first. Example:
+  `[done] Fix invoice rounding - Fri 10-16 19:40 to 19:52`. Keep the ADDED remark on added tasks.
 - **task ids allowed:** task ids may appear in the text (check_run then skips its report-plain check).
   Hashes, run ids and agent names stay out.
 
-## Progress table contract (`<STATE_DIR>/PROGRESS.md`)
+## Task table contract (the Tasks section of `<STATE_DIR>/STATUS.md`)
 
-`scripts/build_table.py` enforces this contract; the reporter reads the table, it never writes it.
+STATUS.md is the owner's one status file; there is no separate progress file.
+`scripts/build_table.py` enforces this contract and rewrites only the lines between
+`<!-- tasks:begin ... -->` and `<!-- tasks:end -->`; the reporter reads the table, it never writes it.
 
 - One table, every planned task from start to end, including tasks not started yet.
 - Columns: #, stage, task id, what it does, status, started, finished, tokens used, token estimate, notes.
 - Status comes from run-state.json outcomes: Done, Deferred (agent), Deferred (owner), Failed, Not run.
 - Per-item work shows (x/N) in status, not item names.
-- Unplanned work gets a new row marked ADDED and a line under "Added along the way".
+- Unplanned work gets a new row with the remark `ADDED Day MM-DD HH:MM - why` and a line under
+  "Added along the way".
 - Every date-time is `Day MM-DD HH:MM` local; a day key sits at the top.
 - An unknown number is written "don't know". Rows are never deleted or reordered.
 - A "Task details" section maps each task id to its plan section, live log and results path.

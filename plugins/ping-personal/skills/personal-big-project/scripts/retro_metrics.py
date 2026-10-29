@@ -2,6 +2,8 @@
 Prints a markdown table, then a "Transcript sample for the retro" section. Reads only process files, never the work's content.
 
   python retro_metrics.py --state-dir docs/proj-123/autopilot --journals <dir> [--transcript <session>.jsonl]
+         [--json <state-dir>/metrics.json --goal-kind "<kind of goal>" --skill-version <x.y.z>]
+--json also writes the scorecard metrics (references/scorecard.json ids) for scripts/scorecard.py.
 
 Sources: workflow journals (wf_*.json; a resumed workflow's replayed agents count once), log/quota-log.md
 (a pause is a row whose Action is exactly PAUSE), log/skill-friction.md, GOAL-BRIEF.md, run-state.json
@@ -9,6 +11,8 @@ Sources: workflow journals (wf_*.json; a resumed workflow's replayed agents coun
 from the latest timestamp, coordinator tokens from assistant message.usage after unattendedSince).
 """
 import argparse
+import glob
+import json
 import os
 import re
 
@@ -38,11 +42,8 @@ def transcript_facts(path, since):
             last = when
         message = entry.get("message") if isinstance(entry.get("message"), dict) else {}
         content = message.get("content")
-        if entry.get("type") == "user" and isinstance(content, str) and not entry.get("isMeta"):
-            # Background notices start with "<"; tick and resume prompts carry these marker words.
-            head = content.lstrip()[:160]
-            if not head.startswith("<") and "30-minute tick" not in head and "resume: relaunch" not in head:
-                owner += 1
+        if statefiles.is_owner_message(entry):
+            owner += 1
         elif entry.get("type") == "assistant":
             if isinstance(content, list):
                 asked += sum(1 for c in content if isinstance(c, dict) and c.get("type") == "tool_use"
@@ -112,6 +113,157 @@ def transcript_sample(agents, journal_dirs):
     return "\n".join(lines) + "\n"
 
 
+SCHEMA_VERSION = 1
+COST = re.compile(r"Cost estimate:\s*([\d.]+)\s*([KkMm]?)\s*-\s*([\d.]+)\s*([KkMm]?)")
+DAY_TIME = re.compile(r"^\w{3} (\d\d)-(\d\d) (\d\d):(\d\d)$")
+
+
+def _tokens(number, unit):
+    return float(number) * {"k": 1e3, "m": 1e6}.get(unit.lower(), 1)
+
+
+def _share(part, whole):
+    return round(part / whole, 3) if whole else None
+
+
+def _check_line(lines, name):
+    """(PASS|FAIL, message) of one check in log/run-check.txt, or (None, '') when it is not there."""
+    for line in lines:
+        if line.startswith(f"PASS {name}"):
+            return "PASS", ""
+        if line.startswith(f"FAIL {name}:"):
+            return "FAIL", line
+    return None, ""
+
+
+def metrics_json(state, journal_dirs, transcript):
+    """The scorecard metrics of one run (references/scorecard.json ids), each from a named file. A metric
+    whose source is missing is null (UNKNOWN), never 0. Owner-message counts stay raw; scorecard.py turns
+    them into per-10-hour rates."""
+    inputs = statefiles.read_json_safe(os.path.join(state, "inputs.json"))
+    inputs = inputs if isinstance(inputs, dict) else {}
+    out = []
+
+    def add(mid, value, unit, source):
+        out.append({"id": mid, "value": value, "unit": unit, "label": "UNKNOWN" if value is None else "EXTRACTED",
+                    "source": source})
+
+    since = hours = None
+    try:
+        since = statefiles.parse_time(inputs["unattendedSince"])
+    except (KeyError, ValueError, TypeError):
+        pass
+    if transcript and since and os.path.isfile(transcript):
+        last = transcript_facts(transcript, since)[2]
+        hours = round((last - since).total_seconds() / 3600, 1) if last else None
+
+    fb_path = os.path.join(state, "log", "owner-feedback.md")
+    fb = [r for r in statefiles.table_rows(fb_path) if len(r) >= 6] if os.path.exists(fb_path) else None
+    count = (lambda cls: sum(1 for r in fb if r[1] == cls)) if fb is not None else (lambda cls: None)
+    score = next((int(r[4]) for r in reversed(fb or []) if r[1] == "score" and r[4].strip() in "12345" and r[4].strip()), None)
+    add("ownerScore", score, "1-5", "log/owner-feedback.md score row")
+
+    run_state = statefiles.read_json_safe(os.path.join(state, "run-state.json"))
+    run_state = run_state if isinstance(run_state, dict) else {}
+    verdict = str(run_state.get("verdict") or "")
+    found = re.search(r"(\d+) deferred", verdict)
+    add("verdict", ("all" if found and found.group(1) == "0" else "deferred") if verdict.startswith("PASS")
+        else "stopped" if verdict.startswith("STOPPED") else None, "", "run-state.json verdict")
+    tasks = [t for s in run_state.get("stages") or [] for t in (s.get("tasks") or {}).values() if isinstance(t, dict)]
+    owner_deferred = sum(1 for t in tasks if t.get("outcome") == "deferred" and t.get("deferredBy") == "owner")
+    passed = sum(1 for t in tasks if t.get("outcome") == "passed")
+    add("tasksFinished", _share(passed, len(tasks) - owner_deferred), "share", "run-state.json outcomes, owner deferrals left out")
+    add("premature", count("premature"), "count", "log/owner-feedback.md class premature")
+
+    times = []
+    for r in statefiles.table_rows(os.path.join(state, "log", "status-log.md")):
+        m = DAY_TIME.match(r[0])
+        if m:
+            mo, d, h, mi = (int(x) for x in m.groups())
+            times.append(((mo * 31 + d) * 24 + h) * 60 + mi)  # minutes; only the gaps matter
+    every = (inputs.get("report") or {}).get("everyMin", 30) if isinstance(inputs.get("report"), dict) else 30
+    gap = max((b - a for a, b in zip(sorted(times), sorted(times)[1:])), default=None) if len(times) > 1 else None
+    add("statusGap", round(gap / every, 2) if gap is not None else None, "ticks", "log/status-log.md, one row per Now rewrite")
+
+    add("complaints", count("complaint"), "count", "log/owner-feedback.md class complaint")
+    reports = sorted(glob.glob(os.path.join(state, "reports", "*.md")))
+    ticks = len(statefiles.table_rows(os.path.join(state, "log", "quota-log.md")))
+    add("reportsOnTime", min(1.0, round(len(reports) / ticks, 3)) if ticks else None, "share", "reports/ vs quota-log.md ticks")
+    style = (inputs.get("report") or {}).get("style") if isinstance(inputs.get("report"), dict) else None
+    failed_load = any(statefiles.read_text(p).lstrip().startswith("copilot talk did not load") for p in reports)
+    add("copilotLoaded", ("no" if failed_load else "yes" if reports else None) if style == "copilot" else "n/a", "",
+        "reports/ first line")
+
+    journals = statefiles.read_journals(journal_dirs)
+    agents, dropped = statefiles.unique_agents(journals)
+    total = sum(statefiles.number(j.get("totalTokens")) for j in journals) - sum(statefiles.number(a.get("tokens")) for a in dropped)
+    status_text = statefiles.read_text(os.path.join(state, "STATUS.md")) if os.path.exists(os.path.join(state, "STATUS.md")) else ""
+    incident_rules = sum(1 for line in status_text.splitlines() if line.lstrip().startswith("- ") and "incident:" in line)
+    gate_tasks = len({a["label"].split(":gate")[0] for a in agents if ":gate" in a.get("label", "")})
+    fixes = count("fix")
+    caught = incident_rules + gate_tasks
+    add("selfCaughtShare", _share(caught, caught + fixes) if fixes is not None else None, "share",
+        "STATUS.md rules with incident:, critic gates vs owner fix rows")
+
+    check_lines = statefiles.read_text(os.path.join(state, "log", "run-check.txt")).splitlines() \
+        if os.path.exists(os.path.join(state, "log", "run-check.txt")) else []
+    side, side_msg = _check_line(check_lines, "side-effects")
+    base, base_msg = _check_line(check_lines, "baselines")
+    tags, tags_msg = _check_line(check_lines, "remote-tags")
+    heads, heads_msg = _check_line(check_lines, "remote-branches")
+    cap = None if side is None else "FAIL" if "> cap" in side_msg else "PASS"
+    baseline = None if base is None else "FAIL" if "changed after capture" in base_msg else "PASS"
+    pushed = None if None in (tags, heads) else "FAIL" if ("added or moved" in tags_msg or "differ" in heads_msg) else \
+        "PASS" if (tags, heads) == ("PASS", "PASS") else None
+    start, end = inputs.get("reviewsAtStart"), inputs.get("reviewsAtEnd")
+    allowed = set(inputs.get("reviewsChangedByOwner") or [])
+    external = None
+    if isinstance(start, dict) and isinstance(end, dict):
+        changed = [k for k, v in start.items() if v == "open" and end.get(k) in ("merged", "closed") and k not in allowed]
+        external = "FAIL" if changed else "PASS"
+
+    decisions = statefiles.read_text(os.path.join(state, "log", "decisions.md")) if os.path.exists(os.path.join(state, "log", "decisions.md")) else ""
+    stops = decisions.count("self-stop:")
+    risk = stops or (count("premature") or 0) or "FAIL" in (cap, baseline, pushed, external)
+    add("selfStops", "stopped" if stops else "missed" if risk else "n/a", "", "log/decisions.md self-stop: rows")
+    add("steering", count("steer"), "count", "log/owner-feedback.md class steer")
+
+    if journals:
+        by_name = {}
+        for j in journals:
+            by_name.setdefault(j.get("workflowName", "?"), []).append(j)
+        earlier = sum(statefiles.number(j.get("totalTokens")) for js in by_name.values() for j in js[:-1])
+        kept_ids = {id(j) for js in by_name.values() for j in js[-1:]}
+        fix_tokens = sum(statefiles.number(a.get("tokens")) for j in journals if id(j) in kept_ids
+                         for a in j.get("workflowProgress") or [] if isinstance(a, dict) and ":fix" in str(a.get("label", "")))
+        add("reworkShare", _share(earlier + fix_tokens, total), "share", "journals: earlier attempts of a stage + :fix agents")
+        add("verifierShare", _share(sum(statefiles.number(a.get("tokens")) for a in agents if ":verify" in a.get("label", "")), total),
+            "share", "journals: :verify agents")
+    else:
+        add("reworkShare", None, "share", "journals")
+        add("verifierShare", None, "share", "journals")
+    brief = os.path.join(state, "GOAL-BRIEF.md")
+    found = COST.search(statefiles.read_text(brief)) if os.path.exists(brief) else None
+    mid = (_tokens(found.group(1), found.group(2) or found.group(4)) + _tokens(found.group(3), found.group(4))) / 2 if found else 0
+    add("estimateRatio", round(total / mid, 3) if found and mid and total else None, "ratio", "GOAL-BRIEF.md Cost estimate line")
+
+    complaint_rows = [r for r in fb or [] if r[1] in ("fix", "complaint")]
+    filed_text = "".join(statefiles.read_text(os.path.join(state, p)) for p in ("log/skill-friction.md", "RETRO.md")
+                         if os.path.exists(os.path.join(state, p)))
+    add("complaintsFiled", _share(sum(1 for r in complaint_rows if r[2] and r[2] in filed_text), len(complaint_rows)), "share",
+        "owner-feedback.md skill column vs skill-friction.md and RETRO.md")
+    for mid, value in (("capOverrun", cap), ("protectedPush", pushed), ("baselineChanged", baseline), ("externalState", external)):
+        add(mid, value, "", "log/run-check.txt" if mid != "externalState" else "inputs.json reviewsAtStart / reviewsAtEnd")
+
+    by_skill = {}
+    for r in complaint_rows:
+        by_skill[r[2]] = by_skill.get(r[2], 0) + 1
+    return {"schemaVersion": SCHEMA_VERSION, "runId": os.path.basename(os.path.normpath(state)),
+            "runDate": since.strftime("%Y-%m-%d") if since else None, "goalKind": None,
+            "skillVersion": None, "scorecardVersion": None, "unattendedHours": hours, "backfilled": False,
+            "metrics": out, "complaintsBySkill": by_skill}
+
+
 def metrics(state, journal_dirs, transcript):
     inputs = statefiles.read_json_safe(os.path.join(state, "inputs.json"))
     inputs = inputs if isinstance(inputs, dict) else {}
@@ -169,6 +321,8 @@ def metrics(state, journal_dirs, transcript):
     else:
         rows.append(("Owner messages / questions / wall clock / coordinator tokens",
                      "don't know (no transcript or unattendedSince)"))
+    for m in metrics_json(state, journal_dirs, transcript)["metrics"]:
+        rows.append((f"scorecard: {m['id']}", "don't know" if m["value"] is None else m["value"]))
 
     return ("| Metric | Value |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in rows) + "\n"
             + transcript_sample(agents, journal_dirs))
@@ -179,9 +333,19 @@ if __name__ == "__main__":
     ap.add_argument("--state-dir", required=True, help="state folder. Example: docs/proj-123/autopilot")
     ap.add_argument("--journals", nargs="*", default=None, help="folders holding wf_*.json; default: every session in inputs.json. Example: ~/.claude/projects/<proj>/<session>/workflows")
     ap.add_argument("--transcript", help="coordinator transcript .jsonl. Example: ~/.claude/projects/<proj>/<session>.jsonl")
+    ap.add_argument("--json", help="also write the scorecard metrics here. Example: docs/proj-123/autopilot/metrics.json")
+    ap.add_argument("--goal-kind", default=None, help="--json: one-line kind of goal, no project names. Example: answer review comments")
+    ap.add_argument("--skill-version", default=None, help="--json: plugin version from the cache path. Example: 0.43.0")
     a = ap.parse_args()
     dirs = a.journals
     if dirs is None:
         run_inputs = statefiles.read_json_safe(os.path.join(a.state_dir, "inputs.json"))
         dirs = statefiles.journal_dirs(run_inputs if isinstance(run_inputs, dict) else {})
     print(metrics(a.state_dir, dirs, a.transcript), end="")
+    if a.json:
+        doc = metrics_json(a.state_dir, dirs, a.transcript)
+        card = statefiles.read_json_safe(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                                      "references", "scorecard.json")) or {}
+        doc.update(goalKind=a.goal_kind, skillVersion=a.skill_version, scorecardVersion=card.get("version"))
+        with open(a.json, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(doc, f, indent=2)

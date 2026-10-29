@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "about": "Run scorecard for personal-big-project. scripts/scorecard.py grades a run's metrics.json with it. Weights and bands are the owner's to change; bump version when you do. Design: docs/big-project/2026-10-29-eval-metrics-retro-design.md in the plugin repo.",
+  "minHours": 1,
+  "dimensions": [
+    {"id": "outcome", "weight": 30, "metrics": [
+      {"id": "ownerScore", "weight": 0.6, "grade": "direct"},
+      {"id": "verdict", "weight": 0.4, "grade": "map", "map": {"all": 5, "deferred": 4, "stopped": 1, "none": 0}}
+    ]},
+    {"id": "completion", "weight": 20, "metrics": [
+      {"id": "tasksFinished", "weight": 0.4, "grade": "atLeast", "bands": [[0.98, 5], [0.9, 4], [0.8, 3], [0.6, 1]]},
+      {"id": "premature", "weight": 0.3, "grade": "atMost", "bands": [[0, 5]]},
+      {"id": "statusGap", "weight": 0.3, "grade": "atMost", "bands": [[2, 5], [3, 4], [5, 3], [10, 1]]}
+    ]},
+    {"id": "communication", "weight": 20, "metrics": [
+      {"id": "complaints", "weight": 0.5, "grade": "atMost", "per10h": true, "bands": [[1, 5], [2, 4], [4, 3], [8, 2], [15, 1]]},
+      {"id": "reportsOnTime", "weight": 0.3, "grade": "atLeast", "bands": [[0.95, 5], [0.85, 4], [0.7, 3], [0.5, 2]]},
+      {"id": "copilotLoaded", "weight": 0.2, "grade": "map", "map": {"yes": 5, "no": 0}}
+    ]},
+    {"id": "selfReliance", "weight": 15, "metrics": [
+      {"id": "selfCaughtShare", "weight": 0.4, "grade": "atLeast", "bands": [[0.9, 5], [0.75, 4], [0.6, 3], [0.4, 1]]},
+      {"id": "selfStops", "weight": 0.2, "grade": "map", "map": {"stopped": 5, "missed": 0}},
+      {"id": "steering", "weight": 0.4, "grade": "atMost", "per10h": true, "bands": [[2, 5], [4, 4], [8, 3], [15, 2], [30, 1]]}
+    ]},
+    {"id": "efficiency", "weight": 10, "metrics": [
+      {"id": "reworkShare", "weight": 0.4, "grade": "atMost", "bands": [[0.1, 5], [0.2, 4], [0.3, 3], [0.45, 1]]},
+      {"id": "verifierShare", "weight": 0.3, "grade": "atMost", "bands": [[0.15, 5], [0.25, 3], [0.35, 1]]},
+      {"id": "estimateRatio", "weight": 0.3, "grade": "between", "bands": [[0.8, 1.25, 5], [0.67, 1.5, 3], [0.5, 2.0, 1]]}
+    ]},
+    {"id": "learning", "weight": 5, "metrics": [
+      {"id": "complaintsFiled", "weight": 1.0, "grade": "atLeast", "bands": [[0.9, 5], [0.7, 3], [0.5, 1]]}
+    ]}
+  ],
+  "classMetric": {"score": "ownerScore", "premature": "premature", "complaint": "complaints", "fix": "selfCaughtShare", "steer": "steering"},
+  "safety": ["capOverrun", "protectedPush", "baselineChanged", "externalState"]
+}

@@ -14,7 +14,8 @@ rules hold after a compaction.
 <!-- <REPORT_SHAPE> : report shape the user chose, from inputs.json report. Example: copilot, with the full task list -->
 
 ```text
-<GOAL> <EVERY>-minute tick (unattended). Never ask the owner anything. Follow these steps in order.
+<GOAL> <EVERY>-minute tick (unattended). Never ask the owner anything and never wait for them; the only
+exception is the cap question in step 3, sent by phone while the run keeps going. Follow these steps in order.
 
 1. Read quota: ~/.claude/live-usage/<SESSION_ID>.json (5h and 7d percentUsed, 5h resetsAt, ctxPct).
    If it is older than 15 min, run pwsh -NoProfile -File "<QUOTA_PS1>" -Provider claude -Json.
@@ -22,7 +23,7 @@ rules hold after a compaction.
    It logs the quota row and prints one JSON action. Do exactly that action:
    - WAIT: nothing.
    - PAUSE: TaskStop the running workflow if any; CronCreate ONE one-shot (recurring false) at the
-     returned time with the prompt '<GOAL> resume: relaunch - run the tick steps 1-3 now'; then
+     returned time with the prompt '<GOAL> resume: relaunch - run the tick steps 1-4 now'; then
      run_state.py record pause <until>. Never create a second one-shot while paused.
    - RESULT: the action's items[0] is the stage's result record,
      ~/.claude/projects/<project>/<SESSION_ID>/workflows/<runId>.json. Run
@@ -47,12 +48,22 @@ rules hold after a compaction.
    - CLOSE: write RETRO.md (SKILL.md "Feedback loop"), PushNotification "DONE" with the verdict,
      and CronDelete this tick.
    A workflow that died or was stopped outside a PAUSE: run_state.py record interrupted <stage>.
-   Every decision you make that the script did not dictate goes into log/decisions.md.
-3. Report: if the action says report true, run python "<SKILL_DIR>/scripts/build_table.py" --state-dir "<STATE_DIR>",
+   Every decision you make that the script did not dictate goes into log/decisions.md; a stop or hold
+   you chose on your own because work was risky or overdue starts with "self-stop:".
+   After any rewrite of the STATUS.md Now block, run python "<SKILL_DIR>/scripts/log_row.py" status --state-dir "<STATE_DIR>".
+3. Caps: run python "<SKILL_DIR>/scripts/log_row.py" usage --state-dir "<STATE_DIR>". For a new WARN or FULL
+   line, PushNotification it in one plain sentence. When a task stopped with "cap reached: <kind>", also
+   PushNotification the question "<kind> cap <cap> reached. Reply raise <kind> to <n>, or stop." and keep
+   the rest of the run going; never wait for the answer. When the owner answers, run log_row.py raise-cap
+   --state-dir "<STATE_DIR>" --kind <kind> --to <n> --note "<their words>", copy their words into STATUS.md
+   "Owner decisions", and add the stopped task back as an ADDED task for the next stage.
+4. Report: if the action says report true, run python "<SKILL_DIR>/scripts/build_table.py" --state-dir "<STATE_DIR>",
    then dispatch the reporter in the background (agentType ping-personal:amanda, model sonnet, effort low)
    with the brief in "<SKILL_DIR>/references/reporter-brief.md", plus two lines: "Now: <Day MM-DD HH:MM
-   from a clock command>" (she has no shell) and "Report shape: <REPORT_SHAPE>". When it returns: paste a 3-line digest
-   and the report path in chat, PushNotification the first sentence, post the full report to the
-   owner's Slack channel if one is set, and run run_state.py record reported <run-log rows>.
+   from a clock command>" (she has no shell) and "Report shape: <REPORT_SHAPE>". When it returns: paste the
+   full report text and its path in chat (never a digest), PushNotification its first sentence as one
+   plain human sentence, post the full report to the owner's Slack channel if one is set, and run
+   run_state.py record reported <run-log rows>. If the report starts with "copilot talk did not load",
+   add a row to log/skill-friction.md.
    If report is false, send nothing.
 ```

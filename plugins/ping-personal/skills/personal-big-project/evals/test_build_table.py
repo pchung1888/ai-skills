@@ -91,6 +91,35 @@ def extra_cases():
         shutil.rmtree(tmp)
 
 
+def section_cases():
+    """The table lives in one STATUS.md section: the coordinator's text around it survives every
+    rebuild, a rebuild replaces the section instead of adding a second one, and a file with no
+    section gets one appended."""
+    template = open(os.path.join(HERE, "..", "references", "STATUS.template.md"), encoding="utf-8").read()
+    assert statefiles.TASKS_BEGIN in template and statefiles.TASKS_END in template, "template markers drifted"
+    tmp = tempfile.mkdtemp()
+    try:
+        state = os.path.join(tmp, "autopilot")
+        write(os.path.join(state, "tasks.csv"), "id,stage,what,estimate,added\nT1,S,one,,\nT2,S,two,,ADDED Thu 10-29 11:51 - owner asked\n")
+        status = os.path.join(state, "STATUS.md")
+        write(status, "# Goal -- live status\n\n## Now\n\n- Stage: s1\n\n## Stage plan\n\n| Stage | What | State |\n|---|---|---|\n| s1 | build | running |\n")
+        build_table.build(state, [])
+        build_table.build(state, [])
+        text = open(status, encoding="utf-8").read()
+        assert text.count(statefiles.TASKS_BEGIN) == 1 and text.count(statefiles.TASKS_END) == 1, text
+        assert "- Stage: s1" in text and "| s1 | build | running |" in text, text  # coordinator text kept
+        assert [r[2] for r in statefiles.task_rows(status)] == ["T1", "T2"], statefiles.task_rows(status)
+        assert row(text, "T2")[9].startswith("ADDED Thu 10-29 11:51 - owner asked"), row(text, "T2")
+        # The coordinator's text after the section survives too.
+        with open(status, "a", encoding="utf-8") as f:
+            f.write("\n## Owner decisions (verbatim)\n\nkeep me\n")
+        build_table.build(state, [])
+        text = open(status, encoding="utf-8").read()
+        assert text.rstrip().endswith("keep me") and text.count(statefiles.TASKS_BEGIN) == 1, text
+    finally:
+        shutil.rmtree(tmp)
+
+
 def main():
     tmp = tempfile.mkdtemp()
     try:
@@ -134,7 +163,10 @@ def main():
         text2 = open(build_table.build(state, journals[:1]), encoding="utf-8").read()
         order2 = [l.split(" | ")[2] for l in text2.splitlines() if l.startswith("| ") and l[2].isdigit()]
         assert order1 == order2 and order1[:len(PLANNED)] == PLANNED, (order1, order2)
-        assert all(ord(c) < 128 for c in text), "PROGRESS.md must be ASCII"
+        assert all(ord(c) < 128 for c in text), "STATUS.md must be ASCII"
+        assert os.path.basename(out) == "STATUS.md" and not os.path.exists(os.path.join(state, "PROGRESS.md")), out
+        assert commit[9].startswith("ADDED Sun 10-18 09:00 - "), commit  # the remark says when it was added
+        section_cases()
         extra_cases()
         print("BUILD TABLE TEST PASS")
     finally:

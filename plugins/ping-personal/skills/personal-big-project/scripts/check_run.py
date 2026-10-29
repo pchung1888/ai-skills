@@ -7,13 +7,13 @@ It fails closed: a missing file or a row it cannot read is a named FAIL, never a
 Prints one line per check, "PASS <name>" or "FAIL <name>: <why>". Exit 1 on any FAIL.
 
 Checks and the files they read (all under --state-dir unless noted):
-  required-files  inputs.json, STATUS.md, tasks.csv, PROGRESS.md, log/run-log.md, log/side-effects.md,
+  required-files  inputs.json, STATUS.md, tasks.csv, log/run-log.md, log/side-effects.md,
                   baseline-hashes.txt (may be empty), run-state.json, OWNER-REPORT.md all exist
   inputs          inputs.json has caps (kind -> whole number) and unattendedSince (ISO time; no zone = UTC)
   log-times       every log/run-log.md row starts with a real-clock time "Day MM-DD HH:MM"
   report-plain    reports/*.md hold no ids, hashes or run codes (the owner reads them on a phone), unless
                   inputs.json "report" has "ids": true (the owner asked for task ids at start)
-  table-rows      every task id in tasks.csv still has a row in PROGRESS.md
+  table-rows      every task id in tasks.csv still has a row in the Tasks section of STATUS.md
   side-effects    log/side-effects.md totals per kind stay within inputs.json "caps"; every row is
                   "| Day MM-DD HH:MM | kind | whole number | note |" and its kind has a cap
   baselines       every line of baseline-hashes.txt ("<sha256>  <repo-relative path>", written by
@@ -28,6 +28,11 @@ Checks and the files they read (all under --state-dir unless noted):
   final-commit    the remote head of inputs.json "branch" equals the local HEAD of repoPath
   owner-report    OWNER-REPORT.md has the headings "## Evidence" and "## Merge danger", and the merge danger
                   section says "one-way door" or "two-way door" for the run as a whole
+  owner-feedback  log/owner-feedback.md has one row per owner message after unattendedSince (ticks, resume
+                  prompts and notices are not owner messages), each "| when | class | skill | missed what |
+                  like | quote |" with a class from statefiles.OWNER_CLASSES
+  owner-score     log/owner-feedback.md has a class "score" row whose like cell is 1-5 (the closing ask)
+The result lines are also written to log/run-check.txt; the scorecard reads its safety rows from there.
 The three git checks run git inside inputs.json "repoPath" (read from the state folder when relative), which must
 be the root of a git repo; remote = inputs.json "remote" (default origin). A git failure is a named FAIL.
 """
@@ -49,7 +54,7 @@ SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 DEFERRED_COUNTS = re.compile(r"(\d+) deferred, (\d+) by agents")
 PASS_VERDICT = re.compile(r"^PASS \((\d+) of (\d+) tasks;")
 STOPPED_VERDICT = re.compile(r"^STOPPED \([^;]*; (\d+) of (\d+) tasks passed;")
-REQUIRED_FILES = ["inputs.json", "STATUS.md", "tasks.csv", "PROGRESS.md", os.path.join("log", "run-log.md"),
+REQUIRED_FILES = ["inputs.json", "STATUS.md", "tasks.csv", os.path.join("log", "run-log.md"),
                   os.path.join("log", "side-effects.md"), "baseline-hashes.txt", "run-state.json", "OWNER-REPORT.md"]
 
 
@@ -99,9 +104,9 @@ def check_table_rows(state):
         return "tasks.csv not found"
     with open(tasks_path, newline="", encoding="utf-8-sig") as f:
         ids = [(r.get("id") or "").strip() for r in csv.DictReader(f)]
-    shown = {r[2] for r in statefiles.table_rows(os.path.join(state, "PROGRESS.md")) if len(r) > 2}
+    shown = {r[2] for r in statefiles.task_rows(os.path.join(state, "STATUS.md")) if len(r) > 2}
     gone = [i for i in ids if i and i not in shown]
-    return f"tasks missing from PROGRESS.md: {', '.join(gone)}" if gone else ""
+    return f"tasks missing from the STATUS.md Tasks section (run build_table.py): {', '.join(gone)}" if gone else ""
 
 
 def check_side_effects(state, inputs):
@@ -207,6 +212,38 @@ def check_no_questions(inputs, transcript):
         if "AskUserQuestion" in names and when >= start:
             asked.append(d["timestamp"])
     return f"asked the owner {len(asked)} time(s) while unattended, first at {asked[0]}" if asked else ""
+
+
+def check_owner_feedback(state, inputs, transcript):
+    """One log/owner-feedback.md row per owner message after unattendedSince, each with one known class."""
+    if not transcript or not os.path.isfile(transcript):
+        return "--transcript is required"
+    try:
+        start = statefiles.parse_time(inputs.get("unattendedSince"))
+    except (ValueError, TypeError):
+        return "inputs.json has no usable unattendedSince"
+    sent = 0
+    for d in statefiles.read_jsonl_safe(transcript):
+        try:
+            when = statefiles.parse_time(d["timestamp"])
+        except (KeyError, ValueError):
+            continue
+        if when >= start and statefiles.is_owner_message(d):
+            sent += 1
+    rows = statefiles.table_rows(os.path.join(state, "log", "owner-feedback.md"))
+    bad = [r[1] if len(r) > 1 else "?" for r in rows if len(r) < 6 or r[1] not in statefiles.OWNER_CLASSES]
+    if bad:
+        return f"rows with a class not in {', '.join(statefiles.OWNER_CLASSES)} (or fewer than 6 cells): {', '.join(bad)}"
+    if len(rows) != sent:
+        return f"{len(rows)} rows for {sent} owner messages after unattendedSince; tag every owner message once"
+    return ""
+
+
+def check_owner_score(state):
+    rows = statefiles.table_rows(os.path.join(state, "log", "owner-feedback.md"))
+    if any(len(r) > 4 and r[1] == "score" and r[4].strip() in ("1", "2", "3", "4", "5") for r in rows):
+        return ""
+    return "no owner score row (class score, Like 1-5); ask the owner for a 1-5 score at close"
 
 
 GIT_TIMEOUT_S = 60
@@ -331,10 +368,16 @@ def run(state, transcript):
     check("remote-branches", check_remote_branches(state, inputs))
     check("final-commit", check_final_commit(state, inputs))
     check("owner-report", check_owner_report(state))
+    check("owner-feedback", check_owner_feedback(state, inputs, transcript))
+    check("owner-score", check_owner_score(state))
 
-    print("\n".join(results))
     failed = sum(r.startswith("FAIL") for r in results)
-    print(f"RUN CHECK FAIL ({failed})" if failed else "RUN CHECK PASS")
+    results.append(f"RUN CHECK FAIL ({failed})" if failed else "RUN CHECK PASS")
+    print("\n".join(results))
+    # The latest result stays in the state folder: the scorecard reads its safety rows from here.
+    os.makedirs(os.path.join(state, "log"), exist_ok=True)
+    with open(os.path.join(state, "log", "run-check.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(results) + "\n")
     return 1 if failed else 0
 
 

@@ -13,6 +13,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
 import check_run  # noqa: E402
+import statefiles  # noqa: E402
 
 sys.path.insert(0, os.path.join(HERE, "fixtures"))
 import materialize  # noqa: E402
@@ -206,6 +207,24 @@ def main():
         assert_passes("report-ids-asked", tmp, ids_asked)
         assert_fails("row-missing", "table-rows", tmp,
                      lambda s, t: append(os.path.join(s, "tasks.csv"), "T3,Build,new,,\n"))
+        # owner-feedback: one row per owner message after unattendedSince, each with a known class; a dropped
+        # row or an unknown class fails, so the coordinator cannot leave out a complaint unseen.
+        fb = lambda s: os.path.join(s, "log", "owner-feedback.md")
+        assert_fails("feedback-row-dropped", "owner-feedback", tmp,
+                     lambda s, t: write(fb(s), "\n".join(read(fb(s)).splitlines()[:3]) + "\n"))
+        assert_fails("feedback-bad-class", "owner-feedback", tmp,
+                     lambda s, t: write(fb(s), read(fb(s)).replace("| steer |", "| happy |")))
+        # A 15-minute tick is not an owner message, so it needs no row.
+        assert_passes("feedback-15-minute-tick", tmp, lambda s, t: append(
+            t, '{"type": "user", "timestamp": "2026-10-17T03:20:00.000Z", "message": {"content": "G 15-minute tick (unattended)."}}\n'))
+        # owner-score: the closing ask must leave a score row (class score, Like 1-5).
+        assert_fails("no-owner-score", "owner-score", tmp,
+                     lambda s, t: write(fb(s), read(fb(s)).replace("| score | big-project | - | 4 |", "| answer | big-project | - | - |")))
+
+        # The task table lives in STATUS.md's Tasks section: a row outside it does not count.
+        assert_fails("no-tasks-section", "table-rows", tmp,
+                     lambda s, t: write(os.path.join(s, "STATUS.md"), statefiles.task_section(read(os.path.join(s, "STATUS.md")))[0]
+                                        + "| 1 | Build | T1 | x |\n| 2 | Build | T2 | x |\n| 3 | Build | T2:fix | x |\n"))
 
         def repo_of(state):
             return os.path.dirname(state)
