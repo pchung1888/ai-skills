@@ -23,7 +23,7 @@ reading instead of the ask.
 - `--requirement "<their words>"` for a one-liner,
 - `--requirement-file <path>` when the ask runs to several lines,
 - `--no-requirement "<why there isn't one>"` for a genuine exploratory spike
-  (12+ chars; it is recorded in the beacon and the critic gate reads it).
+  (12+ chars; it is recorded in the beacon and the critic judge reads it).
 
 **Read it back before writing -- this is enforced.** The requirement lands in a
 git-committed file. In some host repos `docs/` is tracked in git, so a real
@@ -36,7 +36,7 @@ one of:
 - `--text-unreviewed "<why no review was possible>"`.
 
 Either way the answer is written to the beacon as `text_review_status` and committed,
-so a later session and the critic gate can see whether anyone actually looked.
+so a later session and the critic judge can see whether anyone actually looked.
 
 There is deliberately **no scanner**. A regex sees shape, and the thing at risk -- a
 client name, a trader name, a sentence sensitive for what it describes -- has no
@@ -53,7 +53,7 @@ acknowledgement, not a detection.
    - Else: prompt interactively for phase count + names.
    - If --vision <path> is given, pass it to beacon_writer.py via --vision-path. If --plan is given but
      --vision is absent, ask the user: "Is there a vision or why-doc for this goal? (path or 'none')" --
-     a vision doc helps the critic gate judge intent against the WHY, not only the plan's WHAT. If the
+     a vision doc helps the critic judge rule on intent against the WHY, not only the plan's WHAT. If the
      user provides a path, pass it as --vision-path; if they answer 'none', omit the flag (leave vision_path blank).
 3a. Determine operating mode (one question, ask once): interactive or
    autonomous, separately for Phase 1 and Phase 2+. Default if unanswered:

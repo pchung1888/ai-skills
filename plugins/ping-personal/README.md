@@ -33,6 +33,14 @@ Two modes:
 - **PAUSE** (interactive) -- gate prints findings, hands control back to user.
 - **AUTO-RESOLVE** (autonomous) -- gate decides per the 3-vote rule, logs the decision.
 
+### `/personal-critic-judge`
+
+Judged review, planned to replace `/personal-critic-gate`. Five reviewers (ms-mario, amanda,
+maggie, rhea, and codex or iris) return findings only, with no votes. A fresh judge rules on each
+finding against your main goal and the subtask under review: real or not, in scope or not, fix
+now or later, and why. Only "fix now" rows get fixed, then the judge checks those fixes once.
+A leaked secret, data loss, a security hole or a deleted test is never ruled "never".
+
 ### `/personal-md-to-html`
 
 Render markdown (plans, specs, audit trackers) as styled HTML. Two themes: `arc` and `midnight`. Includes a check script that verifies the rendered HTML round-trips its content.
@@ -100,6 +108,13 @@ CLAUDE.md / AGENTS.md, install or update this plugin) and explains any FAIL line
 Add-rule edits `harness/`, installs, runs the sync check and pushes after you
 approve the diff. A brand-new machine needs the bootstrap command once, before
 the plugin (and so this skill) exists there.
+
+### `/personal-copilot-talk`
+
+A talking mode for the session, for an install, deploy, data scrub or runbook you
+run by hand on a box the agent cannot reach. Each reply is one step: a verdict on
+the last step, numbered actions, stop points, and a short "Tell me:" list. It
+drops the mechanism and TL;DR sections until you say stop.
 
 ### Adapted from Matt Pocock's skills (MIT)
 

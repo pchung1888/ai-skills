@@ -55,6 +55,9 @@ _Avoid_: result, status, score
 **Critic gate**: up to three reviewer seats asked one after another; two agreeing votes decide retry, defer or stop.
 _Avoid_: panel, vote (alone), review
 
+**Judge review**: the last check on the whole run: five reviewers list problems, one judge rules each one fix now, later, flagged for the owner, or never.
+_Avoid_: panel, vote, critic gate (for this meaning)
+
 ## Limits and records
 
 **Base commit**: the commit HEAD pointed at when the run started; every diff is measured from it.

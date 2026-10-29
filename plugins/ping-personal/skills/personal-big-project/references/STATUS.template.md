@@ -1,7 +1,8 @@
 # <GOAL> -- live status (every agent reads this first)
 
 <!-- <GOAL> : short goal name. Example: PROJ-123 invoice fixes -->
-Every task appends one line to `log/run-log.md` and rewrites the "Now" block below.
+The verifier appends one line per task to `log/run-log.md` with `scripts/log_row.py`; only the
+coordinator rewrites the "Now" block below.
 Times: `Day MM-DD HH:MM` local, from a real clock command, never estimated.
 
 ## Binding rules (newest last; each dated, with author; overrides any task text)
@@ -14,7 +15,7 @@ Times: `Day MM-DD HH:MM` local, from a real clock command, never estimated.
 - No test-only changes in shipped code.
 - No tag pushes; push only to <TARGET_BRANCH>.
 <!-- <TARGET_BRANCH> : the only branch agents may push. Example: topic/123-invoice-fixes -->
-- Side-effect caps: the "caps" object in inputs.json; write the log/side-effects.md row before acting.
+- Side-effect caps: the "caps" object in inputs.json; run `log_row.py effect` before acting; REFUSED means do not act.
 
 ## Now
 

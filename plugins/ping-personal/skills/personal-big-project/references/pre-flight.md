@@ -13,7 +13,7 @@ pwsh -NoProfile -File ${CLAUDE_SKILL_DIR}/scripts/preflight.ps1 -RepoPath <repo>
   -DoneCommand "<done command>" -PassLine "<pass line>" -Disks C:,D: -MinGB 1 -WeeklyCap 85
 ```
 
-Then run checks 2, 3, 4, 5, 9 and 10 yourself with the real tools, because a permission prompt,
+Then run checks 2, 3, 4, 5, 9, 10, 12 and 13 yourself with the real tools, because a permission prompt,
 a cron fire or a phone buzz can only be seen from inside the session.
 
 | # | Check | PASS when |
@@ -29,6 +29,8 @@ a cron fire or a phone buzz can only be seen from inside the session.
 | 9 | Workflow resume | A toy 2-agent workflow, stopped with TaskStop after agent 1, relaunched with `resumeFromRunId`, returns agent 1's cached result. Also log in `log/skill-friction.md` what its journal file showed after the TaskStop (status, written or not) and after the resume (same runId, rewritten or not): run_state.py assumes the resumed run rewrites the same journal |
 | 10 | Git push auth | `git push` to the target branch (or a scratch ref) succeeds without a prompt |
 | 11 | Done command is RED | The done command runs and its last line is the failing line (`-FailLine`, by default the pass line with PASS changed to FAIL). Any other last line means the command itself is broken; a goal that cannot fail cannot be proven finished |
+| 12 | No blocking popup | Make one deliberate error in each local program the plan drives (a web page, a script host, a DLL call). Each returns an error and no window opens: a script or JIT debugger dialog, or an error box, holds the request until someone clicks it, which stalls an unattended run. If one opens, turn it off with the user's OK and log the setting and its reverse in `log/decisions.md` |
+| 13 | Cost estimate | Tokens per agent from check 9's toy (or, without one, 46K to 74K, the averages of the last two runs) x agents per task (2 when the first try passes; up to 9 with a fix, three critic seats and a second check) x tasks in the plan, plus the tasks added during a run (the last run planned 32 and finished 49). Write the low and high numbers into GOAL-BRIEF.md "Cost estimate" and the user accepts them, or trims the scope now. Asking them after the first stage has spent 500K is too late |
 
 After all PASS, tell the user once: the tick lives in this session, so closing Claude stops the run;
 STATUS.md holds the resume command for a new session.

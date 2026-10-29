@@ -159,6 +159,10 @@ def main():
                      lambda s, t: append(os.path.join(s, "baseline-hashes.txt"), "not-a-hash\n"))
         assert_fails("baselines-not-hex", "baselines", tmp,
                      lambda s, t: write(os.path.join(s, "baseline-hashes.txt"), "zzzz  baseline/expected.txt\n"))
+        # sha256sum -b writes "<sha> *<path>"; a run with nothing to baseline writes "none".
+        assert_passes("baselines-star", tmp, lambda s, t: write(os.path.join(s, "baseline-hashes.txt"),
+                      "498b484532af1715eded0cf3b635f059293c3bcc81664648f06a6339b076f31c *baseline/expected.txt\n"))
+        assert_passes("baselines-none", tmp, lambda s, t: write(os.path.join(s, "baseline-hashes.txt"), "none\n"))
         assert_fails("baselines-short-line", "baselines", tmp,
                      lambda s, t: write(os.path.join(s, "baseline-hashes.txt"), "498b484532af1715eded0cf3b635f059293c3bcc81664648f06a6339b076f31c\n"))
 
@@ -195,6 +199,11 @@ def main():
         # A report with a code in it is refused; progress rows are looked up by task id.
         assert_fails("report-code", "report-plain", tmp,
                      lambda s, t: append(os.path.join(s, "reports", "2026-10-16-2130.md"), "Task T2 passed.\n"))
+
+        def ids_asked(s, t):  # the owner asked for task ids in their reports at start
+            append(os.path.join(s, "reports", "2026-10-16-2130.md"), "Task T2 passed.\n")
+            edit_json(os.path.join(s, "inputs.json"), lambda d: d.update(report={"ids": True}))
+        assert_passes("report-ids-asked", tmp, ids_asked)
         assert_fails("row-missing", "table-rows", tmp,
                      lambda s, t: append(os.path.join(s, "tasks.csv"), "T3,Build,new,,\n"))
 

@@ -28,7 +28,8 @@ just makes the wrongness visible.
 ## ping-personal role anchors (this plugin's defaults)
 - RESEARCHER = `iris` -- read/trace/understand existing code, no writes.
 - IMPLEMENTER = `bunny` -- write/edit source per an approved plan.
-- CRITIC = `ms-mario` (direct adversarial review) or `/personal-critic-gate` (3-vote ship gate).
+- CRITIC = `ms-mario` (direct adversarial review) or `/personal-critic-judge` (judged ship review).
+  A vote between options (retry, defer, stop, a recovery path) stays on `/personal-critic-gate`.
 - Other ping-personal agents are domain-specific and outrank the generic fallbacks when their
   description matches the phase intent (e.g. a parser phase -> `vex`; a git/PR phase -> `dora`;
   a design/chart phase -> `maggie`). These are model-folded, not discover.py rows.

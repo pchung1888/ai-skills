@@ -25,7 +25,10 @@ inputs.json (written at start step 1; read by every script). Example:
   sessions: every session id the run has used (start writes the first, resume appends).
   The CURRENT session id comes from CLAUDE_CODE_SESSION_ID and must be in sessions, else this fails.
   Optional: effort ("low" on Fable, null to inherit on Opus), workerModel ("sonnet" or null to inherit),
-  unattendedSince (ISO 8601 UTC with Z; a naive time is read as UTC).
+  unattendedSince (ISO 8601 UTC with Z; a naive time is read as UTC),
+  report: the report shape the user chose at start. Example: {"everyMin": 15, "style": "copilot", "taskList": true, "ids": true}
+         everyMin: tick and report interval, 10, 15, 20, 30 or 60 (default 30); style: "plain" (default) or
+         "copilot" (narrated, for short weekday runs); taskList: add the full task list; ids: allow task ids.
 
 Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in parallel. Example:
   {"name": "s3-build", "summary": "spikes, then parallel code, then fresh-eyes review",
@@ -39,6 +42,7 @@ Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in para
   model: "worker" (default, uses workerModel) or "inherit" (the session model).
   needs: task ids that must have passed; ids outside this spec count as already passed (a retry spec).
   commits: true lets the task git commit; the agent's tools line must include Bash.
+         Every task agent must have the Write tool (a task always writes its output); ms-mario is a critic seat only.
   resources: exclusive resources the task uses; two tasks of one parallel group may not share one.
   text: task text for the agent. A task without it needs a heading containing "Task <id>" in
         <state-dir>/plan.md (example: "## Task T3 - install"), else this fails naming the task.
@@ -71,7 +75,8 @@ MAX_ESTIMATE_K = 100
 MAX_PARALLEL = 2  # leaves room for the background reporter so the box never runs more than 3 agents
 OTHER_AGENTS = ("general-purpose", "Explore", "Plan")  # agents with no file in agents/
 CRITIC_ONLY = ("codex:codex-rescue",)  # allowed as domainCritic, never as a task agent or reviewer
-READ_ONLY_AGENTS = ("Explore", "Plan")  # cannot run git, so never commit
+READ_ONLY_AGENTS = ("Explore", "Plan")  # cannot run git or write files
+REPORT_EVERY = (10, 15, 20, 30, 60)  # minutes that divide the hour, so the tick fires at fixed minutes
 
 
 def fail(msg):
@@ -98,7 +103,22 @@ def load_inputs(state_dir):
     if inputs["sessionId"] not in inputs["sessions"]:
         fail(f"current session {inputs['sessionId']} is not in inputs.json sessions; append it (resume step)")
     check_agent(inputs["domainCritic"], "domainCritic", critic=True)
+    report = inputs.get("report") or {}
+    if not isinstance(report, dict) or report.get("everyMin", 30) not in REPORT_EVERY \
+            or report.get("style", "plain") not in ("plain", "copilot"):
+        fail(f"inputs.json report: everyMin one of {REPORT_EVERY}, style 'plain' or 'copilot'")
+    inputs["report"] = report
     return inputs
+
+
+def report_shape(report):
+    """One line for the reporter brief naming the shape the user chose at start."""
+    words = ["copilot" if report.get("style") == "copilot" else "plain"]
+    if report.get("taskList"):
+        words.append("with the full task list")
+    if report.get("ids"):
+        words.append("task ids allowed")
+    return ", ".join(words)
 
 
 def fill(text, values):
@@ -125,12 +145,15 @@ def tick(state_dir):
     with open(os.path.join(REFS, "cron-tick.prompt.md"), encoding="utf-8") as f:
         prompt = re.search(r"```text\n(.*?)```", f.read(), re.S).group(1)
     quota_dir = os.path.join(os.path.dirname(SKILL_DIR), "personal-quota").replace("\\", "/")
+    every = i["report"].get("everyMin", 30)
     text = fill(prompt, {
         "GOAL": i["goal"], "STATE_DIR": i["stateDir"], "SESSION_ID": i["sessionId"],
         "QUOTA_PS1": f"{quota_dir}/quota.ps1", "SKILL_DIR": SKILL_DIR.replace("\\", "/"),
+        "EVERY": every, "REPORT_SHAPE": report_shape(i["report"]),
     })
     check_filled(text, "tick prompt")
     write(os.path.join(state_dir, "tick-prompt.txt"), text)
+    print("cron: " + ",".join(str(m) for m in range(7 % every, 60, every)) + " * * * *")
 
 
 def agent_tools(name):
@@ -167,6 +190,11 @@ def check_task(t, n, state_dir):
         if not t.get(k):
             fail(f"step {n} has a task without '{k}'")
     check_agent(t["agent"], f"task {t['id']}")
+    no_write = t["agent"] in READ_ONLY_AGENTS or \
+        (t["agent"] not in OTHER_AGENTS and "Write" not in (agent_tools(t["agent"]) or "Write"))
+    if no_write:
+        fail(f"task {t['id']}: agent {t['agent']} has no Write tool, so it cannot write its output; "
+             "give a critic or review task to ping-personal:rhea or ping-personal:iris")
     if not t.get("text") and not has_plan_heading(state_dir, t["id"]):
         fail(f"task {t['id']} has no 'text' and {state_dir}/plan.md has no heading containing 'Task {t['id']}'")
     if "passLine" in t and not (isinstance(t["passLine"], str) and t["passLine"].strip()):
@@ -290,7 +318,7 @@ def stage(state_dir, spec_path):
         "DISKS": json.dumps(i["disks"]), "MIN_GB": json.dumps(i["minGB"]),
         "EFFORT": json.dumps(i["effort"]) if i.get("effort") else "undefined",
         "WORKER_MODEL": json.dumps(i["workerModel"]) if i.get("workerModel") else "undefined",
-        "DOMAIN_CRITIC": json.dumps(i["domainCritic"]),
+        "DOMAIN_CRITIC": json.dumps(i["domainCritic"]), "SKILL_DIR": json.dumps(SKILL_DIR.replace("\\", "/")),
     }) + "// ---- stage body (generated from " + os.path.basename(spec_path) + ") ----\n" + body
     # Template comments name placeholders as examples; only code lines must be filled.
     code = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("//"))

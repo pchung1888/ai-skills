@@ -79,6 +79,19 @@ def main():
         assert "<" + "STATE_DIR>" not in tick and "live-usage/sess-0001.json" in tick
         assert 'scripts/run_state.py" next --state-dir "docs/proj-123/autopilot"' in tick
         assert "personal-quota/quota.ps1" in tick
+        # Report shape: 30 minutes and plain by default; the user's interval sets the cron and reaches the reporter.
+        assert "cron: 7,37 * * * *" in r.stdout and "30-minute tick" in tick and "Report shape: plain" in tick, r.stdout
+        assert "workflows/<runId>.json" in tick, "RESULT names the exact result record"
+        json.dump(dict(INPUTS, report={"everyMin": 15, "style": "copilot", "taskList": True, "ids": True}), open(inputs_path, "w"))
+        r = gen(state, "tick")
+        tick = open(os.path.join(state, "tick-prompt.txt"), encoding="utf-8").read()
+        assert "cron: 7,22,37,52 * * * *" in r.stdout and "15-minute tick" in tick, r.stdout
+        assert "Report shape: copilot, with the full task list, task ids allowed" in tick, tick
+        for bad in ({"everyMin": 7}, {"style": "loud"}, "15"):
+            json.dump(dict(INPUTS, report=bad), open(inputs_path, "w"))
+            r = gen(state, "tick")
+            assert r.returncode != 0 and "inputs.json report" in r.stderr, (bad, r.stderr)
+        json.dump(INPUTS, open(inputs_path, "w"))
 
         r = gen(state, "stage", "--spec", spec)
         assert r.returncode == 0, r.stderr
@@ -174,6 +187,10 @@ def main():
         js6 = open(os.path.join(state, "stages", "s6.js"), encoding="utf-8").read()
         out = run_node(js6)
         assert "python run_t3.py --fast" in out["prompts"]["T3:verify"], out["prompts"]["T3:verify"]
+        # The verifier writes the run-log row with log_row.py (real clock); workers never edit the logs.
+        assert "/scripts/log_row.py\" run --state-dir \"docs/proj-123/autopilot\" --task \"T3\"" in out["prompts"]["T3:verify"]
+        assert "<" + "SKILL_DIR>" not in js6 and "file-checklist" not in out["prompts"]["T3"]
+        assert "log_row.py\" effect" in out["prompts"]["T3"] and "Write tool" in out["prompts"]["T3"]
         assert out["r"]["stageCheck"] is None, "no stageCheck in the spec: nothing is returned for it"
         # Item 2: the run's base commit is inserted as a JSON string and drives "changed by this run".
         assert 'const BASE_COMMIT = "4b8d`3b26"' in js6
@@ -226,6 +243,9 @@ def main():
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:nobody")], review=None), "ping-personal:nobody")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="someone-else")], review=None), "someone-else")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:amanda", commits=True)], review=None), "no Bash")
+        # A task agent with no Write tool can never write its output (a plan critic task given to ms-mario).
+        refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:ms-mario")], review=None), "has no Write tool")
+        refused(state, spec, dict(SPEC, steps=[dict(a, agent="Explore")], review=None), "has no Write tool")
         refused(state, spec, dict(SPEC, steps=[[dict(a, agent="general-purpose", resources=["IIS"]),
                                                 dict(b, agent="general-purpose", resources=["iis "])]], review=None), "resource")
         refused(state, spec, dict(SPEC, steps=[[dict(a, agent="general-purpose"),
