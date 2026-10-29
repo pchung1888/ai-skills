@@ -3,14 +3,14 @@ name: personal-big-project
 model: inherit
 disable-model-invocation: true
 argument-hint: "start <requirement.md> | resume|status|stop|retro <state-dir> | improve"
-description: Hands a large multi-stage engineering goal to this Opus session to run unattended for hours or days (Friday night to Monday) - plan, test first, build, install, verify, commit - with a 30-minute phone report and self-imposed limits on quota, context, disk and side effects. Every run ends with a process retro that feeds the next version of the skill. Use when the user types /personal-big-project to start, resume, check, stop or retro such a run, or to improve the skill from past retros.
+description: Hands a large multi-stage engineering goal to this Opus session to run unattended for hours or days (Friday night to Monday) - plan, test first, build, install, verify, commit - with a phone report every 15 or 30 minutes and self-imposed limits on quota, context, disk and side effects. Every run ends with a process retro that feeds the next version of the skill. Use when the user types /personal-big-project to start, resume, check, stop or retro such a run, or to improve the skill from past retros.
 ---
 
 # /personal-big-project
 
 The user hands over a big goal before leaving. This session stays open as the coordinator: it makes
-every decision while they are away, one background Workflow per stage does the work, a 30-minute
-Cron tick asks `scripts/run_state.py` what to do next, and state files let any new session pick
+every decision while they are away, one background Workflow per stage does the work, a Cron tick
+(every 30 minutes, or the interval the user picks) asks `scripts/run_state.py` what to do next, and state files let any new session pick
 the run back up. Claude Code runs the skill (it needs Workflow and session Cron); Codex serves as a
 critic seat when it is available, and `agents/openai.yaml` stops Codex from starting this skill on
 its own.
@@ -27,17 +27,21 @@ its own.
    The stage check also runs `python <critic-gate>/lib/floor_guard.py --base <baseCommit>`
    (the personal-critic-gate floor-guard reference); a hit is a regression unless a
    `log/decisions.md` row signs it off.
-4. **Side effects have hard caps** (inputs.json `caps`: mail, pushes, deploys, API calls). Write the
-   side-effects row before acting. Never push a tag. Push only to the target branch.
+4. **Side effects have hard caps** (inputs.json `caps`: mail, pushes, deploys, API calls). Before acting,
+   run `scripts/log_row.py effect`; it refuses a kind with no cap and a total past the cap. Never push a tag. Push only to the target branch.
 5. **The user's explicit asks are inputs, not proposals.** Offer a cheaper option once; the default
    stays what they asked for.
 6. **Every timestamp comes from a real clock.** Owner-facing text uses `Day MM-DD HH:MM` local.
+   Log rows come from `scripts/log_row.py`, which reads the clock; an agent with no shell gets the
+   time in its brief.
 7. **Owner-facing text is plain words in the run's own vocabulary:** the words in
    [references/glossary.md](references/glossary.md), never ids, hashes, stage codes or agent names;
-   12 lines max. Agents use the same words, because a shared vocabulary, not "be concise", is what
+   12 lines max. The report shape the user picks at start (inputs.json `report`) overrides the length
+   and the ids rule (rule 5). Agents use the same words, because a shared vocabulary, not "be concise", is what
    keeps reports short and unambiguous.
 8. **At most 3 agents at once:** parallel groups hold at most 2 tasks, leaving room for the
-   reporter; critic seats run one after another; exclusive resources (a
+   reporter; critic gate seats run one after another. One exception: the final judge review runs
+   all five seats in one message, because no stage runs then. Exclusive resources (a
    database, IIS, one browser) are declared per task and never shared inside a parallel group.
 9. **State lives in files.** STATUS.md and run-state.json are enough to resume after a crash, a
    compaction or a new session. Only `run_state.py` writes run-state.json.
@@ -55,7 +59,7 @@ its own.
 | Coordinator | This session. It must be Opus; pre-flight refuses otherwise. It launches stages, reads journals, edits STATUS.md and answers the user, and never does heavy work itself. | The user can ask the running session anything; its context grows only by tick text |
 | Next action | `scripts/run_state.py next` decides launch, retry, resume, pause, wait, handoff, final, stop or close from run-state.json, quota and disk | The stop, skip, no-progress and quota rules are tested code, so they hold after a compaction |
 | Stages | One background `Workflow` per stage, generated from [references/stage-workflow.template.js](references/stage-workflow.template.js) by `scripts/generate.py` | `resumeFromRunId` replays finished agents after an interruption |
-| Tick | Session `CronCreate` every 30 minutes, prompt from [references/cron-tick.prompt.md](references/cron-tick.prompt.md) | One heartbeat; it does only what run_state.py says |
+| Tick | Session `CronCreate` every 30 minutes (or the user's interval), prompt from [references/cron-tick.prompt.md](references/cron-tick.prompt.md) | One heartbeat; it does only what run_state.py says |
 | State | `docs/<goal-slug>/autopilot/` in the target repo, from [references/STATUS.template.md](references/STATUS.template.md) | Survives everything the session does not |
 
 The tick dies if Claude exits. Pre-flight warns the user, and STATUS.md always holds the resume command.
@@ -63,12 +67,12 @@ The tick dies if Claude exits. Pre-flight warns the user, and STATUS.md always h
 ## Which agent for which job
 
 The coordinator picks per task and may use any installed agent or built-in type that fits better;
-`generate.py` refuses an agent that does not exist and a committing task given to an agent without
-a shell.
+`generate.py` refuses an agent that does not exist, a task given to an agent without the Write tool
+(ms-mario is a critic seat only), and a committing task given to an agent without a shell.
 
 | Job | Default agent | Model / effort |
 |---|---|---|
-| Plan writing, 30-minute report, boss report, retro draft | ping-personal:amanda (no shell: never give her a commit) | sonnet, low for reports |
+| Plan writing, tick report, boss report, retro draft | ping-personal:amanda (no shell: never give her a commit) | sonnet, low for reports |
 | Code, scripts, tests, fixes | ping-personal:bunny | workerModel (sonnet), or inherit for hard tasks |
 | Parsers, data contracts, SQL, ingestion | ping-personal:vex | workerModel |
 | Research, discovery, fresh-eyes review | ping-personal:iris | sonnet, low |
@@ -111,6 +115,7 @@ final review and check_run all diff against them. Done when each row has a value
 | Side-effect caps | {"mail": 300, "push": 20}; push target branch; no deploys |
 | Resources | exclusive resources; disks to watch with minimum free GB |
 | Budget | weekly % at which to stop starting new stages |
+| Report shape | `report` in inputs.json: every 15 or 30 minutes; plain (12 lines) or copilot (narrated, for a 3-4 h weekday run they follow on the phone); full task list yes or no; task ids yes or no |
 
 **Step 2. Alignment at the door.** A 30-hour run on a misread goal wastes the whole weekend, and
 this is the last moment the user can be asked anything. Read the requirement and the code it touches,
@@ -119,7 +124,9 @@ the questions whose prerequisites are answered, numbered Q1, Q2, ..., each with 
 default, so they can answer by voice ("Q1 agree, Q2 change it to ..."). Answers unlock the next round;
 stop when no decision is left that a worker would have to guess. Call the Skill tool with grill-me
 when a branch needs deeper questioning. Cover what done looks like to them on Monday, what is out of scope, and what would
-disappoint them even if every test passes. Then write `GOAL-BRIEF.md` in the state folder: the goal
+disappoint them even if every test passes. Always ask which real downstream chain proves the change
+works (example: a release feeds the next system, which feeds retention). The done command runs
+that chain end to end, or the brief says why it cannot; unit checks alone missed one in a past run. Then write `GOAL-BRIEF.md` in the state folder: the goal
 in their words, done-on-Monday, out of scope, disappointments to avoid, every decision with its
 answer, and the line `Corrections before approval: <n>`. Show it and ask them to approve or correct
 it; each correction round adds one to n. Copy the decisions verbatim into STATUS.md "Owner
@@ -141,7 +148,7 @@ plan.md and an empty section means a guaranteed failure. Write its spec to `stag
 run `python ${CLAUDE_SKILL_DIR}/scripts/generate.py stage --state-dir <state-dir> --spec <spec>`,
 launch the printed `.js` with Workflow `scriptPath` in the background, and record it with
 `run_state.py record launch s1-plan <runId>`. Run `generate.py tick --state-dir <state-dir>` and
-pass `tick-prompt.txt` to CronCreate (`7,37 * * * *`, recurring). Never hand-edit the templates;
+pass `tick-prompt.txt` to CronCreate with the cron line it prints (`7,37 * * * *` for 30 minutes), recurring. Never hand-edit the templates;
 a GENERATE FAIL names what to fix. Write the run id and the resume command into the STATUS.md Now
 block.
 
@@ -151,7 +158,7 @@ session open, and the resume command for a new session.
 ## Stages (default; the plan may add or split)
 
 1. Plan: discover (up to 3 in parallel) -> plan with task ids, done-checks, agent per task -> 3 critics -> revise -> dora commits.
-2. Harness first: backups, test tools, pre-change baseline (hashes into baseline-hashes.txt), RED proof, adversarial and fresh-eyes review -> commit.
+2. Harness first: backups, test tools, pre-change baseline (`log_row.py baseline`, only files that must not change; `--none` when there are none), RED proof, adversarial and fresh-eyes review -> commit.
 3. Build: spikes, parallel work on independent files, critic and TDD gate -> commit.
 4. Install and verify: full done command, fix rounds until run_state.py stops them, rollback rehearsal.
 5. Final: fresh-eyes review of the evidence, one verdict, OWNER-REPORT.md, final commit verified on the remote.
@@ -168,9 +175,13 @@ agent, phase, needs, commits, resources, and two required fields:
 
 The last stage sets `finalReview: true`: two fresh reviewers, one after the other, report on two
 separate axes that are never merged: Spec (amanda: the diff from baseCommit against GOAL-BRIEF.md)
-and Standards (ms-mario: the repo's standards and conventions). The final critic-gate verdict must
-carry `Reviewed: <sha>`; refuse a PASS whose sha is not HEAD (`tally.py --final --sha <sha> --expect-head`, exit 2 = stale; an owner's "ship anyway" on a FIX is
-not blocked). A stage that tests code adds the
+and Standards (ms-mario: the repo's standards and conventions). After that stage the coordinator
+runs personal-critic-judge with `UNATTENDED` on `git diff <baseCommit>...HEAD`: the Main goal quoted
+from GOAL-BRIEF.md, Subtask "the whole run", all five seats in one message (rule 8). Its header carries
+`Reviewed: <sha>`; a sha that differs from `git rev-parse HEAD` is stale and not a pass (an
+owner's "ship anyway" on a FIX is not blocked). Fix-now rows get one fix stage (one task per row),
+then the judge's verify pass; flagged rows go to OWNER-REPORT.md "## Judge review". The judge does
+not decide retry, defer or stop: that stays with the critic gate. A stage that tests code adds the
 tests before the code.
 
 ## Fix, defer or stop (per failing item)
@@ -235,7 +246,8 @@ keep running.
   OWNER-REPORT.md and RETRO.md, delete the tick.
 - **retro `<state-dir>`:** The user is back. Ask them two questions: how well the result matched what
   they wanted (1 missed to 5 exactly), and what surprised them. Add both answers, verbatim, to RETRO.md
-  under "Did it match what the owner wanted", then copy RETRO.md again to the retro folder.
+  under "Did it match what the owner wanted". When their surprise names something the skill missed,
+  add it as proposed change 1. Then copy RETRO.md again to the retro folder.
 - **improve:** run in the plugin repo. Read every file in `~/.claude/big-project-retros/`, group
   the friction rows, decision rows and proposed changes by skill step, and rank them by how many runs
   hit them and what they cost. Then use the skill-creator-plus skill in REFINE mode on this skill,

@@ -48,6 +48,11 @@ checks (T4 rejected -- redundant with that same code guard).
 If operating mode is interactive: proceed normally; the driving session handles
 /personal-critic-gate invocations when needed.
 
+To review finished work (a phase output before it ships), use /personal-critic-judge,
+not the gate. In autonomous mode pass UNATTENDED and the beacon goal as the Main goal;
+its "later - flagged for the owner" rows go into your return, never into a question.
+The gate above is only for the T3 choice between recovery paths.
+
 Stay-paused list (always halt for human, regardless of mode or vote tally):
 - Any `git push --force` to `main`, `master`, or `feature/*`
 - Any SQL `DROP TABLE` or schema-destructive DDL

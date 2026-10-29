@@ -1,11 +1,15 @@
 # Reporter briefs
 
-## 30-minute report (fresh background agent, each tick where run-log changed)
+## Tick report (fresh background agent, each tick where run-log changed)
+
+The tick adds two lines to this brief: "Now: <Day MM-DD HH:MM>" (the reporter has no shell, so
+this is her clock) and "Report shape: <shape>" (from inputs.json "report", chosen by the user at start).
 
 ```text
 Read <STATE_DIR>/STATUS.md, the last 40 lines of log/run-log.md, the last 3 lines of
 log/quota-log.md, the previous report, and the progress table.
-Write <STATE_DIR>/reports/<YYYY-MM-DD-HHMM>.md. Max 12 lines: what is being worked on now,
+Write <STATE_DIR>/reports/<YYYY-MM-DD-HHMM>.md, named from the "Now:" line; use that time for "now"
+and never guess a time. Follow the "Report shape:" line (shapes below). Plain shape, max 12 lines: what is being worked on now,
 what finished since the last report (do not repeat it), what went wrong and how it is handled,
 whether work is paused to save usage and when it resumes (day and date), what comes next, and
 any decision taken without the owner (with how to reverse it).
@@ -16,6 +20,20 @@ Finish estimates only from measured durations in run-log.md, with the basis stat
 Return the report text only.
 ```
 <!-- <STATE_DIR> Example: docs/proj-123/autopilot -->
+
+Report shapes (the user picks one at start step 1; plain is the default):
+
+- **plain:** the 12-line report above.
+- **copilot:** for a short weekday run that the user follows on their phone. Narrate in the words of the
+  personal-copilot-talk skill (sentences of 20 words or fewer, active voice, one idea each, no
+  semicolons), as a stack of short blocks, each with a bold heading and a `---` line between
+  blocks: **Since the last report** (what finished, with its proof), **Now** (what runs and what it
+  does, in one or two sentences), **Why** (only when a choice was made without the user, with how to
+  reverse it), **Next** (what comes after this). No "Tell me" block: the user is never asked anything.
+- **with the full task list:** add the progress table's id, what, status, started and finished
+  columns for every task, after the other lines.
+- **task ids allowed:** task ids may appear in the text (check_run then skips its report-plain check).
+  Hashes, run ids and agent names stay out.
 
 ## Progress table contract (`<STATE_DIR>/PROGRESS.md`)
 
@@ -46,6 +64,9 @@ Verdict: <the exact line from run_state.py record final>
 Overall: <one-way door | two-way door> - <one sentence why>
 <per shipped change: one-way or two-way door (can it be reverted cheaply?) and blast radius (who or
 what is affected if it is wrong)>
+
+## Judge review
+<the judge's VERDICT line and Reviewed: <sha>; each fix-now row and its fix; each row flagged for the owner>
 
 ## Deferred items
 <each: what failed, root cause so far, what the user must provide, how to resume>

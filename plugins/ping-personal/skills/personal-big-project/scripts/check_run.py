@@ -11,12 +11,14 @@ Checks and the files they read (all under --state-dir unless noted):
                   baseline-hashes.txt (may be empty), run-state.json, OWNER-REPORT.md all exist
   inputs          inputs.json has caps (kind -> whole number) and unattendedSince (ISO time; no zone = UTC)
   log-times       every log/run-log.md row starts with a real-clock time "Day MM-DD HH:MM"
-  report-plain    reports/*.md hold no ids, hashes or run codes (the owner reads them on a phone)
+  report-plain    reports/*.md hold no ids, hashes or run codes (the owner reads them on a phone), unless
+                  inputs.json "report" has "ids": true (the owner asked for task ids at start)
   table-rows      every task id in tasks.csv still has a row in PROGRESS.md
   side-effects    log/side-effects.md totals per kind stay within inputs.json "caps"; every row is
                   "| Day MM-DD HH:MM | kind | whole number | note |" and its kind has a cap
-  baselines       every line of baseline-hashes.txt ("<sha256>  <repo-relative path>") is well formed and
-                  its file is unchanged; repo root = inputs.json "repoPath"
+  baselines       every line of baseline-hashes.txt ("<sha256>  <repo-relative path>", written by
+                  log_row.py baseline; a "*" before the path and a "none" line are accepted) is well formed
+                  and its file is unchanged; repo root = inputs.json "repoPath"
   verdict         OWNER-REPORT.md contains run-state.json's verdict string exactly; the verdict is
                   "PASS (P of T tasks; N deferred, M by agents ...)" or "STOPPED (reason; P of T tasks passed;
                   N deferred, M by agents ...)", and its counts equal the outcomes in run-state.json
@@ -80,7 +82,10 @@ def check_log_times(state):
     return f"{len(bad)} run-log rows without a Day MM-DD HH:MM time, first: '{bad[0]}'" if bad else ""
 
 
-def check_report_plain(state):
+def check_report_plain(state, inputs):
+    report = inputs.get("report") if isinstance(inputs.get("report"), dict) else {}
+    if report.get("ids") is True:  # the owner asked for task ids in their reports at start
+        return ""
     hits = []
     for path in sorted(glob.glob(os.path.join(state, "reports", "*.md"))):
         for m in IDS.finditer(statefiles.read_text(path)):
@@ -122,13 +127,13 @@ def check_baselines(state, inputs):
     root = os.path.join(state, str(inputs.get("repoPath", "")))
     changed, malformed = [], []
     for line in statefiles.read_text(hashes).splitlines():
-        if not line.strip():
+        if not line.strip() or line.strip() == "none":
             continue
         parts = line.strip().split(None, 1)
         if len(parts) != 2 or not SHA256.match(parts[0]):
             malformed.append(line.strip()[:60])
             continue
-        path = os.path.join(root, parts[1])
+        path = os.path.join(root, parts[1].lstrip("*"))  # sha256sum -b marks a path with "*"
         actual = hashlib.sha256(open(path, "rb").read()).hexdigest() if os.path.isfile(path) else "missing"
         if actual != parts[0].lower():
             changed.append(parts[1])
@@ -316,7 +321,7 @@ def run(state, transcript):
     check("inputs", check_inputs(inputs))
     inputs = inputs if isinstance(inputs, dict) else {}
     check("log-times", check_log_times(state))
-    check("report-plain", check_report_plain(state))
+    check("report-plain", check_report_plain(state, inputs))
     check("table-rows", check_table_rows(state))
     check("side-effects", check_side_effects(state, inputs))
     check("baselines", check_baselines(state, inputs))

@@ -51,7 +51,10 @@ $Invariants = @(
     'finalReview: true',                     # two-axis final review, never merged
     'Transcript sample for the retro',       # retro reads raw transcripts, not only self-reports
     'references/glossary.md',                # one vocabulary for owner and agents
-    'interview them in rounds'                # dependency-graph rounds with recommended answers
+    'interview them in rounds',             # dependency-graph rounds with recommended answers
+    'real downstream chain',                 # the done command proves the change end to end
+    'scripts/log_row.py',                    # log rows and side effects go through one script
+    'Report shape'                           # the user picks the report interval and shape at start
 )
 function Get-Missing([string]$text) {
     @($Invariants | Where-Object { -not $text.Contains($_) })
@@ -105,7 +108,7 @@ $tests = @(
     @{
         Name = 'python self-tests: run_state transitions, check_run fail-closed, retro_metrics parsing'
         Run = {
-            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'))) {
+            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'), @('test_log_row.py', 'LOG ROW TEST PASS'))) {
                 $out = (python (Join-Path $PSScriptRoot $t[0]) 2>&1) -join "`n"
                 if ($LASTEXITCODE -ne 0 -or $out -notmatch [regex]::Escape($t[1])) { throw "$($t[0]):`n$out" }
             }
@@ -209,9 +212,10 @@ $tests = @(
         }
     }
     ,@{
-        Name = 'expect_head_rule: SKILL.md carries the literal tally.py --final --sha <sha> --expect-head'
+        Name = 'expect_head_rule: the final judge review compares Reviewed: <sha> with git rev-parse HEAD'
         Run = {
-            if (-not (Get-Content $Skill -Raw).Contains('tally.py --final --sha <sha> --expect-head')) { throw 'SKILL.md lost the --expect-head call' }
+            $s = Get-Content $Skill -Raw
+            foreach ($k in @('personal-critic-judge', 'UNATTENDED', 'git rev-parse HEAD', 'Judge review', 'all five seats in one message')) { if (-not $s.Contains($k)) { throw "SKILL.md lost: $k" } }
         }
     }
     ,@{

@@ -79,6 +79,19 @@ def main():
         assert "<" + "STATE_DIR>" not in tick and "live-usage/sess-0001.json" in tick
         assert 'scripts/run_state.py" next --state-dir "docs/proj-123/autopilot"' in tick
         assert "personal-quota/quota.ps1" in tick
+        # Report shape: 30 minutes and plain by default; the user's interval sets the cron and reaches the reporter.
+        assert "cron: 7,37 * * * *" in r.stdout and "30-minute tick" in tick and "Report shape: plain" in tick, r.stdout
+        assert "workflows/<runId>.json" in tick, "RESULT names the exact result record"
+        json.dump(dict(INPUTS, report={"everyMin": 15, "style": "copilot", "taskList": True, "ids": True}), open(inputs_path, "w"))
+        r = gen(state, "tick")
+        tick = open(os.path.join(state, "tick-prompt.txt"), encoding="utf-8").read()
+        assert "cron: 7,22,37,52 * * * *" in r.stdout and "15-minute tick" in tick, r.stdout
+        assert "Report shape: copilot, with the full task list, task ids allowed" in tick, tick
+        for bad in ({"everyMin": 7}, {"style": "loud"}, "15"):
+            json.dump(dict(INPUTS, report=bad), open(inputs_path, "w"))
+            r = gen(state, "tick")
+            assert r.returncode != 0 and "inputs.json report" in r.stderr, (bad, r.stderr)
+        json.dump(INPUTS, open(inputs_path, "w"))
 
         r = gen(state, "stage", "--spec", spec)
         assert r.returncode == 0, r.stderr
@@ -158,9 +171,9 @@ def main():
         assert run_node(js5, "", " ALL OK ")["r"]["results"]["T3"]["passed"] is True
         out = run_node(js5, "defer,defer", "ALL OK but wrong")
         assert out["r"]["results"]["T3"]["passed"] is False and out["r"]["results"]["T3"]["deferred"] is True, out
-        # Task ids with quotes and backticks stay valid JavaScript.
-        weird = dict(flow, steps=[{**R, "id": "T\"`1", "agent": "ping-personal:bunny", "phase": "P\"x", "text": "a`${b}\\"}],
-                     review="T\"`1")
+        # Phases and task text with quotes and backticks stay valid JavaScript.
+        weird = dict(flow, steps=[{**R, "id": "T1", "agent": "ping-personal:bunny", "phase": "P\"x", "text": "a`${b}\\"}],
+                     review="T1")
         json.dump(weird, open(spec4, "w"))
         assert gen(state, "stage", "--spec", spec4).returncode == 0
         run_node(open(os.path.join(state, "stages", "s4.js"), encoding="utf-8").read())
@@ -174,6 +187,11 @@ def main():
         js6 = open(os.path.join(state, "stages", "s6.js"), encoding="utf-8").read()
         out = run_node(js6)
         assert "python run_t3.py --fast" in out["prompts"]["T3:verify"], out["prompts"]["T3:verify"]
+        # The verifier writes the run-log row with log_row.py (real clock); workers never edit the logs.
+        assert "/scripts/log_row.py\" run --state-dir \"docs/proj-123/autopilot\" --task \"T3\" --what-file \"docs/proj-123/autopilot/log/verify-T3.txt\"" in out["prompts"]["T3:verify"]
+        assert "--what \"" not in out["prompts"]["T3:verify"], "check output never goes on a command line"
+        assert "<" + "SKILL_DIR>" not in js6 and "file-checklist" not in out["prompts"]["T3"]
+        assert "log_row.py\" effect" in out["prompts"]["T3"] and "Write tool" in out["prompts"]["T3"]
         assert out["r"]["stageCheck"] is None, "no stageCheck in the spec: nothing is returned for it"
         # Item 2: the run's base commit is inserted as a JSON string and drives "changed by this run".
         assert 'const BASE_COMMIT = "4b8d`3b26"' in js6
@@ -220,12 +238,18 @@ def main():
         # Refusals.
         a, b ={**R, "id": "T1", "phase": "P"}, {**R, "id": "T2", "phase": "P"}
         refused(state, spec, dict(SPEC, steps=[[]]), "empty group")
+        # Task ids go into a shell command, so only letters, digits, '-' and '_' (1-16) pass.
+        for bad_id in ("T\"`1", "T3; rm -rf x", "$(id)", "T" * 17):
+            refused(state, spec, dict(SPEC, steps=[dict(a, id=bad_id, agent="general-purpose")], review=None), "task id")
         refused(state, spec, dict(SPEC, steps=[[dict(a, id=f"T{n}", agent="general-purpose") for n in range(1, 4)]],
                                   review=None), "limit is 2")  # M6
         refused(state, spec, dict(SPEC, review="T9"), "review task T9")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:nobody")], review=None), "ping-personal:nobody")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="someone-else")], review=None), "someone-else")
         refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:amanda", commits=True)], review=None), "no Bash")
+        # A task agent with no Write tool can never write its output (a plan critic task given to ms-mario).
+        refused(state, spec, dict(SPEC, steps=[dict(a, agent="ping-personal:ms-mario")], review=None), "has no Write tool")
+        refused(state, spec, dict(SPEC, steps=[dict(a, agent="Explore")], review=None), "has no Write tool")
         refused(state, spec, dict(SPEC, steps=[[dict(a, agent="general-purpose", resources=["IIS"]),
                                                 dict(b, agent="general-purpose", resources=["iis "])]], review=None), "resource")
         refused(state, spec, dict(SPEC, steps=[[dict(a, agent="general-purpose"),

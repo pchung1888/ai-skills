@@ -13,7 +13,7 @@ green-list run on taste alone:
 | `PASS` | -- | record + continue next tick |
 | `FIX` | low / medium, green-list goal | log finding to `.claude/tmp/` status file; CONTINUE |
 | `FIX` | high, OR security-tagged (secret / irreversible / scope-violation), OR a fenced/ship ACTION | HALT; write findings; report fix path |
-| `ESCALATE` | -- | fire the full 5-seat panel (personal-critic-gate); resolve per verdict |
+| `ESCALATE` | -- | fire the panel (personal-critic-judge, `UNATTENDED`); resolve per its VERDICT line |
 
 "Advisory" means precise: the critic cannot move the STOP verdict in EITHER
 direction. It cannot declare the loop done, and a lone low-severity nitpick
@@ -21,7 +21,7 @@ cannot halt it. Completion is determined by the ONE authoritative gate (THE GATE
 LAW: `all-goals-done` in campaign mode, `accept_cmd` exit 0 in single-artifact
 mode), never by a critic vote.
 
-## Full 5-seat panel (on trigger only)
+## Judge panel (on trigger only)
 
 Fires when:
 1. Fast lane voted ESCALATE
@@ -30,8 +30,17 @@ Fires when:
 4. Route confidence was `low` (uncertain ACTION pick)
 5. `--full-every N` sample (periodic safety check, default off)
 
-The full panel keeps PASS/FIX/BLOCK. ESCALATE is NOT a valid 5-seat vote
-(tally.py raises ValueError if ESCALATE reaches the panel -- fail-loud design).
+The panel is personal-critic-judge: 5 seats find, one judge rules. Resolve its VERDICT line:
+
+| Judge result | Loop behavior |
+|---|---|
+| `VERDICT: CLEAN` | record + continue |
+| `VERDICT: FIX` | fix the fix-now rows, run the judge's verify pass, then continue |
+| any `[floor]` row ruled later - flagged for the owner | HALT; write the table; report |
+| other flagged rows | log to the status file; CONTINUE |
+
+The judge never votes, so ESCALATE cannot reach it. A stay-paused condition still halts
+through the fence, whatever the judge rules.
 
 ## Role resolution (portability)
 

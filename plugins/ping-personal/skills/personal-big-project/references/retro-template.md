@@ -40,5 +40,6 @@ From log/decisions.md and the critic-gate rows in STATUS.md; judge each with hin
 |---|---|---|---|
 
 ## Proposed changes to /personal-big-project (most valuable first)
-1. <change> - because <evidence row above>
+<!-- When the owner's surprise or score points at something the skill missed, that is change 1, even with no friction row behind it. -->
+1. <change> - because <evidence row above, or the owner's words>
 ```

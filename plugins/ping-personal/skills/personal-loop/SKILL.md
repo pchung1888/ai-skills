@@ -64,7 +64,7 @@ If you internalize nothing else: **multi-artifact goal -> campaign mode ->
 BEACON      = personal-goal               # host goal beacon (host-goal on host repos)
 CONDUCTOR   = personal-workflow            # the inner per-goal conductor
 FAST_CRITIC = <resolved at runtime>        # see Role Resolution
-PANEL       = personal-critic-gate         # full 5-seat escalation
+PANEL       = personal-critic-judge        # 5 seats + judge, on trigger
 ```
 
 ## Invocation
@@ -251,7 +251,8 @@ domain knowledge); both the announcement and the REPORT label the gate strength.
      file and CONTINUE.
    - FIX, high severity OR security-tagged (secret, irreversible action,
      scope-violation) OR a fenced/ship ACTION -> HALT; report the fix path.
-   - ESCALATE -> fire the full PANEL; resolve per its verdict.
+   - ESCALATE -> fire the PANEL with `UNATTENDED`; resolve per its VERDICT line
+     (`references/tiered-gate.md`).
 7. STOP EVAL: `lib/stop_eval.py --state <json>`. It returns a structured detail
    object (stop, reason, gloss, goals_done/total, remaining, next_pending).
    Completion is decided by the ONE authoritative gate (THE GATE LAW), never by

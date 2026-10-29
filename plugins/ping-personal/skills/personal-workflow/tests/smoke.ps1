@@ -85,7 +85,7 @@ $tests = @(
             foreach ($needle in @('BEACON', 'BRAINSTORM', 'RESEARCHER', 'IMPLEMENTER', 'CRITIC',
                                   'ROUTE', 'MODE', 'FENCE', 'VERIFY', 'RECORD',
                                   'discover.py', 'fence.py', 'model folds in',
-                                  'personal-goal', 'personal-critic-gate', 'iris', 'bunny')) {
+                                  'personal-goal', 'personal-critic-judge', 'personal-critic-gate', 'iris', 'bunny')) {
                 if ($s -notmatch [regex]::Escape($needle)) { throw "SKILL.md missing: $needle" }
             }
             # FIX-3 guard: no version-pinned plugin cache path baked in

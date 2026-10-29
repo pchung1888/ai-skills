@@ -17,7 +17,7 @@ BEACON      = personal-goal               # the durable git-committed beacon (pl
 BRAINSTORM  = superpowers:brainstorming   # shared superpowers skill (model context, not on disk)
 RESEARCHER  = iris                         # ping-personal read-work agent (subagent_type=iris)
 IMPLEMENTER = bunny                        # ping-personal write-work agent (subagent_type=bunny)
-CRITIC      = ms-mario / personal-critic-gate   # adversarial review + 3-vote ship gate
+CRITIC      = ms-mario / personal-critic-judge  # adversarial review + judged ship review
 ```
 These delegates are **plugin-context entities the model folds in** (the `ping-personal:*` skills
 and agents, `superpowers:*`) -- they are not discovered by `discover.py` (which reads only the
@@ -96,7 +96,8 @@ For each pending phase:
 4. **VERIFY** -- before recording any "PASS / genuine-defect / works" claim, re-check it against the
    evidence its claim-type requires (`references/fanout-and-verification.md` evidence map). Downgrade
    to "unverified" if it does not hold; never write an unverified claim as fact. For high-stakes
-   ship/merge decisions, route through the CRITIC role (`/personal-critic-gate`).
+   ship/merge decisions, route through the CRITIC role (`/personal-critic-judge`, with `UNATTENDED`
+   in an autonomous phase). A vote between options stays on `/personal-critic-gate`.
 5. **RECORD** -- invoke `/personal-goal-next <slug> --phase N --outcome PASS --tokens <T>
    --commit <SHA> --subagent <A> --verify "<Gate 4 evidence: check run + one quoted
    output line>"` (the slash command). `--verify` is required on PASS (advance.py

@@ -18,6 +18,8 @@ const BASE_COMMIT = <BASE_COMMIT>             // Example: "4b8d3b26c1f0a9e7d5c3b
 const EXCLUSIVE_RESOURCES = <EXCLUSIVE_RESOURCES> // Example: "SQL Server, IIS, the test browser"
 const DISKS = <DISKS>                         // Example: "C:,D:"
 const MIN_GB = <MIN_GB>                       // Example: 1
+const SKILL_DIR = <SKILL_DIR>                 // Example: "C:/Users/<user>/.claude/plugins/cache/ping-personal/ping-personal/<version>/skills/personal-big-project"
+const LOG_ROW = `python "${SKILL_DIR}/scripts/log_row.py"`
 
 // Shared header every agent receives. Rules live in STATUS.md so the coordinator can add one
 // mid-run without relaunching this workflow.
@@ -28,11 +30,11 @@ The owner is away: never ask questions (no AskUserQuestion). Decide, record in $
 Plan: ${STATE_DIR}/plan.md. Do your task exactly as written there, including its done-check command.
 Read first: the TOP of ${STATE_DIR}/STATUS.md (binding rules override any task text), then your task section.
 Exclusive resources (one agent at a time): ${EXCLUSIVE_RESOURCES}. Back up before overwrite.
-After your task: (1) append ONE line to ${STATE_DIR}/log/run-log.md:
-| <Day MM-DD HH:MM from a real clock command> | <task id> | <what happened, plain words> | <evidence path> |
-(2) update the Now block of STATUS.md; (3) tick your rows in file-checklist.md. Read each file right before editing; change only your lines.
-Every external side effect (a mail sent, a push, a deploy) gets one row in ${STATE_DIR}/log/side-effects.md: | Day MM-DD HH:MM | kind | count | note |. Write the row BEFORE the action, then check the totals against the caps in STATUS.md.
-When you capture a baseline, append "<sha256>  <repo-relative path>" for each file to ${STATE_DIR}/baseline-hashes.txt; never edit a captured file.
+Do not edit log/run-log.md or the Now block of STATUS.md: the verifier logs your result. Read a file right before editing it; change only your lines.
+Side effects (a mail sent, a push, a deploy): BEFORE each one run ${LOG_ROW} effect --state-dir "${STATE_DIR}" --kind <a kind from inputs.json caps> --count 1 --note "<what, to whom>" --key <task id>-<n>. REFUSED (exit 2) means do not act. A retry of the same action reuses its key: ALREADY LOGGED (exit 3) means it was counted before, so act again only if the earlier try did not happen. Retries per key are capped.
+Baselines: ${LOG_ROW} baseline --state-dir "${STATE_DIR}" <repo-relative path> ... Hash only files that must not change during the run; never edit a captured file.
+Shell: create or rewrite a multi-line file with the Write tool and change files with Edit, never with a heredoc, echo or a python string. Put a command with nested quotes in a script file and run that file. Run PowerShell only as pwsh -NoProfile -File <script.ps1>.
+Structured result: problems is a JSON array of strings ([] when none, ["x failed"] otherwise); write summary as plain sentences with no double quotes.
 Do not git commit unless your task says so. Quote done-check output verbatim; never claim pass without it; never fake, mock or hardcode results.
 Stop heavy writes if free disk on ${DISKS} is under ${MIN_GB} GB.
 `
@@ -59,17 +61,22 @@ function done(review) {
   return { results, stoppedBy: halt.by, stoppedAt: halt.at, review: review || { findings: [] }, stageCheck: stageCheckResult }
 }
 
+// The verifier writes the task's run-log row with log_row.py, so every row has a real-clock time even when
+// the worker has no shell. The check's output goes into a file, never onto the command line, so no shell
+// parses it. Task ids are safe to insert: generate.py allows only letters, digits, '-' and '_'.
+const logLine = (task) => `\nThen record it: with the Write tool, write one line "passed: <last line>" (or "failed: <last line>") to ${STATE_DIR}/log/verify-${task}.txt, then run: ${LOG_ROW} run --state-dir "${STATE_DIR}" --task "${task}" --what-file "${STATE_DIR}/log/verify-${task}.txt". Never put the check's output on a command line.`
+
 // The verifier re-runs the task's own scoped check command itself; a worker's own "passed" is never used.
 // A task may name its exact pass line (passLine); then the last printed line must equal it too.
 async function verify(task, phase, passLine, check) {
-  const v = await agent(CTX + `\nVERIFIER for ${task}. Run exactly this check command yourself and do not trust anyone's claim: ${check}\nReturn passed true only if it succeeded and printed its pass line (plan.md section "Task ${task}" names it); lastLine is the last line it printed.`, { label: `${task}:verify`, phase, agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
+  const v = await agent(CTX + `\nVERIFIER for ${task}. Run exactly this check command yourself and do not trust anyone's claim: ${check}\nReturn passed true only if it succeeded and printed its pass line (plan.md section "Task ${task}" names it); lastLine is the last line it printed.` + logLine(task), { label: `${task}:verify`, phase, agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
   if (!v) return { passed: false, lastLine: '' }
   return passLine ? { passed: v.passed && String(v.lastLine).trim() === passLine, lastLine: v.lastLine } : v
 }
 
 // After every task, one verifier runs the full done command once (tasks only ran their scoped checks).
 async function stageCheck(command, passLine) {
-  const v = await agent(CTX + `\nVERIFIER for the whole stage. Run exactly this full done command yourself, once, and do not trust anyone's claim: ${command}\nReturn passed true only if it succeeded${passLine ? ' and its last line, trimmed, equals ' + JSON.stringify(passLine) : ''}; lastLine is the last line it printed.`, { label: 'stage:check', phase: 'Stage check', agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
+  const v = await agent(CTX + `\nVERIFIER for the whole stage. Run exactly this full done command yourself, once, and do not trust anyone's claim: ${command}\nReturn passed true only if it succeeded${passLine ? ' and its last line, trimmed, equals ' + JSON.stringify(passLine) : ''}; lastLine is the last line it printed.` + logLine('stage'), { label: 'stage:check', phase: 'Stage check', agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
   const ok = !!v && v.passed && (!passLine || String(v.lastLine).trim() === passLine)
   stageCheckResult = { passed: ok, lastLine: v ? v.lastLine : '' }
 }
