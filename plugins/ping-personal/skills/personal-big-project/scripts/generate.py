@@ -189,6 +189,8 @@ def check_task(t, n, state_dir):
     for k in ("id", "agent", "phase"):
         if not t.get(k):
             fail(f"step {n} has a task without '{k}'")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,16}", str(t["id"])):
+        fail(f"task id {t['id']!r}: use 1-16 letters, digits, '-' or '_' (it goes into a shell command). Example: T3")
     check_agent(t["agent"], f"task {t['id']}")
     no_write = t["agent"] in READ_ONLY_AGENTS or \
         (t["agent"] not in OTHER_AGENTS and "Write" not in (agent_tools(t["agent"]) or "Write"))

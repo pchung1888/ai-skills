@@ -31,7 +31,7 @@ Plan: ${STATE_DIR}/plan.md. Do your task exactly as written there, including its
 Read first: the TOP of ${STATE_DIR}/STATUS.md (binding rules override any task text), then your task section.
 Exclusive resources (one agent at a time): ${EXCLUSIVE_RESOURCES}. Back up before overwrite.
 Do not edit log/run-log.md or the Now block of STATUS.md: the verifier logs your result. Read a file right before editing it; change only your lines.
-Side effects (a mail sent, a push, a deploy): BEFORE each one run ${LOG_ROW} effect --state-dir "${STATE_DIR}" --kind <a kind from inputs.json caps> --count 1 --note "<what, to whom>" --key <task id>-<n>. REFUSED means do not act. A retry of the same action reuses its key, so it is counted once.
+Side effects (a mail sent, a push, a deploy): BEFORE each one run ${LOG_ROW} effect --state-dir "${STATE_DIR}" --kind <a kind from inputs.json caps> --count 1 --note "<what, to whom>" --key <task id>-<n>. REFUSED (exit 2) means do not act. A retry of the same action reuses its key: ALREADY LOGGED (exit 3) means it was counted before, so act again only if the earlier try did not happen. Retries per key are capped.
 Baselines: ${LOG_ROW} baseline --state-dir "${STATE_DIR}" <repo-relative path> ... Hash only files that must not change during the run; never edit a captured file.
 Shell: create or rewrite a multi-line file with the Write tool and change files with Edit, never with a heredoc, echo or a python string. Put a command with nested quotes in a script file and run that file. Run PowerShell only as pwsh -NoProfile -File <script.ps1>.
 Structured result: problems is a JSON array of strings ([] when none, ["x failed"] otherwise); write summary as plain sentences with no double quotes.
@@ -62,8 +62,9 @@ function done(review) {
 }
 
 // The verifier writes the task's run-log row with log_row.py, so every row has a real-clock time even when
-// the worker has no shell.
-const logLine = (task) => `\nThen record it: ${LOG_ROW} run --state-dir "${STATE_DIR}" --task "${task}" --what "passed: <last line>" (or "failed: <last line>"; replace any double quote in the last line with a single quote).`
+// the worker has no shell. The check's output goes into a file, never onto the command line, so no shell
+// parses it. Task ids are safe to insert: generate.py allows only letters, digits, '-' and '_'.
+const logLine = (task) => `\nThen record it: with the Write tool, write one line "passed: <last line>" (or "failed: <last line>") to ${STATE_DIR}/log/verify-${task}.txt, then run: ${LOG_ROW} run --state-dir "${STATE_DIR}" --task "${task}" --what-file "${STATE_DIR}/log/verify-${task}.txt". Never put the check's output on a command line.`
 
 // The verifier re-runs the task's own scoped check command itself; a worker's own "passed" is never used.
 // A task may name its exact pass line (passLine); then the last printed line must equal it too.

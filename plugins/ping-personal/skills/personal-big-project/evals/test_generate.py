@@ -171,9 +171,9 @@ def main():
         assert run_node(js5, "", " ALL OK ")["r"]["results"]["T3"]["passed"] is True
         out = run_node(js5, "defer,defer", "ALL OK but wrong")
         assert out["r"]["results"]["T3"]["passed"] is False and out["r"]["results"]["T3"]["deferred"] is True, out
-        # Task ids with quotes and backticks stay valid JavaScript.
-        weird = dict(flow, steps=[{**R, "id": "T\"`1", "agent": "ping-personal:bunny", "phase": "P\"x", "text": "a`${b}\\"}],
-                     review="T\"`1")
+        # Phases and task text with quotes and backticks stay valid JavaScript.
+        weird = dict(flow, steps=[{**R, "id": "T1", "agent": "ping-personal:bunny", "phase": "P\"x", "text": "a`${b}\\"}],
+                     review="T1")
         json.dump(weird, open(spec4, "w"))
         assert gen(state, "stage", "--spec", spec4).returncode == 0
         run_node(open(os.path.join(state, "stages", "s4.js"), encoding="utf-8").read())
@@ -188,7 +188,8 @@ def main():
         out = run_node(js6)
         assert "python run_t3.py --fast" in out["prompts"]["T3:verify"], out["prompts"]["T3:verify"]
         # The verifier writes the run-log row with log_row.py (real clock); workers never edit the logs.
-        assert "/scripts/log_row.py\" run --state-dir \"docs/proj-123/autopilot\" --task \"T3\"" in out["prompts"]["T3:verify"]
+        assert "/scripts/log_row.py\" run --state-dir \"docs/proj-123/autopilot\" --task \"T3\" --what-file \"docs/proj-123/autopilot/log/verify-T3.txt\"" in out["prompts"]["T3:verify"]
+        assert "--what \"" not in out["prompts"]["T3:verify"], "check output never goes on a command line"
         assert "<" + "SKILL_DIR>" not in js6 and "file-checklist" not in out["prompts"]["T3"]
         assert "log_row.py\" effect" in out["prompts"]["T3"] and "Write tool" in out["prompts"]["T3"]
         assert out["r"]["stageCheck"] is None, "no stageCheck in the spec: nothing is returned for it"
@@ -237,6 +238,9 @@ def main():
         # Refusals.
         a, b ={**R, "id": "T1", "phase": "P"}, {**R, "id": "T2", "phase": "P"}
         refused(state, spec, dict(SPEC, steps=[[]]), "empty group")
+        # Task ids go into a shell command, so only letters, digits, '-' and '_' (1-16) pass.
+        for bad_id in ("T\"`1", "T3; rm -rf x", "$(id)", "T" * 17):
+            refused(state, spec, dict(SPEC, steps=[dict(a, id=bad_id, agent="general-purpose")], review=None), "task id")
         refused(state, spec, dict(SPEC, steps=[[dict(a, id=f"T{n}", agent="general-purpose") for n in range(1, 4)]],
                                   review=None), "limit is 2")  # M6
         refused(state, spec, dict(SPEC, review="T9"), "review task T9")

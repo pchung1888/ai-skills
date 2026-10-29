@@ -3,16 +3,19 @@ Agents call this instead of editing the logs by hand, so no row is malformed, no
 no side effect goes past its cap.
 
   python log_row.py run      --state-dir D --task T3 --what "passed: ALL OK" [--evidence <path>]
+  python log_row.py run      --state-dir D --task T3 --what-file log/verify-T3.txt [--evidence <path>]
       -> one row in log/run-log.md: | Day MM-DD HH:MM | T3 | passed: ALL OK | <path> |
+         --what-file reads the text from a file, so command output never passes through a shell.
   python log_row.py effect   --state-dir D --kind mail --count 1 --note "test statement" [--key send-T3-1]
       -> one row in log/side-effects.md, written BEFORE the action. Refused (exit 2, nothing written)
          when the kind has no cap in inputs.json "caps" or the new total would pass the cap. --key names
          one real action: a retry of the same action passes the same key and is not counted twice.
+         A retry writes a count-0 row and exits 3 (ALREADY LOGGED); past MAX_REPLAYS retries it is refused.
   python log_row.py baseline --state-dir D <repo-relative path> [...]   |   --none
       -> "<sha256>  <path>" lines in baseline-hashes.txt (repo root = inputs.json "repoPath", read from the
          state folder when relative). Hash only files that must not change during the run. --none writes
          "none" for a run with nothing to baseline.
-Exit 0 = written (or already logged), 2 = refused.
+Exit 0 = written, 2 = refused, 3 = already logged (a retry of a counted action).
 """
 import argparse
 import hashlib
@@ -23,6 +26,7 @@ from datetime import datetime
 import statefiles
 
 DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")  # fixed English names: the locale never changes them
+MAX_REPLAYS = 2  # retries allowed per --key; more means the action is repeating, not retrying
 HEADERS = {"run-log.md": "| When | Task | What happened | Evidence |",
            "side-effects.md": "| When | Kind | Count | Note |"}
 
@@ -67,9 +71,14 @@ def effect(state, kind, count, note, key):
         refuse("count must be 1 or more")
     path = os.path.join(state, "log", "side-effects.md")
     rows = statefiles.table_rows(path)
-    if key and any(len(r) > 3 and r[3].startswith(f"[{key}]") for r in rows):
-        print(f"ALREADY LOGGED: {key}")
-        return
+    tagged = [r for r in rows if len(r) > 3 and r[3].startswith(f"[{key}]")] if key else []
+    if tagged:
+        replays = sum(1 for r in tagged if r[2] == "0")
+        if replays >= MAX_REPLAYS:
+            refuse(f"key {key} already retried {replays} times; do not act")
+        append_row(path, [now_text(), kind, 0, f"[{key}] replay: {note}"])
+        print(f"ALREADY LOGGED: {key} (retry {replays + 1} of {MAX_REPLAYS}, not counted)")
+        sys.exit(3)
     used = sum(int(r[2]) for r in rows if len(r) > 2 and r[1] == kind and r[2].isdigit())
     if used + count > caps[kind]:
         refuse(f"{kind}: {used} used + {count} would pass the cap {caps[kind]}; do not act")
@@ -105,6 +114,7 @@ def main():
     ap.add_argument("--state-dir", required=True, help="state folder. Example: docs/proj-123/autopilot")
     ap.add_argument("--task", help="run: task id, or 'stage' for the stage check. Example: T3")
     ap.add_argument("--what", dest="text", help="run: what happened, plain words. Example: passed: ALL CHECKS PASS")
+    ap.add_argument("--what-file", help="run: a file holding the --what text. Example: log/verify-T3.txt")
     ap.add_argument("--evidence", default="-", help="run: evidence path or command. Example: logs/t3.txt")
     ap.add_argument("--kind", help="effect: a kind named in inputs.json caps. Example: mail")
     ap.add_argument("--count", type=int, default=1, help="effect: how many. Example: 1")
@@ -113,8 +123,13 @@ def main():
     ap.add_argument("--none", action="store_true", help="baseline: nothing to baseline in this run")
     a = ap.parse_args()
     if a.what == "run":
+        if a.what_file:
+            try:
+                a.text = statefiles.read_text(a.what_file).strip()
+            except OSError as e:
+                refuse(f"cannot read --what-file: {e}")
         if not a.task or not a.text:
-            refuse("run needs --task and --what")
+            refuse("run needs --task and --what or --what-file")
         append_row(os.path.join(a.state_dir, "log", "run-log.md"), [now_text(), a.task, a.text, a.evidence])
     elif a.what == "effect":
         if not a.kind:
