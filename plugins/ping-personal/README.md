@@ -116,6 +116,14 @@ run by hand on a box the agent cannot reach. Each reply is one step: a verdict o
 the last step, numbered actions, stop points, and a short "Tell me:" list. It
 drops the mechanism and TL;DR sections until you say stop.
 
+### `/personal-ask-like-expert`
+
+For a question in a field you do not know. It researches the field online, checks
+your terms and the named technology (wrong term, legacy, better option), answers
+four expert questions, and returns a deeper, not bigger, prompt to paste, plus a
+counter-option prompt for the client. `rate <1-5> <note>` logs a retro row;
+`improve` turns low ratings into proposed edits; `grill` interviews you first.
+
 ### Adapted from Matt Pocock's skills (MIT)
 
 - `/personal-diagnosing-bugs` -- build a red-capable feedback loop before any theory: an HTTP request to the IIS page, `sqlcmd` for the stored procedure, or a `cscript` COM harness.

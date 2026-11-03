@@ -1,0 +1,504 @@
+{
+  "title": "AppHost 7 - Phase 0",
+  "subtitle": "PROJ-824 - the phase 0 plan, step by step, for approval.",
+  "eyebrow": "Walk-through - PROJ-824",
+  "key": "proj824-phase0",
+  "idea": "Phase 0 builds the road, not the houses: we measure today, test the risky parts, and build the new pieces switched off, so clients see no change.",
+  "hero_visual": {"svg_file": "phase0-hero.svg", "caption": "Every new piece ships switched off until the go decision."},
+  "hero_links": {"hv-switch": "s8", "hv-markers": "s2"},
+  "decision": "Approve phase 0, then fill in the answer sheet after step 12.",
+  "opening": [
+    "Phase 0 prepares the move to AppHost 7.",
+    "It builds the process and the tools, not real screens.",
+    "The Holiday screens in phase 1 are the first real test.",
+    "Clients see no change, because every new piece stays switched off.",
+    "The work uses spare developer hours, not paid client hours.",
+    "The chart below shows the 12 steps, and each box opens its step."
+  ],
+  "categories": [
+    {"id": "a", "label": "Measure, decide and prepare"},
+    {"id": "b", "label": "Build new pieces, switched off"}
+  ],
+  "flow_title": "The flow of phase 0",
+  "flow_lead": "Twelve steps lead to one go, change or stop decision.",
+  "flow_caption": [
+    "Opened steps turn green. Step 4 waits for the client logs from step 3, while the other steps go on.",
+    "Dotted words show their meaning on hover. All words are also in Reference, Words used here."
+  ],
+  "steps": [
+    {
+      "id": "s1", "name": "Decisions to record", "sub": "answers come from the sheet after step 12", "cat": "a",
+      "lead": "Every decision from this meeting becomes a one-page record that sets the direction.",
+      "blocks": [
+        {"stats": [{"value": "18", "label": "questions on the answer sheet"}, {"value": "4", "label": "set a direction, confirmed later"}, {"value": "14", "label": "final today"}]},
+        {"bullets": [
+          "Each record states the choice, the reason and the alternative.",
+          "Some decisions are final today.",
+          "Others set a direction today, and a later step confirms it with real results.",
+          "Acme settles all 18 on the answer sheet after step 12."
+        ]},
+        {"h3": "Direction today, confirmed later"},
+        {"table": {"head": ["Question", "Why it matters", "Confirmed by"], "rows": [
+          ["[4 Tech stack](#q4)", "Every new screen is built with it for years.", "Step 5, checks A to D: can new code call the old VB6 and AppHostAPI code, and run beside AppHost?"],
+          ["[3 Router](#q3)", "Every click goes through it, so changing it later redoes work.", "Step 5, checks F and H, then the build in step 8."],
+          ["[6 Session model](#q6)", "Every new screen must know who is logged in.", "Step 9, the security design."],
+          ["[17 Screen factory](#q17)", "It sets how fast pages are built after the Holiday test.", "Step 11, one trial run on the dummy screen."]
+        ]}},
+        {"note": {"tone": "info", "text": "If a check fails, the developer brings the decision back to Acme with what the check found."}},
+        {"h3": "Final today"},
+        {"table": {"head": ["Question", "Why it matters"], "rows": [
+          ["[1 Approval scope](#q1)", "It sets how much we commit before real numbers exist."],
+          ["[2 First screens](#q2)", "It decides what the process is first tested on."],
+          ["[5 Switch levels](#q5)", "It sets how much risk each switch flip carries."],
+          ["[7 Capacity](#q7)", "It sets how fast phase 0 moves."],
+          ["[8 Cover](#q8)", "One developer is a single point of failure."],
+          ["[9 Part-time experts](#q9)", "It decides whether review keeps pace with the work."],
+          ["[10 Retire list basis](#q10)", "It decides how we avoid converting unused pages."],
+          ["[11 Log fallback](#q11)", "A bank may refuse to send logs."],
+          ["[12 Example Bank reply](#q12)", "A client is waiting for an answer."],
+          ["[13 Name](#q13)", "It sets the label clients see."],
+          ["[14 .NET patching](#q14)", "It decides who keeps the new service patched."],
+          ["[15 Security scans](#q15)", "The security \"before\" number needs one owner."],
+          ["[16 Effort estimate](#q16)", "Acme needs the cost of phase 0 early."],
+          ["[18 Order of work](#q18)", "It decides who sets what is converted next."]
+        ]}}
+      ],
+      "check": {"q": "Is the tech stack final after today?", "a": "No. Today sets the direction, and checks A to D in step 5 confirm it."},
+      "takeaway": "Today Acme settles 14 answers for good and points 4 more in a direction that later tests confirm."
+    },
+    {
+      "id": "s2", "name": "\"Before\" numbers", "sub": "8 areas, measured today", "cat": "a",
+      "lead": "We measure today's AppHost first, so every later claim has a real \"before\".",
+      "analogy": "A diet starts with stepping on the scale. Without today's weight, nobody can say the diet worked.",
+      "blocks": [
+        {"table": {"head": ["Area", "What we count", "Source"], "rows": [
+          ["Security", "Open findings in one outside scan of today's AppHost, by severity.", "Scan report and code check"],
+          ["Patching", "Days from a vendor patch to all clients patched.", "Release log and vendor pages"],
+          ["Maintainability", "Hours per comparable change, and time to approval.", "Jira and GitLab, last 12 months"],
+          ["Installs", "Manual steps and hours per client install.", "Runbooks and install log"],
+          ["Observability", "Hours to find the cause of recent support tickets.", "Jira support logs"],
+          ["Reliability", "Client-found defects per release.", "Jira support tickets, last 12 months"],
+          ["Delivery speed", "Lead time per comparable ticket.", "Jira, last 12 months"],
+          ["Capacity", "Paid client hours, support hours and spare developer hours per month.", "Jira time logs, last 12 months"]
+        ]}},
+        {"bullets": [
+          "Phase 0 sets no targets.",
+          "The team sets targets at the prototype review.",
+          "The prototype does not start without these numbers."
+        ]}
+      ],
+      "check": {"q": "Who sets the targets for these numbers?", "a": "The team, at the prototype review. Phase 0 only measures."},
+      "takeaway": "Measure today first, or no later claim of \"better\" can be proven."
+    },
+    {
+      "id": "s3", "name": "Client logs", "sub": "90 days of page use, per client", "cat": "a", "edge_note": "logs arrive",
+      "lead": "Client logs show which pages each client really uses.",
+      "blocks": [
+        {"stats": [{"value": "90", "label": "days of web server logs asked from each client"}]},
+        {"bullets": [
+          "The network admin asks each client for 90 days of web server (IIS) logs.",
+          "The logs show how often each page is opened, per client.",
+          "Clients may send logs late or refuse.",
+          "The fallback for a client that refuses is still open."
+        ]},
+        {"note": {"tone": "warn", "title": "Still open", "text": "No fallback is agreed yet for a bank that refuses. Question 11 on the answer sheet asks Acme."}}
+      ],
+      "takeaway": "Real page use, not memory, decides what is worth converting."
+    },
+    {
+      "id": "s4", "name": "Retire list and ranking", "sub": "the PROJ-824 ranking sheet", "cat": "a", "alongside": "while others go on",
+      "lead": "The logs and the PROJ-824 sheet decide what to drop and what to convert first.",
+      "blocks": [
+        {"h3": "Retire list"},
+        {"bullets": [
+          "Pages nobody opened in 90 days become retire candidates, not conversions.",
+          "Each client confirms its list, because some pages run only at quarter end or year end."
+        ]},
+        {"h3": "The PROJ-824 sheet"},
+        {"stats": [{"value": "370", "label": "items in the sheet"}, {"value": "171", "label": "screens"}, {"value": "53", "label": "reports"}, {"value": "49", "label": "batch jobs"}, {"value": "97", "label": "helper files"}]},
+        {"bullets": [
+          "The sheet stays the one list of what to convert.",
+          "Phase 0 adds five columns: page hits per client, switch name, parity-test status, estimated hours and actual hours.",
+          "The sheet's \"phase 1\" and \"phase 2\" tabs become plan phases 3 and 4."
+        ]},
+        {"h3": "How the sheet ranks what comes first"},
+        {"table": {"head": ["Factor", "1", "2", "3", "Source"], "rows": [
+          ["Use", "Few hits", "Moderate", "Top pages", "IIS logs, hits per page per client"],
+          ["Reach", "1 client", "Some", "All clients", "IIS logs and the PROJ-824 sheet"],
+          ["Risk", "Read-only page", "Edits data", "Login, money, trades, or an open scan finding", "Scan report and the money check"],
+          ["Business pull", "None", "Internal request", "Paid or client-requested", "Jira and SOWs"]
+        ]}},
+        {"chips": ["Importance = sum of 4 factors (4 to 12)", "Effort = measured hours x size factor", "Rank = importance / effort"]},
+        {"bullets": [
+          "Size factors are list 1, detail 1.5 and complex 3.",
+          "Rank is highest first, and it is redone monthly.",
+          "Login and other dependencies go first, whatever their score.",
+          "The size factors are estimates until real hours replace them."
+        ]}
+      ],
+      "check": {"q": "A page nobody opened in 90 days: convert it or not?", "a": "Not yet. It becomes a retire candidate, and the client confirms, because some pages run only at quarter or year end."},
+      "takeaway": "Drop what nobody uses, then convert the most important work per hour first."
+    },
+    {
+      "id": "s5", "name": "Checks A to K", "sub": "on the test server, A and B first", "cat": "a",
+      "lead": "These 11 small experiments test the risky assumptions before any real screen is built.",
+      "analogy": "Before building a bridge, engineers drill test holes. A bad hole changes the plan cheaply, before any steel goes up.",
+      "blocks": [
+        {"note": {"tone": "idea", "title": "Run first", "text": "A and B run first, because a failure there changes the stack and the back-end plan."}},
+        {"table": {"head": ["Check", "What we try", "Why it matters"], "rows": [
+          ["A", "A test .NET 10 program calls one real VB6 component and times many calls at once.", "The whole plan assumes new code can call the old components."],
+          ["B", "The same program calls one AppHostAPI function.", "If it fails, AppHostAPI screens wait for a later phase."],
+          ["C", "Find out how the old components are hosted.", "It decides whether the new service must run as 32-bit."],
+          ["D", "The web server runs a test React page and a test .NET service next to AppHost.", "It proves the new pieces can live beside AppHost."],
+          ["E", "Check the AppHost login cookie's safety flags and whether the new service can read it.", "The prototype reuses today's login."],
+          ["F", "Try the router option chosen in question 3.", "The router sends users to old or new screens."],
+          ["G", "Find money calculations in old pages and test expired sessions in stored procedures.", "New code must round money the same way and keep session checks."],
+          ["H", "List every way into each page: menu, links, redirects, form posts and bookmarks.", "A menu-only router misses the other ways in."],
+          ["I", "Flip a test switch and time how long running pages take to see it.", "AppHost keeps settings in memory, so a flip may lag."],
+          ["J", "Record today's page load times.", "It gives a speed baseline for the extra hop to the new service."],
+          ["K", "Ask clients which browsers they use, and make a scrubbed test copy of the database.", "Bank desktops may pin old browsers, and tests never use live client data."]
+        ]}},
+        {"note": {"tone": "warn", "title": "Shared server", "text": "The test server is shared with QA, so we look first, back up, and ask before any change."}}
+      ],
+      "check": {"q": "Why do checks A and B go first?", "a": "If new code cannot call the old VB6 or AppHostAPI code, the stack and back-end plan change."},
+      "takeaway": "Cheap experiments now prevent expensive surprises later."
+    },
+    {
+      "id": "s6", "name": "Stack and starter", "sub": "starter project + one dummy screen", "cat": "b",
+      "lead": "We confirm the tools, then prove them with one throwaway screen.",
+      "blocks": [
+        {"bullets": [
+          "Recommended stack: React + Vite for screens and C# on .NET LTS for the back-end service.",
+          "Other options on the table: Next.js, htmx + Razor, Blazor or Angular.",
+          "Checks A to D must pass before the stack is confirmed.",
+          "Acme sets the direction in [question 4](#q4)."
+        ]},
+        {"h3": "Trade-offs for screens (for expert discussion)"},
+        {"table": {"head": ["Option", "Pros", "Cons"], "rows": [
+          ["React + Vite", "React rarely ships a major version and backports security fixes. Plain files on IIS, so nothing new on client servers. The developer knows React.", "We pick and maintain our own add-on libraries."],
+          ["Next.js", "The other Acme team's standard. Built on React, so skills transfer.", "Each major version is supported 2 years, with a new one yearly. Its server parts need Node.js on every client server."],
+          ["htmx + Razor", "One language, C#. Few upgrades. Closest to today's pages.", "Less suited to live, app-like screens. Less reuse of React skills."],
+          ["Blazor", "One language, C#. Ships with .NET.", "Upgrades every 2 years with .NET. Fewer developers know it."],
+          ["Angular", "Full framework. The developer has some experience.", "Each major version is supported 24 months, with a new one yearly."]
+        ]}},
+        {"note": {"tone": "info", "text": "The React, UX and .NET experts should review this table before the stack is final."}},
+        {"h3": "Three parts"},
+        {"table": {"head": ["Part", "What we do", "Output"], "rows": [
+          ["6a", "Confirm the stack once checks A to D pass.", "One decision record per layer."],
+          ["6b", "Set up a starter project for the confirmed stack.", "Folder layout, build, deploy, shared header and menu, one data-call pattern."],
+          ["6c", "Build one dummy screen end to end with the starter.", "New screen -> new service -> old component -> stored procedure."]
+        ]}},
+        {"chips": ["New screen", "New service", "Old component", "Stored procedure"]},
+        {"bullets": [
+          "The dummy screen proves the whole chain before the Holiday screens.",
+          "That way the prototype's hours measure screen work, not setup.",
+          "The starter project is what the screen factory and the review skills build on."
+        ]}
+      ],
+      "check": {"q": "Why build a dummy screen nobody will use?", "a": "It proves the whole chain first, so the Holiday prototype's hours measure screen work, not setup."},
+      "takeaway": "Prove the whole chain on a throwaway screen, so real screens measure real work."
+    },
+    {
+      "id": "s7", "name": "Strangler Fig recipe", "sub": "the steps every screen follows", "cat": "b",
+      "lead": "The recipe is the fixed set of steps that moves one screen from old to new.",
+      "analogy": "A strangler fig is a vine that grows around a tree until it replaces it. The new AppHost grows around the old one, one feature at a time.",
+      "blocks": [
+        {"h3": "The idea"},
+        {"bullets": [
+          "In software, the new system grows around the old one, one feature at a time.",
+          "The old system keeps working the whole time.",
+          "Every click passes through one front door, the router.",
+          "The router reads one switch per feature in System Settings."
+        ]},
+        {"svg_file": {"file": "strangler.svg", "caption": "Old and new run side by side. System Settings decides per feature, and switching back loses no data."}},
+        {"table": {"head": ["Stage", "What the router does"], "rows": [
+          ["Today", "Every switch says old, so every click goes to the old pages."],
+          ["During the work", "Converted features go to new screens, and the rest stay old."],
+          ["The end", "Every switch says new, and the old pages can be switched off."]
+        ]}},
+        {"h3": "The recipe every screen follows"},
+        {"numbered": [
+          "Add the feature's switch in System Settings, set to old.",
+          "Build the new screen with the starter project.",
+          "Call old components only through one adapter.",
+          "Run a parity test against the old page.",
+          "Add the router entry for the feature.",
+          "Turn the switch on for Acme staff, then one user group, then the whole client.",
+          "Delete the old page when the written rule says it is safe."
+        ]}
+      ],
+      "check": {"q": "What happens to data if a switch is flipped back to old?", "a": "Nothing is lost. Old and new save through the same stored procedures."},
+      "takeaway": "New grows around old, one switch at a time, and either side can take the next click."
+    },
+    {
+      "id": "s8", "name": "Router", "sub": "built with every switch off", "cat": "b",
+      "lead": "The router is the front door that sends each click to the old page or the new screen.",
+      "analogy": "Think of a railway switch. Flipping the lever sends the next train down the other track, and no track is torn up.",
+      "blocks": [
+        {"bullets": [
+          "We build the router option Acme picks in [question 3](#q3).",
+          "Every switch starts off, so clients see no change.",
+          "We prove it with the dummy screen at all three switch levels.",
+          "Check H must find every way into a page, not only the menu."
+        ]},
+        {"h3": "How one switch flips"},
+        {"chips": ["Admin changes the switch", "Setting reloads", "Next click goes the new way", "Flip back: next click goes old"]},
+        {"bullets": [
+          "The switch can be on for Acme staff, one user group, or a whole client.",
+          "Once the setting reloads, the next click goes the new way, with no install.",
+          "No data moves, because both sides save through the same stored procedures.",
+          "Check I measures how long the reload takes."
+        ]}
+      ],
+      "check": {"q": "Does turning a screen on need an install?", "a": "No. An admin flips its switch in System Settings, and the next click goes the new way once the setting reloads."},
+      "takeaway": "One switch per feature, flipped in settings, decides old or new for the next click."
+    },
+    {
+      "id": "s9", "name": "Security and session", "sub": "design + session model", "cat": "a",
+      "lead": "The new service needs a written security design before any real screen uses it.",
+      "blocks": [
+        {"bullets": [
+          "The security expert writes the security design of the new service.",
+          "The expert recommends a session model, and Acme approves it in [question 6](#q6).",
+          "The prototype reuses today's login, and check E tests that."
+        ]},
+        {"table": {"head": ["Concern", "Why it matters"], "rows": [
+          ["Today's login cookie has known weak spots.", "Users can change cookie values that the server trusts."],
+          ["Any new session must keep the SessionData row.", "Many stored procedures record the session ID for audit."],
+          ["A login token must never sit in browser storage.", "A script on the page could steal it."]
+        ]}},
+        {"ba": {"before_title": "Option one", "after_title": "Option two", "before": ["Harden today's cookie session."], "after": ["Move to login tokens such as JWT through one adapter."]}}
+      ],
+      "takeaway": "Security is designed and written down before any real screen depends on it."
+    },
+    {
+      "id": "s10", "name": "Review skills", "sub": "every Acme member writes one", "cat": "a",
+      "lead": "Each Acme member turns how they review a page into a skill that checks every change.",
+      "blocks": [
+        {"h3": "The problem today"},
+        {"bullets": [
+          "Every change waits for a busy expert to read it.",
+          "Each expert's rules live in their head, so reviews vary.",
+          "A screen factory would produce changes faster than people can read them."
+        ]},
+        {"h3": "The idea, start to finish"},
+        {"chips": ["A member explains how they review", "Standards page", "Automatic checks + review skill", "Eval proves the skill catches mistakes", "Runs on every merge request", "Member reads only the flags", "A missed mistake becomes a new eval case"]},
+        {"h3": "What changes"},
+        {"ba": {"before_title": "Today", "after_title": "With review skills",
+          "before": ["A change waits for a busy expert.", "Review standards live in people's heads.", "Each reviewer checks different things.", "Nobody can show what review catches.", "The screen factory would outrun human review.", "A new team member learns rules by asking."],
+          "after": ["The skill reviews at once, and the expert reads only flags.", "Standards are written down and reused on every change.", "Every change gets the same checks.", "The eval shows what each skill catches.", "Review keeps pace with the factory, with a person still approving.", "The standards pages teach the rules."]}},
+        {"bullets": [
+          "Each member gives time once, and Claude drafts the rest from a one-hour interview (suggestion).",
+          "A person still approves every merge.",
+          "Login, money and trade pages still need expert sign-off.",
+          "Each member's phase 0 time is not estimated yet.",
+          "Who writes which skill, a worked React example and the merge-request rules are in [Review skills in detail](#ref-skills)."
+        ]}
+      ],
+      "check": {"q": "Does a review skill replace the human approver?", "a": "No. A person still approves every merge, and login, money and trade pages still need expert sign-off."},
+      "takeaway": "Experts write their review rules once, and a skill applies them to every change."
+    },
+    {
+      "id": "s11", "name": "Screen factory", "sub": "Jira board + triage skill + review gates", "cat": "b",
+      "lead": "The factory turns the ranked PROJ-824 sheet into converted screens, one ticket at a time (suggestion).",
+      "analogy": "An assembly line: the sheet sets the order, each station does one job, and an inspector signs off before anything ships.",
+      "blocks": [
+        {"bullets": ["It runs on a new AppHost 7 Jira board, with one ticket per item in the sheet's rank order."]},
+        {"chips": ["The PROJ-824 sheet ranks the items", "Jira board in rank order", "Triage skill picks the top ready ticket", "Claude drafts the screen", "Review skills check it", "A person approves", "Switch on for Acme staff"]},
+        {"h3": "Rules for the triage skill"},
+        {"bullets": [
+          "It never changes the order.",
+          "Only the sheet's ranking sets the order.",
+          "It picks a ticket only when everything that ticket depends on is already converted.",
+          "It stops and asks a person when a ticket touches login, money or trades.",
+          "QA tests each screen before its switch goes past Acme staff.",
+          "Every ticket records estimated and actual hours, so the sheet's numbers stay real."
+        ]},
+        {"note": {"tone": "info", "text": "In phase 0 the factory runs once, on the dummy screen only."}}
+      ],
+      "takeaway": "The sheet sets the order, skills do the drafting and checking, and a person approves."
+    },
+    {
+      "id": "s12", "name": "Criteria and decision", "cat": "a",
+      "outcomes": [
+        {"label": "Go", "tone": "ok", "note": "-> Holiday prototype"},
+        {"label": "Change plan", "tone": "change", "note": "checks failed"},
+        {"label": "Stop", "tone": "warn", "note": "criteria missed"}
+      ],
+      "lead": "Phase 0 ends with a written go, change or stop decision on the Holiday prototype.",
+      "blocks": [
+        {"bullets": [
+          "The team writes go, change and stop criteria before the prototype starts.",
+          "Examples: a limit for hours per screen, whether the VB6 call works under load, and the security scan result.",
+          "The team sets the numbers, not this page."
+        ]},
+        {"table": {"head": ["Outcome", "What happens next"], "rows": [
+          ["Go", "The Holiday prototype starts."],
+          ["Change plan", "The plan is updated to match what the checks found."],
+          ["Stop", "The work ends, and the cost is the phase 0 hours alone."]
+        ]}},
+        {"h3": "Phase 0 is done when"},
+        {"done": [
+          "Decisions are written.",
+          "\"Before\" numbers exist for all eight areas.",
+          "A draft retire list exists, and the sheet has its five new columns.",
+          "All checks pass, or the plan is changed to match what they found.",
+          "The tech stack is confirmed and recorded.",
+          "The starter project for the confirmed stack exists.",
+          "One dummy screen runs end to end on the test server.",
+          "The Strangler Fig recipe is written.",
+          "The router works at all three switch levels, with every switch off by default.",
+          "The security design and session model are written.",
+          "Each review skill passes its own eval.",
+          "The screen factory runs once on the dummy screen.",
+          "Go, change and stop criteria are written, and the decision is made."
+        ]}
+      ],
+      "check": {"q": "What is the worst case if the answer is Stop?", "a": "The cost is the phase 0 hours alone, because nothing reached clients."},
+      "takeaway": "Phase 0 ends in a written go, change or stop, and stopping costs only phase 0 hours."
+    }
+  ],
+  "answers": {
+    "title": "Answer sheet for Acme",
+    "respond_title": "AppHost 7 phase 0 - answers",
+    "lead": "Each answer becomes a decision record in step 1.",
+    "bullets": [
+      "Pick one choice per question, or pick Other and type an answer.",
+      "Every section has a Comment button, and each comment needs Save.",
+      "Respond copies all answers and saved comments as plain text.",
+      "Paste that text into an email or Slack to the developer."
+    ],
+    "questions": [
+      {"title": "Approval scope", "ask": "What do you approve now?", "why": "It sets how much we commit before real numbers exist.", "when": "Final today.", "choices": [
+        {"text": "Phase 0 and the Holiday prototype only", "effect": "Small commitment, and the rest is re-planned on measured hours."},
+        {"text": "The whole roadmap", "effect": "Commits to every phase on estimates not yet measured."}]},
+      {"title": "First screens", "ask": "Which screens come first after phase 0?", "why": "It decides what the process is first tested on.", "when": "Final today.", "choices": [
+        {"text": "Holiday first, then core pages (login, menu, System Settings)", "effect": "A small screen tests the process before daily trading screens."},
+        {"text": "All bond screens first", "effect": "Users see the main screens sooner, with more risk to daily work."}]},
+      {"title": "Router", "ask": "How should users reach old or new screens?", "why": "Every click goes through the router, so changing it later redoes work.", "when": "Direction today. Confirmed by checks F and H in step 5 and the build in step 8.", "choices": [
+        {"text": "Menu, links and old-page forwarding", "effect": "Nothing new to install, and check H finds any missed paths.", "tag": "suggestion"},
+        {"text": "IIS URL Rewrite", "effect": "A web server add-on with one rule per page on each client server."},
+        {"text": "Reverse proxy from day one", "effect": "Catches every request, but adds a new server piece at every client now."}]},
+      {"title": "Tech stack", "ask": "Which tools build the new screens and service?", "why": "Every new screen is built with it for years.", "when": "Direction today. Confirmed by checks A to D in step 5, which prove new code can call the old VB6 and AppHostAPI code.", "choices": [
+        {"text": "React + Vite screens and a C# .NET LTS service", "effect": "Rare major versions and nothing new on client servers, but we maintain our own add-ons.", "tag": "recommended"},
+        {"text": "Next.js", "effect": "The other Acme team's standard, but it needs Node.js on every client server and a new major version yearly."},
+        {"text": "htmx + Razor", "effect": "One language and closest to today's pages, but less suited to live, app-like screens."},
+        {"text": "Blazor", "effect": "One language and ships with .NET, but fewer developers know it."},
+        {"text": "Angular", "effect": "A full framework the developer has used, but a new major version yearly."}]},
+      {"title": "Switch levels and old pages", "ask": "How is a new screen turned on, and when do old pages go?", "why": "It sets how much risk each switch flip carries.", "when": "Final today.", "choices": [
+        {"text": "Staff, then one group, then the client, and old pages go by a written rule", "effect": "Problems show up on staff first, and old code leaves on schedule.", "tag": "recommended"},
+        {"text": "Per client only, and old pages stay to the end", "effect": "Simpler switch, but a bad screen reaches a whole client at once."}]},
+      {"title": "Session model", "ask": "How should the new pieces know who is logged in?", "why": "Every new screen must know who is logged in.", "when": "Direction today. Confirmed by the security design in step 9.", "choices": [
+        {"text": "Harden today's cookie session", "effect": "One method and less to build, but a poor fit with bank single sign-on."},
+        {"text": "Move to login tokens (such as JWT) through one adapter", "effect": "Fits bank single sign-on, and the method can change later without touching screens."}]},
+      {"title": "Capacity", "ask": "Which hours pay for this work?", "why": "It sets how fast phase 0 moves.", "when": "Final today.", "choices": [
+        {"text": "Spare developer hours only", "effect": "No extra cost, but work pauses when client work is busy."},
+        {"text": "Fixed weekly hours", "effect": "Predictable dates, but fewer hours for client work."},
+        {"text": "Borrowed developers", "effect": "Faster, but the developer must train and review them."}]},
+      {"title": "Cover for the one developer", "ask": "Who can continue if the only developer is away?", "why": "One developer is a single point of failure.", "when": "Final today.", "choices": [
+        {"text": "Name a person", "effect": "Work continues, but that person needs time to learn."},
+        {"text": "Accept the risk for now", "effect": "No cost now, but work stops if the developer is away."}]},
+      {"title": "Part-time experts", "ask": "How do the part-time experts protect quality?", "why": "It decides whether review keeps pace with the work.", "when": "Final today.", "choices": [
+        {"text": "Write standards, checks, a review skill and an eval in phase 0", "effect": "Time up front, then they read only flagged items."},
+        {"text": "Review each change by hand", "effect": "No time up front, but every change waits for a busy expert."}]},
+      {"title": "Retire list basis", "ask": "What decides which old pages to drop?", "why": "It decides how we avoid converting unused pages.", "when": "Final today.", "choices": [
+        {"text": "Web log data", "effect": "Evidence per page, but it needs client logs."},
+        {"text": "Team judgment", "effect": "Faster, but a page someone uses may be dropped."}]},
+      {"title": "Fallback if a bank will not send logs", "ask": "If a bank will not send logs, how do we decide which of its pages are unused?", "why": "A bank may refuse to send logs.", "when": "Final today.", "choices": null},
+      {"title": "Example Bank reply", "ask": "Example Bank asked for AppHost in Linux containers. What do we tell them?", "why": "A client is waiting for an answer.", "when": "Final today.", "choices": [
+        {"text": "Honest timeline: the web part on Linux after the web layer moves, all of AppHost after the back end moves", "effect": "No extra cost, but Linux comes late.", "tag": "suggestion"},
+        {"text": "A Windows container image now", "effect": "Something sooner, but still Windows."},
+        {"text": "Fund the Linux work earlier", "effect": "Linux sooner, but it needs extra paid hours."}]},
+      {"title": "Name", "ask": "What do we call the new version?", "why": "It sets the label clients see.", "when": "Final today.", "choices": [
+        {"text": "AppHost 7", "tag": "suggestion"}, {"text": "AppHost 8"}, {"text": "Keep 6.x numbering"}]},
+      {"title": ".NET patching", "ask": "Who patches the .NET runtime that the new service needs?", "why": "It decides who keeps the new service patched.", "when": "Final today.", "choices": [
+        {"text": "Patches ship inside each AppHost package", "effect": "We test every patch, but each patch needs a release."},
+        {"text": "Shared .NET on the server, patched by the client", "effect": "Smaller packages, but a client patch can reach AppHost untested."}]},
+      {"title": "Outside security scans", "ask": "Who runs the outside security scan of today's AppHost?", "why": "The security \"before\" number needs one owner.", "when": "Final today.", "choices": null},
+      {"title": "Phase 0 effort estimate", "ask": "When is the phase 0 effort estimate due?", "why": "Acme needs the cost of phase 0 early.", "when": "Final today.", "choices": [
+        {"text": "In the first week of phase 0"}]},
+      {"title": "Screen factory", "ask": "How are pages built after the Holiday test?", "why": "It sets how fast pages are built after the Holiday test.", "when": "Direction today. Confirmed by one trial run on the dummy screen in step 11.", "choices": [
+        {"text": "Screen factory: a triage skill picks the next page, Claude drafts it, review skills and a person check it", "effect": "More pages per week, once the review skills pass their evals."},
+        {"text": "The developer builds each page by hand", "effect": "Fewer moving parts, but slower."}]},
+      {"title": "Order of work", "ask": "Should the ranked PROJ-824 sheet set the order the factory follows?", "why": "It decides who sets what is converted next.", "when": "Final today.", "choices": [
+        {"text": "Yes: the sheet ranks, the Jira board follows, and the triage skill picks the top ready item", "effect": "One list decides the order, and the factory cannot skip ahead."},
+        {"text": "Acme picks each next screen by hand", "effect": "Full control, but every screen waits for a decision."}]}
+    ]
+  },
+  "reference": [
+    {"id": "ref-steps", "title": "All steps in one table", "blocks": [
+      {"table": {"head": ["#", "Step", "Output", "Who"], "rows": [
+        ["1", "Write each phase 0 decision as a one-page record.", "One page per decision, with the reason and the alternative.", "Developer"],
+        ["2", "Agree one measure per area and take today's AppHost numbers.", "\"Before\" numbers for all eight areas.", "Developer, QA lead (test hours)"],
+        ["3", "Ask each client for 90 days of web server (IIS) logs.", "Page-use logs per client.", "Network admin"],
+        ["4", "List the pages nobody opened, and add the five new columns to the PROJ-824 sheet.", "A draft retire list for each client to confirm, and hit counts in the sheet.", "open"],
+        ["5", "Run checks A to K on the test server, A and B first.", "Pass or fail per check, or a changed plan.", "Developer, network admin"],
+        ["6", "Confirm the stack, build the starter project and one dummy screen.", "Decision records, a starter project and a working dummy screen.", "Developer, Acme approves the stack"],
+        ["7", "Write the Strangler Fig recipe that every screen follows.", "A one-page recipe.", "Developer"],
+        ["8", "Build the router option chosen in question 3, with every switch off.", "A router proven with the dummy screen at all three switch levels.", "Developer, network admin"],
+        ["9", "Write the security design of the new service.", "A written design, including the session model.", "Security expert recommends, Acme approves"],
+        ["10", "Each Acme member writes standards, automatic checks, a review skill and its eval.", "Checks and skills that run on every change.", "Acme members"],
+        ["11", "Set up the screen factory on a new AppHost 7 Jira board, in the sheet's rank order.", "One ticket per item, a triage skill and review gates.", "Developer"],
+        ["12", "Write the go, change and stop criteria, then decide.", "Written criteria and a decision on the Holiday prototype.", "The team, Acme decides"]
+      ]}}]},
+    {"id": "ref-skills", "title": "Review skills in detail", "blocks": [
+      {"h3": "Skills to write first"},
+      {"table": {"head": ["Area", "Written by", "What the skill checks", "Example rule"], "rows": [
+        ["Security", "Security expert", "Login, session and data-access risks in each change.", "No login token in browser storage."],
+        ["Business test cases", "QA lead", "Each screen has test cases that match how traders use it.", "Every save path has a test with real-looking data."],
+        ["UX and layout", "UX expert", "Layout, wording and accessibility on phone and desktop.", "Every form field has a visible label."],
+        ["Unit tests", "Developer", "Tests exist for new logic and the change shows they ran.", "New money logic ships with a unit test."],
+        ["React standards", "React expert", "How screens fetch data and use hooks such as useEffect.", "Use an effect only to sync with something outside React."],
+        [".NET service", ".NET expert", "How the service calls old components through adapters.", "No screen calls a VB6 component directly."],
+        ["Performance", "Performance expert", "Page speed against a budget the expert sets.", "A new screen is not slower than its old page."],
+        ["Business rules", "Any Acme member who knows the product", "Business terms and rules a screen must keep.", "Rates and amounts round the same way as the old page."]
+      ]}},
+      {"h3": "What each member delivers"},
+      {"bullets": ["A standards page: what good looks like and why.", "Automatic checks for any rule a machine can test exactly.", "A review skill with good and bad examples from our code.", "An eval: planted mistakes plus clean files."]},
+      {"h3": "Worked example: React"},
+      {"bullets": ["The standards page explains when useEffect is needed.", "The automatic check is the React hooks lint rules.", "The skill asks whether each effect is needed at all.", "The eval is a set of needless effects the skill must flag, plus clean files it must pass.", "The member sets the eval cases and the pass mark, not the developer."]},
+      {"h3": "How busy members can still contribute (suggestion)"},
+      {"bullets": ["The developer runs a one-hour interview with each member.", "Claude drafts the standards page, skill and eval from that interview.", "The member corrects the draft instead of writing from a blank page.", "The member adds a few real examples from past reviews."]},
+      {"h3": "At every merge request"},
+      {"bullets": ["Automatic checks must pass before review starts.", "Each review skill posts its findings on the merge request.", "The member for that area reads only the flagged items.", "A person approves every merge."]},
+      {"h3": "How a skill gets better over time"},
+      {"bullets": ["A defect the skill missed becomes a new eval case.", "The skill must pass every old case and the new one before it changes.", "Each member refreshes examples and eval cases every quarter."]}
+    ]},
+    {"id": "ref-watch", "title": "Other things to watch", "blocks": [
+      {"table": {"head": ["Concern", "Why it matters", "Step"], "rows": [
+        ["Pages have more ways in than the menu.", "A router that only watches the menu misses links and bookmarks.", "5, 8"],
+        ["A switch flip may not act at once.", "AppHost keeps its settings in memory.", "5, 8"],
+        ["Experts have their own projects.", "Their phase 0 time is not estimated yet.", "10"],
+        ["The test server is shared with QA.", "Look first, back up, and ask before any change.", "5, 6, 8"],
+        ["Clients may send logs late or refuse.", "The retire list waits, and the fallback is still open.", "3, 4"],
+        ["Late logs or late \"before\" numbers.", "Phase 0 runs longer.", "2, 3"],
+        ["Phase 0 effort is not estimated yet.", "The developer gives an estimate in the first week.", "1"],
+        ["The Holiday switch name and parity measure are not set.", "The prototype cannot start without them.", "7"]
+      ]}}]}
+  ],
+  "glossary": [
+    ["Strangler Fig", "Replace an old system one feature at a time while old and new run side by side."],
+    ["Router", "The piece that sends each user to the old page or the new screen."],
+    ["Switch", "An on/off setting in System Settings that the router reads per feature."],
+    ["Switch levels", "A switch can be on for Acme staff, one user group, or a whole client."],
+    ["Holiday prototype", "The market-holiday calendar screens, the first real screens to convert."],
+    ["Dummy screen", "A throwaway test screen that proves the new pieces work together."],
+    ["React + Vite", "The recommended tools for building new screens in the browser."],
+    [".NET LTS", "Microsoft's long-term-support release, the recommended base for the new service."],
+    ["VB6 components", "The old business-logic programs that AppHost pages call today."],
+    ["AppHostAPI", "AppHost's existing .NET 4.8 bridge to outside systems."],
+    ["Adapter", "One small wrapper, so new code calls an old component in one place only."],
+    ["Parity test", "Proof that a new screen shows the same data as the old page."],
+    ["Session", "The record that a user is logged in, stored in the SessionData table."],
+    ["JWT", "A signed login token, one option for a stronger session."],
+    ["Screen factory", "A repeatable line where a skill picks the next page, Claude drafts it, and review skills and a person check it."],
+    ["Triage skill", "An AI instruction set that reads the Jira board and picks the next page to convert."],
+    ["Review skill", "An AI reviewer that checks each change against one member's written standards."],
+    ["Eval", "A set of planted mistakes that a review skill must catch."],
+    ["Merge request", "A proposed code change that is reviewed before it joins the main code."],
+    ["Bond screens", "The variable-rate bond screens in AppHost."],
+    ["PROJ-824 sheet", "The Google sheet that lists every AppHost screen, report, batch job and helper file."],
+    ["IIS", "Microsoft's web server, which runs AppHost's pages at each client."],
+    ["Stored procedure", "A saved SQL program in the database that both old and new code call."]
+  ]
+}

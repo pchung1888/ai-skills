@@ -1,0 +1,46 @@
+<svg viewBox="0 0 760 440" role="img" aria-label="Every click goes through the router. The router reads one switch per feature from System Settings and sends the user to old AppHost or to AppHost 7. AppHost 7 calls the old VB6 code for now. Both save through the same stored procedures into one SQL Server database.">
+<defs>
+<marker id="sfA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker>
+<marker id="sfO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--b)"/></marker>
+<marker id="sfN" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--a)"/></marker>
+</defs>
+<g style="font-family:var(--sans)">
+<rect x="200" y="8" width="220" height="44" rx="8" style="fill:var(--panel);stroke:var(--line);stroke-width:1.5"/>
+<text x="310" y="35" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">Users at 5 clients</text>
+<line x1="310" y1="52" x2="310" y2="88" style="stroke:var(--muted);stroke-width:2" marker-end="url(#sfA)"/>
+<text x="320" y="75" font-size="12" style="fill:var(--muted)">every click</text>
+<rect x="150" y="90" width="320" height="62" rx="8" style="fill:var(--panel);stroke:var(--hi);stroke-width:3"/>
+<text x="310" y="116" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">Router (the front door)</text>
+<text x="310" y="138" text-anchor="middle" font-size="12" style="fill:var(--muted)">checks the switch for this feature</text>
+<rect x="530" y="76" width="220" height="92" rx="8" style="fill:var(--panel);stroke:var(--b);stroke-width:2;stroke-dasharray:6 3"/>
+<text x="640" y="98" text-anchor="middle" font-size="14" font-weight="600" style="fill:var(--ink)">System Settings</text>
+<text x="640" y="116" text-anchor="middle" font-size="12" style="fill:var(--muted)">one switch per feature</text>
+<text x="640" y="136" text-anchor="middle" font-size="12" style="fill:var(--a)">Holiday: new, Acme staff</text>
+<text x="640" y="154" text-anchor="middle" font-size="12" style="fill:var(--b)">Every other feature: old</text>
+<line x1="530" y1="121" x2="474" y2="121" style="stroke:var(--b);stroke-width:2;stroke-dasharray:5 4" marker-end="url(#sfO)"/>
+<path d="M250,152 V186 H190 V222" style="fill:none;stroke:var(--b);stroke-width:2.5" marker-end="url(#sfO)"/>
+<path d="M370,152 V186 H570 V222" style="fill:none;stroke:var(--a);stroke-width:2.5" marker-end="url(#sfN)"/>
+<text x="180" y="180" text-anchor="end" font-size="12" font-weight="600" style="fill:var(--b)">switch says old</text>
+<text x="470" y="180" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--a)">switch says new</text>
+<rect x="40" y="224" width="300" height="112" rx="8" style="fill:var(--b-soft);stroke:var(--b);stroke-width:2"/>
+<text x="190" y="250" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">Old AppHost (6.x)</text>
+<text x="190" y="274" text-anchor="middle" font-size="13" style="fill:var(--ink)">ASP pages on Windows IIS</text>
+<text x="190" y="294" text-anchor="middle" font-size="13" style="fill:var(--ink)">VB6 code under COM+</text>
+<text x="190" y="320" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--b)">shrinks, feature by feature</text>
+<rect x="420" y="224" width="300" height="112" rx="8" style="fill:var(--a-soft);stroke:var(--a);stroke-width:2"/>
+<text x="570" y="250" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">AppHost 7</text>
+<text x="570" y="274" text-anchor="middle" font-size="13" style="fill:var(--ink)">React screens</text>
+<text x="570" y="294" text-anchor="middle" font-size="13" style="fill:var(--ink)">.NET service with adapters</text>
+<text x="570" y="320" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--a)">grows, feature by feature</text>
+<line x1="420" y1="300" x2="344" y2="300" style="stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 4" marker-end="url(#sfA)"/>
+<text x="382" y="290" text-anchor="middle" font-size="11" style="fill:var(--muted)">calls VB6</text>
+<text x="382" y="318" text-anchor="middle" font-size="11" style="fill:var(--muted)">for now</text>
+<line x1="190" y1="336" x2="190" y2="378" style="stroke:var(--muted);stroke-width:2" marker-end="url(#sfA)"/>
+<line x1="570" y1="336" x2="570" y2="378" style="stroke:var(--muted);stroke-width:2" marker-end="url(#sfA)"/>
+<text x="200" y="362" font-size="12" style="fill:var(--muted)">same stored procedures</text>
+<text x="560" y="362" text-anchor="end" font-size="12" style="fill:var(--muted)">same stored procedures</text>
+<rect x="120" y="380" width="520" height="52" rx="8" style="fill:var(--panel);stroke:var(--line);stroke-width:1.5"/>
+<text x="380" y="403" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">SQL Server: one set of data</text>
+<text x="380" y="423" text-anchor="middle" font-size="12" style="fill:var(--muted)">about 1,220 stored procedures, unchanged until every screen moves</text>
+</g>
+</svg>

@@ -1,0 +1,34 @@
+<svg viewBox="0 0 560 290" role="img" aria-label="Phase 0 builds the road, not the houses: we measure today, test the risky parts, and build the new pieces switched off, so clients see no change.">
+<g transform="translate(24,0)">
+<g id="hv-houses" class="hv-in" style="fill:none;stroke:var(--hero-muted);stroke-opacity:.55;stroke-width:2.5;stroke-dasharray:7 5;stroke-linejoin:round">
+<path d="M32,182 V154 L66,128 L100,154 V182 Z"/>
+<path d="M120,182 V154 L154,128 L188,154 V182 Z"/>
+<path d="M208,182 V154 L242,128 L276,154 V182 Z"/>
+</g>
+</g>
+<text x="56" y="120" style="fill:var(--hero-muted);font-family:var(--sans);font-size:22px;font-weight:400">screens: phase 1+</text>
+<path id="hv-road" class="hv-draw" d="M20,230 L410,230 L410,186 L48,186 Z" style="fill:var(--a);stroke:var(--a);stroke-width:2.5;stroke-linejoin:round"/>
+<path d="M40,208 H400" style="fill:none;stroke:var(--hero-ink);stroke-width:2.5;stroke-dasharray:18 12;stroke-opacity:.8"/>
+<g id="hv-markers" class="hv-in">
+<path d="M80,218 V192" style="fill:none;stroke:var(--hero-ink);stroke-width:3.5;stroke-linecap:round"/>
+<path d="M69,174 H91 V192 H69 Z" style="fill:var(--hero-ink);stroke:var(--a);stroke-width:2.5;stroke-linejoin:round"/>
+<path d="M240,218 V192" style="fill:none;stroke:var(--hero-ink);stroke-width:3.5;stroke-linecap:round"/>
+<path d="M229,174 H251 V192 H229 Z" style="fill:var(--hero-ink);stroke:var(--a);stroke-width:2.5;stroke-linejoin:round"/>
+<path d="M400,218 V192" style="fill:none;stroke:var(--hero-ink);stroke-width:3.5;stroke-linecap:round"/>
+<path d="M389,174 H411 V192 H389 Z" style="fill:var(--hero-ink);stroke:var(--a);stroke-width:2.5;stroke-linejoin:round"/>
+</g>
+<text x="80" y="254" text-anchor="middle" style="fill:var(--hero-ink);font-family:var(--sans);font-size:22px;font-weight:600">measure</text>
+<text x="240" y="254" text-anchor="middle" style="fill:var(--hero-ink);font-family:var(--sans);font-size:22px;font-weight:600">test</text>
+<text x="400" y="254" text-anchor="middle" style="fill:var(--hero-ink);font-family:var(--sans);font-size:22px;font-weight:600">build</text>
+<text x="400" y="280" text-anchor="middle" style="fill:var(--hero-ink);font-family:var(--sans);font-size:22px;font-weight:600">switched off</text>
+<g id="hv-switch" class="hv-in">
+<path d="M400,158 V172" style="fill:none;stroke:var(--hi);stroke-width:3;stroke-linecap:round"/>
+<rect x="364" y="128" width="72" height="30" rx="15" style="fill:none;stroke:var(--hi);stroke-width:3.5"/>
+<circle cx="379" cy="143" r="10" style="fill:var(--hi);stroke:none"/>
+</g>
+<g id="hv-clients" class="hv-in" style="fill:none;stroke:color-mix(in srgb,var(--ok) 55%,#fff);stroke-width:3;stroke-linecap:round">
+<circle cx="470" cy="36" r="11"/>
+<path d="M450,74 C450,54 490,54 490,74"/>
+</g>
+<text x="530" y="108" text-anchor="end" style="fill:var(--hero-ink);font-family:var(--sans);font-size:22px;font-weight:600">clients: no change</text>
+</svg>

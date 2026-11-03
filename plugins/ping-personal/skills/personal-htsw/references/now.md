@@ -101,3 +101,20 @@ Same source (the current conversation); `<path>` is only where the page goes.
 3. Print the link to `<path>` (a `file:///` link and the plain Windows path) and stop.
    The chat reply is the verdict plus the link, not the whole page.
 4. ASCII only in the Markdown (no em-dashes, smart quotes or Unicode arrows).
+
+## Walk-through (`now --deep --html --walk <path>`)
+
+Same source as Deep HTML, but the page is a clickable step-by-step walk-through instead of a
+Markdown article. It suits a plan, process, migration or proposal that ends in a decision. It builds
+a hero with the one-sentence idea, a flow chart that is the table of contents, one section per step,
+an answer sheet and a glossary. The source is the current conversation, or a document the user points to.
+`<path>` is still only the output file. Typed in the chat, the steps run there.
+
+1. Read `references/walk-page.md` (rules for catching the idea, and the spec format).
+2. Write the walk spec as `<path minus .html>.walk.json` next to `<path>`.
+3. Build and check it, with the two commands in walk-page.md "Build and check". Fix the spec and
+   rebuild until every must rule passes.
+4. Print the link to `<path>` (a `file:///` link and the plain Windows path). The chat reply is the
+   verdict, the link and the walk-check SCORE line, not the page.
+
+ASCII only in the spec and the SVG files (no em-dashes, smart quotes or Unicode arrows).

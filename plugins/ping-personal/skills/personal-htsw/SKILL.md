@@ -1,7 +1,7 @@
 ---
 name: personal-htsw
 model: sonnet
-description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of seven purposes (walk / pr / qa / boss / baby / code-explain / now). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request; now --deep --html writes the page it is given). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top. Add --cantonese to any mode (or say "explain in Cantonese") to get the answer in Hong Kong Cantonese.
+description: How This Shit Works - re-explain code, a PR diff, a spec, a plan, or current conversation for one of seven purposes (walk / pr / qa / boss / baby / code-explain / now). Default mode is **walk** (explain-it-to-me) when no mode is specified. Trigger on /personal-htsw or natural phrases like "how does this work", "wtf is this code", "walk me through this", "explain this PR", "QA brief on this", "pitch this to my boss", "explain this like I'm new", "explain this line by line", "walk me through this diff file by file". Output is inline only - no file writes (code-explain may save a doc on explicit request; now --deep --html writes the page it is given; --walk builds a clickable walk-through page). For PR mode, the skill calls the built-in /review skill behind the scenes to get the diff, then layers the htsw voice on top. Add --cantonese to any mode (or say "explain in Cantonese") to get the answer in Hong Kong Cantonese.
 ---
 
 # htsw — How This Shit Works
@@ -89,6 +89,10 @@ a longer explanation with per-phase tables, a glossary, evidence labels and diag
 as Markdown next to `<path>` and rendered to `<path>` with personal-md-to-html. Details in
 `references/now.md`.
 
+`now --deep --html --walk <path>` builds a clickable step-by-step walk-through page instead (idea, flow chart,
+one section per step, answer sheet). The model writes a walk spec JSON and runs `walk/walk-build.py` and
+`walk/walk-check.py`. Rules and spec format: `references/walk-page.md`. This `--walk` flag is not the `walk` mode.
+
 ### Baby mode — analogy walks alongside jargon, never instead of it
 
 Baby mode teaches a technical subject by pairing every piece of jargon with an everyday physical analogy. The jargon stays literally on the page; the analogy is a companion, not a replacement. A junior dev reading baby-mode output learns both the mental model AND the vocabulary they need to talk to senior engineers.
@@ -173,6 +177,7 @@ Boss output uses tables for visual structure — Impact-at-a-glance for features
 | No path arg, baby mode | Use the current conversation |
 | now mode | Always the current conversation; a path arg is ignored |
 | `now --deep --html <path>` | Always the current conversation. `<path>` is the output file, never read as a source, so it is not an error when it does not exist yet |
+| `now --deep --html --walk <path>` | Same as above, or a document the user names. `<path>` is the output page; the spec goes next to it as `.walk.json` |
 | Path arg given, code-explain mode | Read that file/diff; if it's a *change*, also pull `git diff <base>...HEAD` / `git show <hash>` and read the live file at its real line numbers |
 | No path arg, code-explain mode | The change just discussed, or `git diff <base>...HEAD` for the current branch |
 | Path doesn't exist | Fail loud: "Source not found: \<path\>" |
@@ -573,6 +578,7 @@ tier or tone is unclear:
 
 - `references/walk.md`, `pr.md`, `qa.md`, `boss.md`, `baby.md`, `code-explain.md` -- voice and structure rules per mode.
 - `references/examples/` -- worked renderings: `walk-examples.md`, `pr-examples.md`, `qa-examples.md`, `boss-examples.md`, `baby-examples.md`, `code-explain-examples.md`.
+- `references/walk-page.md` -- spec format and idea-catching rules for `now --deep --html --walk`; read it before writing a walk spec.
 - `references/diagrams.md` -- mermaid syntax rules; open only when a diagram must be mermaid.
 - `references/validator.md` -- what `htsw-check.py` checks; open it when a check fails.
 
