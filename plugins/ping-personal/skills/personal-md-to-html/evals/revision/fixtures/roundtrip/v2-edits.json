@@ -1,0 +1,9 @@
+{
+  "note": "Canned source edits for the round trip: change targets 1-3, leave 4 and 5, delete 6. Each find string must occur exactly once.",
+  "edits": [
+    { "op": "replace", "find": "<h1>Setup guide</h1>", "with": "<h1>Quick setup guide</h1>" },
+    { "op": "replace", "find": "<p>Install the widget before you start the demo.</p>", "with": "<p>Install the widget first.</p>" },
+    { "op": "replace", "find": "<p>Check that the lamp turns green after power on.</p>", "with": "<p>Confirm the lamp is green after power on.</p>" },
+    { "op": "delete", "find": "<p>Wipe the glass panel with a dry cloth.</p>\n" }
+  ]
+}

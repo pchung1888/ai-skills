@@ -18,13 +18,16 @@ Times: `Day MM-DD HH:MM` local, from a real clock command, never estimated.
 <!-- <PROTECTED_BRANCHES> : inputs.json protectedBranches from pre-flight check 14, or "none". Example: feature/123, main -->
 <!-- Add the next line only when the goal answers review comments; delete it otherwise. -->
 - REPLY ORDER: no reply goes out on a review request until every fix is done, its check passed and the code is pushed; then all replies go out together.
+- STOP RULES: a stop rule written by the owner or the plan is overridden only by a critic gate vote (2 agreeing seats), never by the coordinator alone. The log/decisions.md row starts with "override:", names the rule, the votes and the reverse step, and the next report says it in plain words.
 - Side-effect caps: the "caps" object in inputs.json; run every sending command through `log_row.py send ... -- <command>` (or `log_row.py effect` before an action with no command); REFUSED means do not act; CAP REACHED stops only that task until the owner raises the cap.
 
 ## Now
 
+<!-- One line per field. The task table below and TIMELINE.md are rebuilt by run_state.py next on every tick; never by hand. -->
 - Stage: <stage> -- running since <Day MM-DD HH:MM>, workflow run <run id>
 - Resume in a new session: /personal-big-project resume <STATE_DIR>
   (it appends the session id, runs generate.py tick, re-creates the tick and asks run_state.py next)
+- Timeline: TIMELINE.md, every logged event oldest first. Reports: reports/, one file per post, titled with its post time.
 <!-- <STATE_DIR> : this state folder, repo-relative. Example: docs/proj-123/autopilot -->
 
 ## Decisions taken without the owner
@@ -41,7 +44,8 @@ Critic-gate outcomes and deferrals. The coordinator's other decisions go to log/
 
 ## Tasks
 
-Every task from start to end, rebuilt each tick by `scripts/build_table.py`; never edit it by hand.
+Every task from start to end, with the stage budget above it, rebuilt by `scripts/build_table.py` on every
+tick (from run_state.py next) and after every verifier row (from log_row.py run); never edit it by hand.
 <!-- tasks:begin - scripts/build_table.py rewrites this section every tick; do not edit it -->
 <!-- tasks:end -->
 

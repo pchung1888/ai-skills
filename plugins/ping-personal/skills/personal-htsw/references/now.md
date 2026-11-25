@@ -64,6 +64,7 @@ Same source (the current conversation); `<path>` is only where the page goes.
    - each "watch out" item is a `note` block (warn, risk or info);
    - a choice the person must make is an `ask` block with the recommended option `checked`.
    Use a block only where it shows something real; the htsw voice, slang and headers stay.
+   Pick each chart and table by the question it answers: `references/visuals.md`.
    Exact syntax (copy these shapes; the pane does not send md-to-html's own docs):
 
    ````

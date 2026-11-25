@@ -5,7 +5,7 @@ fixture question and the skill's output, writes observations first, then scores.
 
 ## Metric
 
-Eight criteria, each scored 0, 1 or 2. Total is 0-16. The run score is the mean total over all
+Nine criteria, each scored 0, 1 or 2. Total is 0-18. The run score is the mean total over all
 fixtures in `fixtures/`.
 
 | # | Criterion | 0 | 1 | 2 |
@@ -18,6 +18,7 @@ fixtures in `fixtures/`.
 | C6 | Usable by a novice | no term glosses; prompt not pasteable | partly glossed or partly pasteable | every new term glossed; one pasteable prompt block |
 | C7 | Ask check | takes the ask at face value | checks it, but misses a wrong term, a legacy technology or a better option the fixture contains | catches each wrong term or legacy technology, and names any counter-option by its real name; says so in one line when the ask is sound |
 | C8 | Current sources | no sources | sources, but undated or not on the status and tool claims | status and tool claims cite a fetched URL and the date checked |
+| C9 | Blind spots | covers only what the question named | names some parts a field expert plans for that the question left out | names, by their real names, the parts an expert plan must cover that the question left out; on a fixture with an "Expected blind spots" line, names at least all but one of them |
 
 ## Judge prompt
 
@@ -31,12 +32,13 @@ Skill output:
 <output>
 
 First write 2-4 observations per criterion, quoting the output. Then score C1-C6 with the
-anchors in judge-rubric.md. Return: observations, scores C1..C8, total, and the single
+anchors in judge-rubric.md, and C7-C9 too. Return: observations, scores C1..C9, total, and the single
 change to the SKILL.md that would raise the lowest score.
 ```
 
 ## Calibration
 
 A bare rewrite of the question with no expert content should score 0-4. The skill's job is a
-total of 12 or more on every fixture. That target is set by this rubric, not by the user; change it
+total of 12 or more on C1-C8 on every fixture, and C9 = 2 on every fixture with an "Expected
+blind spots" line. That target is set by this rubric, not by the user; change it
 if real use shows it is wrong.

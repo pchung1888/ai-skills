@@ -20,7 +20,7 @@ their prompt.
 | Argument | Do this |
 |---|---|
 | a question or prompt | The rewrite below |
-| `grill <question>` | Run `personal-grill-me` on the user's intent first, then the rewrite. Add `with docs` to save the settled terms in `docs/glossary/`, so their field vocabulary builds up |
+| `grill <question>` | Run `personal-grill-me` on the user's intent first, then the full rewrite (grilling alone is not this skill's output). Add `with docs` to save the settled terms in `docs/glossary/`, so their field vocabulary builds up |
 | `rate <1-5> <note>` | Append one row to the retro log (see "Retro log") and stop |
 | `improve` | Read the retro log and propose edits to this skill (see "Improve mode") |
 | nothing | Ask the user for the question in one line |
@@ -40,7 +40,7 @@ their prompt.
    of life, version, price, law) with a fetched vendor or primary-doc URL (the vendor's docs,
    the standard, the RFC, the law) and the date checked. A forum post, a blog
    or a search-result summary does not count. If search fails, say so.
-4. **Check the ask.** Do these three checks before the rewrite, and report each in one or two
+4. **Check the ask.** Do these four checks before the rewrite, and report each in one or two
    lines. If the ask is sound, say so in one line.
    - **Term check.** Say in plain words what the user's term means. Compare it with what they
      described. If they differ, write: "You said X. X means ... What you describe sounds like Y."
@@ -51,6 +51,14 @@ their prompt.
    - **Counter-option.** If an expert would offer the client a better approach, name it by
      its real name. Say when it fits better than the ask, and give one line the user could say
      to the client. Give at most two.
+   - **Blind-spot sweep.** The user cannot ask about what they do not know exists, so name it for
+     them. List the parts every expert plan in this field must cover, by their real names (for
+     a legacy migration: the routing layer of a strangler fig, shared login and session across
+     old and new, rollback per feature, both systems running side by side). Mark each one
+     covered, missing or unknown in their ask, one line each. Each missing one becomes a
+     question in step 9 or an ask in step 7 when it serves their goal. Never leave one out
+     because they did not mention it: an expert who only answers what they typed is no expert.
+     When the ask is a plan or design, this sweep also runs again on the finished plan.
 5. **Answer the four expert questions.** Answer each one for this exact question, not in general.
    1. **What a top professional would do here that the user is not asking for.**
    2. **The rawest material they would start from** instead of what was already digested for

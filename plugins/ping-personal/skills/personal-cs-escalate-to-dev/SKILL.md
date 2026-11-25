@@ -150,8 +150,3 @@ go through a human per this persona's contract.
 Either run the query yourself and reply with the result, or send the client
 a screenshot of the equivalent filtered report view.
 ```
-
-## Length budget
-
-Keep this file's content under ~130 lines. The handoff template is still the
-load-bearing part; the metric step is audit infrastructure, not new logic.

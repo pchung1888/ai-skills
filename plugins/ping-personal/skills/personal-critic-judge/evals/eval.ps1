@@ -76,8 +76,18 @@ $tests = @(
                 'Safety floor', '[floor]', 'floor_guard.py', 'verify pass', 'finds nothing new', 'no second panel',
                 $Header, 'light run', 'Domain Routing Table', 'Seat 5 is in every run', 'English, ASCII only',
                 'cheap probe', 'sizing probe', 'Never put a pipe', 'VERDICT: FIX', 'VERDICT: CLEAN', 'Reviewed: <sha>',
-                'Saving the run', 'Never replace or strip', 'UNATTENDED', 'owner list', 'personal-critic-gate')
+                'Saving the run', 'Never replace or strip', 'UNATTENDED', 'owner list', 'personal-critic-gate',
+                'SCREENSHOTS:', 'opens every screenshot pair', 'fresh output')
             foreach ($k in $keys) { if ($s -notmatch [regex]::Escape($k)) { throw "SKILL.md lost: $k" } }
+        }
+    },
+    @{
+        # A five-seat full run measured about 750K; the 600K floor leaves room for a smaller diff. A lower quote misleads the budget call.
+        Name = 'cost_floor: the stated full-run cost is at least 600K'
+        Run = {
+            $m = [regex]::Match((Read-Text $Skill), 'Full run: 5 seats plus the judge, about (\d+)K')
+            if (-not $m.Success) { throw 'SKILL.md lost "Full run: 5 seats plus the judge, about <n>K"' }
+            if ([int]$m.Groups[1].Value -lt 600) { throw "full-run cost quoted as $($m.Groups[1].Value)K; a measured five-seat run cost about 750K" }
         }
     },
     @{

@@ -1,6 +1,6 @@
 ---
 name: personal-unslop
-description: Cut AI tells from any writing. Rewrites text against 30 numbered patterns (AI vocabulary, filler, passive voice, jargon nouns, over-compression) while keeping meaning and tone. Use when the user asks to unslop, de-AI, clean up or tighten a piece of writing, or before publishing a doc, PR description or message written for other people. Trigger on /personal-unslop.
+description: Cut AI tells from any writing. Rewrites text against a numbered pattern list (AI vocabulary, filler, passive voice, jargon nouns, over-compression) while keeping meaning and tone. Use when the user asks to unslop, de-AI, clean up or tighten a piece of writing, or before publishing a doc, PR description or message written for other people. Trigger on /personal-unslop.
 disable-model-invocation: false
 ---
 

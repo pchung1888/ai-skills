@@ -1,0 +1,63 @@
+{
+  "title": "Bakery - Opening day",
+  "subtitle": "A made-up plan, step by step.",
+  "eyebrow": "Walk-through - fixture",
+  "key": "bakery-fixture",
+  "idea": "Opening day needs three steps: mix, bake and sell, and each step has one owner.",
+  "decision": "Approve the opening day plan.",
+  "opening": [
+    "The bakery opens next week.",
+    "The plan has three steps.",
+    "Each box below opens its step."
+  ],
+  "categories": [
+    {"id": "a", "label": "Prepare"},
+    {"id": "b", "label": "Sell"}
+  ],
+  "flow_title": "The flow of opening day",
+  "flow_lead": "Three steps lead to one open door.",
+  "flow_caption": ["Opened steps turn green."],
+  "glossary": [
+    ["Dough", "Flour and water mixed before baking."],
+    ["Tray", "A flat pan that holds twelve loaves."]
+  ],
+  "answers": {
+    "title": "Answer sheet",
+    "respond_title": "Bakery - answers",
+    "lead": "Each answer sets one choice for opening day.",
+    "bullets": ["Pick one choice per question.", "Respond copies all answers as plain text."],
+    "questions": [
+      {"title": "Loaf", "ask": "Which loaf is first?", "why": "It sets the first tray.", "when": "Final today.", "choices": [
+        {"text": "Rye", "effect": "Longer bake, strong smell."},
+        {"text": "White", "effect": "Shorter bake, mild smell."}]}
+    ]
+  },
+  "steps": [
+    {
+      "id": "s1", "name": "Mix the dough", "sub": "flour and water", "cat": "a",
+      "lead": "The baker mixes the dough before dawn.",
+      "blocks": [
+        {"bullets": ["Use fresh flour.", "Rest the dough for one hour."]}
+      ],
+      "check": {"q": "When does the baker start?", "a": "Before dawn."},
+      "takeaway": "Dough first, everything else follows."
+    },
+    {
+      "id": "s2", "name": "Bake the loaves", "sub": "the big oven", "cat": "a",
+      "lead": "The oven bakes twelve loaves per tray.",
+      "blocks": [
+        {"table": {"head": ["Loaf", "Minutes"], "rows": [["Rye", "40"], ["White", "30"]]}},
+        {"note": {"tone": "info", "text": "Heat the oven ten minutes early."}}
+      ],
+      "takeaway": "Bake times differ per loaf."
+    },
+    {
+      "id": "s3", "name": "Open the door", "sub": "seven o'clock", "cat": "b",
+      "lead": "The shop opens at seven.",
+      "blocks": [
+        {"bullets": ["Put the first tray out.", "Turn the sign around."]}
+      ],
+      "takeaway": "Customers see fresh bread first."
+    }
+  ]
+}

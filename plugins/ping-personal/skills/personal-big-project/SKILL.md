@@ -1,9 +1,9 @@
 ---
 name: personal-big-project
 model: inherit
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: "start <requirement.md> | resume|status|stop|retro <state-dir> | improve"
-description: Hands a large multi-stage engineering goal to this Opus session to run unattended for hours or days (Friday night to Monday) - plan, test first, build, install, verify, commit - with a phone report every 15 or 30 minutes and self-imposed limits on quota, context, disk and side effects. Every run ends with a process retro that feeds the next version of the skill. Use when the user types /personal-big-project to start, resume, check, stop or retro such a run, or to improve the skill from past retros.
+description: Hands a large multi-stage engineering goal to this Opus session to run unattended for hours or days (Friday night to Monday) - plan, test first, build, install, verify, commit - with a phone report every 15 or 30 minutes and self-imposed limits on quota, context, disk and side effects. Every run ends with a process retro that feeds the next version of the skill. Use when the user types or names /personal-big-project in their request to start, resume, check, stop or retro such a run, or to improve the skill from past retros.
 ---
 
 # /personal-big-project
@@ -22,7 +22,8 @@ its own.
    to reverse, logged, and named in the next report. A question nobody answers freezes the run.
    The one exception is a side-effect cap (rule 4): the tick asks by phone and never waits.
 2. **Pass comes only from the done command's output,** run by a verifier agent that did not do the
-   work, never from a worker saying "passed". NOT-RUN is never PASS.
+   work, never from a worker saying "passed". NOT-RUN is never PASS, and one NOT-RUN check anywhere
+   keeps "complete" and "best" out of every headline and report (check_run's not-run-claims check).
 3. **Baselines are captured before any change and never re-taken from new code's output.**
    Loosening an assertion needs predicted vs observed written down and a reviewer's sign-off.
    The stage check also runs `python <critic-gate>/lib/floor_guard.py --base <baseCommit>`
@@ -43,14 +44,18 @@ its own.
    time in its brief.
 7. **Owner-facing text is plain words in the run's own vocabulary:** the words in
    [references/glossary.md](references/glossary.md), never ids, hashes, stage codes or agent names;
-   12 lines max. The report shape the user picks at start (inputs.json `report`) overrides the length
+   12 lines max. `scripts/log_row.py report` checks each report for codes BEFORE it is posted and saves it
+   under `reports/` titled with the post time; only the saved file is posted. The report shape the user picks at start (inputs.json `report`) overrides the length
    and the ids rule (rule 5). Agents use the same words, because a shared vocabulary, not "be concise", is what
    keeps reports short and unambiguous.
 8. **At most 3 agents at once:** parallel groups hold at most 2 tasks, leaving room for the
    reporter; critic gate seats run one after another. One exception: the final judge review runs
    all five seats in one message, because no stage runs then. Exclusive resources (a
    database, IIS, one browser) are declared per task and never shared inside a parallel group.
-9. **State lives in files.** Each rewrite of STATUS.md's Now block is followed by
+9. **State lives in files, and scripts keep them current.** `run_state.py next` rebuilds the STATUS.md
+   task table and TIMELINE.md on every tick, and `log_row.py run` rebuilds the table after every verifier
+   row, so neither depends on a prompt step: a report-only rebuild once froze the table for 9 hours.
+   Each rewrite of STATUS.md's Now block is followed by
    `scripts/log_row.py status --note "<what changed>"`, so the scorecard can show the file stayed current.
    STATUS.md and run-state.json are enough to resume after a crash, a
    compaction or a new session. Only `run_state.py` writes run-state.json.
@@ -60,7 +65,9 @@ its own.
     `log/skill-friction.md` (`| Day MM-DD HH:MM | skill step | what did not fit | what I did instead |`).
     The retro and the next version of the skill learn from these rows; an unlogged one is lost.
 11. ASCII only in every file. Agent findings carry EXTRACTED / INFERRED / UNKNOWN labels.
-12. **Every owner message gets one row in `log/owner-feedback.md`** as it arrives:
+12. **Every owner message gets one row in `log/owner-feedback.md`** as it arrives, written by
+    `scripts/log_row.py owner` (clock time of receipt; a fix, complaint or premature row also files a
+    `log/skill-friction.md` row naming the skill, so the retro sees every complaint):
     `| Day MM-DD HH:MM | class | skill | missed what | like | quote |`. Class is exactly one of setup,
     steer, fix (they caught a miss), complaint (about a message or report), premature (the run said
     done while work remained), praise, answer, score (the like cell holds 1-5). Skill names the skill
@@ -68,12 +75,59 @@ its own.
     one line and never leaves the repo. check_run's owner-feedback check counts the rows against the
     transcript, so a skipped complaint fails the run. These rows drive the run's scorecard
     ([references/scorecard.json](references/scorecard.json)).
+13. **A page or app is tested in a real browser, the way the user will use it.** A stub DOM harness
+    never passes a UI task: in a past run a grid scored 100/100 on stubs and nobody could type in
+    it in Chrome. Any task that ships HTML or a UI has a check in headless Playwright Chromium
+    (unattended-safe; Claude in Chrome needs the user to confirm the browser by name, so it cannot run
+    while they are away). The check clicks, types, uses the keys they named, and reloads to prove a save
+    stuck. It opens the deliverable the way the recipient will (the zip unpacked into a new empty
+    folder, opened from there), and it saves one screenshot per chart. A fresh reviewer reads the
+    screenshots for: labels that do not overlap, a scale that spreads the points, distinct series
+    colors, and every score header saying which end is best. Pre-flight check 16 proves Playwright runs.
+    Mark such a task `"ui": true` in its stage spec. check_run's ui-browser check fails the run when a
+    UI task's check never launches Chromium, or the run changed a page and no task is a UI task.
+    The check also saves its proof in the state folder at `proof/<task id>/`: a PNG screenshot
+    (`page.screenshot`) or a Playwright trace zip (`context.tracing.stop`). Example: `proof/T3/grid.png`.
+    ui-browser fails a UI task that was not deferred and has no real PNG or trace there.
+
+14. **A stop rule is overridden only by a vote.** A STOP condition written by the user or the plan is
+    overridden only when a critic gate (2 agreeing seats) votes for it, never by the coordinator alone.
+    The log/decisions.md row starts with `override:` and names the rule, the stage, the votes and the
+    reverse step; then `run_state.py record override <stage>` lifts a critic-gate stop (never a hand edit).
+15. **The box is watched like the quota.** `run_state.py next` runs `scripts/box_health.ps1` (read-only:
+    disk, memory, commit, handles, nonpaged pool, orphan processes, resource events, hooks with no
+    timeout) every tick, and the tick phones only new warnings with the command the user could run. The run
+    never kills a process or changes a setting itself. A slow box in a past run came from orphan
+    processes and a plugin hook, not from the run.
+16. **No task or run grades itself.** A task never edits the check, limit or list that grades it (a size
+    limit, a frozen case list, an expected count), unless its plan section says it writes that check.
+    Every stage brief carries this rule, and the verifier diffs the check's files against `baseCommit`
+    before it runs them; an edit fails the task as `CHECK EDITED: <file>`, unless a `log/decisions.md` row
+    starts `check-signoff:` and names the file (a coordinator change a reviewer signed off; no task writes one).
+    Before launch, read every plan line that names a file a check reads against that check: a plan line once
+    contradicted the grading design and a task then edited the check to satisfy it. Neither a task nor the
+    coordinator picks the metric, margin or pass line that decides "done": the user sets each at the door,
+    or the old version is the oracle (rule 17). A run that invented its own look score graded itself
+    95.81 while the pages looked nothing like the old ones; the user scored it 1.
+17. **Audit the old version first, even when the user does not ask.** When the goal builds a new version
+    of anything (a v2 page, a rewrite, a port, a new release of a skill), the plan stage's first task
+    audits the old version. It writes each finding into whatever guides the build (the build skill,
+    the project rules, the plan template) before any build agent starts, so every build agent
+    inherits the lessons. GOAL-BRIEF.md names the old version under `## Old version` (or `none`);
+    check_run's audit-first check fails a run that names one and has no `audit-old.md` in the state
+    folder. When the new version replaces an existing page, the old page is also the oracle. The done
+    command compares old and new per state: a screenshot pair, and the controls listed both ways (by how
+    each looks, so a link is not a button), with input values and every grid row. The user signs off from
+    `fidelity/index.html`, the two pages side by side, and a fresh reviewer looks at it before they do.
+    Each state's tag on that page carries its measured count (`data-state="edit" data-differences="0"`).
+    check_run's fidelity check fails a rebuild without that page, with a state that has no count, or
+    with a NOT-RUN state.
 
 ## The shape (fixed parts; the coordinator decides inside them)
 
 | Part | What it is | Why |
 |---|---|---|
-| Coordinator | This session. It must be Opus; pre-flight refuses otherwise. It launches stages, reads journals, edits STATUS.md and answers the user, and never does heavy work itself. | The user can ask the running session anything; its context grows only by tick text |
+| Coordinator | This session. It must be Opus; pre-flight refuses otherwise. It launches stages, reads journals, edits STATUS.md and answers the user, and never does heavy work itself. It never writes the git index (add, commit, rm, mv, stash) while a stage runs: a coordinator write once failed against a running stage, so repo hygiene goes into the next commit task. | The user can ask the running session anything; its context grows only by tick text |
 | Next action | `scripts/run_state.py next` decides launch, retry, resume, pause, wait, handoff, final, stop or close from run-state.json, quota and disk | The stop, skip, no-progress and quota rules are tested code, so they hold after a compaction |
 | Stages | One background `Workflow` per stage, generated from [references/stage-workflow.template.js](references/stage-workflow.template.js) by `scripts/generate.py` | `resumeFromRunId` replays finished agents after an interruption |
 | Tick | Session `CronCreate` every 30 minutes (or the user's interval), prompt from [references/cron-tick.prompt.md](references/cron-tick.prompt.md) | One heartbeat; it does only what run_state.py says |
@@ -85,7 +139,8 @@ The tick dies if Claude exits. Pre-flight warns the user, and STATUS.md always h
 
 The coordinator picks per task and may use any installed agent or built-in type that fits better;
 `generate.py` refuses an agent that does not exist, a task given to an agent without the Write tool,
-and a committing task given to an agent without a shell. A read-only agent (ms-mario, a judge seat,
+a committing task given to an agent without a shell, and a brief that names a tool ("the Bash tool") its
+agent lacks. A read-only agent (ms-mario, a judge seat,
 Explore) runs inside a stage as a review step (`"kind": "review"` in the stage spec): it returns
 findings, `run_state.py` saves them to `reviews/<id>.md` and counts the open HIGH ones, so a judge
 review before the plan or between stages is part of a stage, resumable and in the task table.
@@ -100,8 +155,9 @@ review before the plan or between stages is part of a stage, resumable and in th
 | Critic seats | ping-personal:ms-mario, ping-personal:rhea, and the domain critic (codex:codex-rescue when available; codex is never a task agent) | low |
 | UI, design, charts | ping-personal:maggie | workerModel |
 | Git: commit, push, tag check, PR | ping-personal:dora | sonnet |
+| Advisor at fixed points (design, cut list, grader disagreement, final read) | a task or review step with `"model": "advisor"` | inputs.json `advisorModel`, for example fable |
 
-Worker effort: `low` on Fable, inherit on Opus. Helper effort (reporter, verifier, critic seats,
+Worker effort comes from inputs.json `effort`, asked at the door (default `low` on Fable, inherit on Opus). Helper effort (reporter, verifier, critic seats,
 reviewer) is always `low`. Tokens are logged per stage, so the choices can be measured.
 
 ## start
@@ -135,22 +191,39 @@ final review and check_run all diff against them. Done when each row has a value
 | Side-effect caps | {"mail": 300, "push": 20}; push target branch; no deploys. Give headroom: about 2x the plan's expected count, mail at least 300, so a retry or a re-run does not hit the cap |
 | Resources | exclusive resources; disks to watch with minimum free GB |
 | Budget | weekly % at which to stop starting new stages |
+| Effort | `effort` (workers) and `reviewEffort` (critic-judge seats, code review) in inputs.json, asked now. Example: low, medium for review. A saved memory may already answer it (pre-flight check 15) |
+| Project steps | `projectSteps` in inputs.json: steps this run adds to every tick, each with its condition. Example: ["After s1-plan has a RESULT, run personal-critic-judge on plan.md", "Post every report to Slack channel id C0123"] |
+| Approved baseline changes | `baselineChangesApproved` in inputs.json: baselined files the plan must change, approved now. Example: ["web/MasterInclude.asp"] |
 | Report shape | `report` in inputs.json: every 15 or 30 minutes; plain (12 lines) or copilot (narrated, for a 3-4 h weekday run they follow on the phone); full task list yes or no; task ids yes or no |
 
 **Step 2. Alignment at the door.** A 30-hour run on a misread goal wastes the whole weekend, and
 this is the last moment the user can be asked anything. Read the requirement and the code it touches,
-then interview them in rounds. Treat the open questions as a dependency graph: each round asks only
-the questions whose prerequisites are answered, numbered Q1, Q2, ..., each with a recommended safe
-default, so they can answer by voice ("Q1 agree, Q2 change it to ..."). Answers unlock the next round;
-stop when no decision is left that a worker would have to guess. Call the Skill tool with grill-me
+then interview them one decision per turn (their saved feedback asks for that, and a page of
+questions is not read). Treat the open questions as a dependency graph: ask next the question
+whose prerequisites are answered, with a recommended safe default, so they can answer by voice
+("agree" or "change it to ..."). A defaults table they approve in one answer is fine for the
+low-stakes rest. Stop when no decision is left that a worker would have to guess. Call the Skill tool with grill-me
 when a branch needs deeper questioning. Cover what done looks like to them on Monday, what is out of scope, and what would
 disappoint them even if every test passes. Always ask which real downstream chain proves the change
 works (example: a release feeds the next system, which feeds retention). The done command runs
-that chain end to end, or the brief says why it cannot; unit checks alone missed one in a past run. When the goal answers review comments, the reply order is
+that chain end to end, or the brief says why it cannot; unit checks alone missed one in a past run.
+For a migration, ask how each moved feature is switched on (its own feature switch, or a shared
+one), because a past run silently gave the second feature the first one's switch.
+Always settle the deliverable too, because one run's owner asked six times what to send and
+five times for data to load by itself: (a) who opens the result first, on what machine, and
+what they may do by hand (default: nothing, so data loads by relative path with no picker);
+(b) the manifest, meaning the exact files each recipient gets, one "latest" folder, and a
+version number in the file name instead of a date; (c) the folder contract, meaning which kind
+of file lives in which folder (client data never shares a folder with team files). The brief
+lists them under "Deliverable" (a `## Deliverable` heading; check_run's deliverable check
+fails without it), and the done command checks the manifest and the first-run test (rule 13). When the goal answers review comments, the reply order is
 fixed, not asked: no reply goes out until every fix is done, checked and pushed (the REPLY ORDER rule in
-the STATUS.md template). Ask only whether they want a different order. Then write `GOAL-BRIEF.md` in the state folder: the goal
+the STATUS.md template). Ask only whether they want a different order. Find the old version yourself
+(rule 17): a v1 page, the previous release, the code being rewritten. Do not ask the user whether to audit it;
+only confirm which one it is. Then write `GOAL-BRIEF.md` in the state folder: the goal
 in their words, done-on-Monday, out of scope, disappointments to avoid, every decision with its
-answer, and the line `Corrections before approval: <n>`. Show it and ask them to approve or correct
+answer, a `## Old version` section (its path, and the skill or rules file the build follows; or `none`),
+and the line `Corrections before approval: <n>`. Show it and ask them to approve or correct
 it; each correction round adds one to n. Copy the decisions verbatim into STATUS.md "Owner
 decisions". Done when the user approves the brief.
 
@@ -180,10 +253,17 @@ session open, and the resume command for a new session.
 
 ## Stages (default; the plan may add or split)
 
-1. Plan: discover (up to 3 in parallel) -> plan with task ids, done-checks, agent per task -> 3 critics -> revise -> dora commits.
+1. Plan: audit the old version when GOAL-BRIEF.md names one (rule 17: findings into `audit-old.md`, then
+   into the build guidance it names) -> discover (up to 3 in parallel) -> plan with task ids, done-checks,
+   agent per task -> 3 critics -> revise -> dora commits.
 2. Harness first: backups, test tools, pre-change baseline (`log_row.py baseline`, only files that must not change; `--none` when there are none), RED proof, adversarial and fresh-eyes review -> commit.
+   The plan always has this stage, or puts the baseline task first in its first code stage:
+   plan_to_stage.py refuses a committing stage while no baseline is captured and no task runs
+   `log_row.py baseline`.
 3. Build: spikes, parallel work on independent files, critic and TDD gate -> commit.
 4. Install and verify: full done command, fix rounds until run_state.py stops them, rollback rehearsal.
+   After every fix round the stage check re-measures every gate (speed, look, tests), not only the
+   one the fix aimed at: a look fix once slowed cold load from 63 ms to 112 ms.
 5. Final: fresh-eyes review of the evidence, one verdict, OWNER-REPORT.md, final commit verified on the remote.
 
 The plan writes, per stage, a task table that the coordinator turns into each stage's spec: id,
@@ -196,14 +276,35 @@ agent, phase, needs, commits, resources, and two required fields:
 - `estimateK`: expected context in thousands of tokens, at most 100. Quality drops past about 140K,
   so a bigger task is split before launch; generate.py refuses it otherwise.
 
+The plan writes each stage as a `## Stage <name>` heading with the table
+`| id | agent | what | needs | resources | commits | check | passLine | estimateK |` (optional columns
+`expect`, `ui`, `phase`, `kind` (review makes a review step), `model` (worker, inherit or advisor)) and one `## Task <id>` section per task. Then
+`python ${CLAUDE_SKILL_DIR}/scripts/plan_to_stage.py --state-dir <state-dir> --plan <plan file> --stage <name>`
+writes the stage spec and copies the task sections into plan.md and the rows into tasks.csv, the
+same way every time (a past coordinator wrote this generator mid-run). Never join several check
+commands by hand with `;` or `&&`: give `check` as a list, and generate.py runs them through
+`scripts/run_check.py`, which reports which one failed. A RED task (its test must fail until the
+code exists) sets `"expect": "fail"`: run_check.py passes it only when the test file exists and
+every command fails. A task that only reviews or gathers evidence sets `"ui": false`. A task that answers a review step's
+findings checks with `scripts/check_answers.py --review reviews/<id>.md --answers <file>`: every open finding
+needs its own numbered accepted or rejected line, because one accept word once let a reviser answer old findings.
+A blind comparison (graders must not know which setup wrote an answer) names its worktrees and files
+neutrally (`run-01`, never the setup name) and its stage check greps the answer set for every setup name
+and worktree path: a worktree name once leaked through file links and cost a 1.7M-token re-grade.
+
+The last stage's check list includes `check_run.py --state-dir <state-dir> --only owner-report` (the
+Evidence and Merge danger sections), so the report shape fails inside the stage, not at close.
 The last stage sets `finalReview: true`: two fresh reviewers, one after the other, report on two
 separate axes that are never merged: Spec (amanda: the diff from baseCommit against GOAL-BRIEF.md)
 and Standards (ms-mario: the repo's standards and conventions). After that stage the coordinator
 runs personal-critic-judge with `UNATTENDED` on `git diff <baseCommit>...HEAD`: the Main goal quoted
 from GOAL-BRIEF.md, Subtask "the whole run", all five seats in one message (rule 8). Its header carries
 `Reviewed: <sha>`; a sha that differs from `git rev-parse HEAD` is stale and not a pass (an
-owner's "ship anyway" on a FIX is not blocked). Fix-now rows get one fix stage (one task per row),
-then the judge's verify pass; flagged rows go to OWNER-REPORT.md "## Judge review". The judge does
+owner's "ship anyway" on a FIX is not blocked). The judge runs before OWNER-REPORT.md is final: a stage's own fresh review once missed 13 fix-now rows the
+judge found. Fix-now rows get one fix stage (one task per row),
+added with `run_state.py record add-stage <name> <the stage it follows>` (the position is required;
+a stage once landed after the final with no way to move it) so the tick runs and counts it like any stage
+(the same event adds any stage the plan did not foresee, such as scorer hardening), then the judge's verify pass; flagged rows go to OWNER-REPORT.md "## Judge review". The judge does
 not decide retry, defer or stop: that stays with the critic gate. A stage that tests code adds the
 tests before the code.
 
@@ -232,8 +333,10 @@ listed in OWNER-REPORT.md for them to confirm or reverse.
 `run_state.py next` returns FINAL when every stage is done, meaning every task passed or was
 deferred; this outranks every quota and disk check, so a finished run always closes cleanly.
 FINAL: dora commits the state folder, pushes, and verifies the commit with `git ls-remote`; then
-`run_state.py record final` prints the verdict, for example
-`PASS (51 of 53 tasks; 2 deferred, 1 by agents)`, and OWNER-REPORT.md gets that exact line plus
+`run_state.py record final --done-line "<the done command's last line>"` (the final stage check's
+lastLine in `run_state.py status`) prints the verdict, for example
+`PASS (51 of 53 tasks; 2 deferred, 1 by agents)`, or `FAIL (done command: <line>; ...)` when the done
+command did not pass: task counts never make a PASS on their own, and OWNER-REPORT.md gets that exact line plus
 the "## Evidence" and "## Merge danger" sections from [references/reporter-brief.md](references/reporter-brief.md).
 The next action is CHECK: run
 `python ${CLAUDE_SKILL_DIR}/scripts/check_run.py --state-dir <state-dir> --transcript <this session's .jsonl>`
@@ -241,11 +344,13 @@ The next action is CHECK: run
 row lost, side effects within caps, baselines untouched, verdict matching the outcomes, no question
 asked while away, one owner-feedback row per owner message, an owner score) and record `checked pass`
 or `checked fail <names>`. A failed check is never hidden: the verdict gains "RUN CHECK FAIL (<names>)".
-Before CLOSE, the closing ask: in chat and by phone, ask the owner for a 1-5 score, what they had to catch
+Before CLOSE, the closing ask: in chat and by phone, ask the user for a 1-5 score, what they had to catch
 themselves, whether all the work they wanted is done, and show them the owner-feedback tags to correct.
-Their answer is a score row (rule 12). If they are away, close as "awaiting owner score"; the owner-score
+Their answer is a score row (rule 12). If they are away, close with `record close awaiting-owner-score`; the owner-score
 check stays FAIL until retro mode records it. Then CLOSE: write RETRO.md (Feedback loop),
-push one phone message and delete the tick, because later ticks would only repeat "done" and
+push one phone message and delete the tick. When the verdict starts FAIL or carries RUN CHECK FAIL, that
+message and the chat reply start with "NOT DONE:" and the open items, before any word like closed or
+finished: an owner once read a close message and asked "are you telling me everything is completed?" Then, because later ticks would only repeat "done" and
 spend tokens.
 
 run_state.py stops the run early when any of these holds; the coordinator stops the running stage,
@@ -256,6 +361,11 @@ and the same closing actions:
 - weekly quota reaches the budget cap (the running stage finishes first);
 - the critic gate votes stop;
 - free disk falls below the minimum.
+
+Cost: every tick re-estimates the whole run against the owner's accepted GOAL-BRIEF.md range, from the
+first stage spec on, and phones at 1.5x. Launch gate: a stage starts under 60% of the 5-hour window, or
+higher once a finished stage measured points per million tokens and the stage's `estimateTokens` fits
+under 90%. The meter comes from the live-usage file (`next --usage`), never from typed numbers.
 
 Not a stop: the 5-hour window. At 90%, or when the burn rate would run it out before the next
 tick, run_state.py returns PAUSE; the coordinator stops the running stage, creates one one-shot
@@ -268,7 +378,8 @@ keep running.
 - **resume `<state-dir>`:** append this session's id to inputs.json `sessions`, read STATUS.md top to
   bottom, run `generate.py tick` and re-create the tick, then run the tick's step 2 once by hand.
 - **status `<state-dir>`:** answer from `run_state.py status`, the newest report and STATUS.md; do
-  not dispatch agents.
+  not dispatch agents. When the user asks what is built so far, add `git diff --stat <baseCommit>...HEAD`
+  and one plain line per page, script or table the run created, with its path.
 - **stop `<state-dir>`:** TaskStop the running stage, `run_state.py record close owner-stop`, write
   OWNER-REPORT.md and RETRO.md, delete the tick.
 - **retro `<state-dir>`:** The owner is back. If the closing ask got no score, ask it now (a score row,
@@ -311,15 +422,24 @@ Each run is also a test of this skill, so each run leaves evidence for the next 
 
 ## Reporting
 
-- STATUS.md is the owner's one status file. The tick rebuilds its Tasks section with
-  `scripts/build_table.py` (from tasks.csv, every session's journals, run-state.json and the run
-  log) at no token cost: every task, with status, started and finished times and ADDED remarks.
-  There is no separate progress file. Contract in [references/reporter-brief.md](references/reporter-brief.md).
+- STATUS.md is the owner's one status file. `run_state.py next` rebuilds its Tasks section with
+  `scripts/build_table.py` on every tick (from tasks.csv, every session's journals, run-state.json and
+  the run log) at no token cost: the stage budget (estimate against actual tokens), then every task,
+  with status, started and finished times and ADDED remarks. check_run's table-fresh check fails a run
+  whose table fell more than one tick behind the run log. There is no separate progress file.
+- TIMELINE.md is rebuilt by `scripts/timeline.py` in the same call: every logged event (verifier rows,
+  decisions, side effects, owner messages, status rewrites, friction, box warnings, tick actions,
+  saved reports), oldest first, each with its source row. Text outside its marked section is kept. Contract in [references/reporter-brief.md](references/reporter-brief.md).
 - The reporter is amanda, fresh each time, on sonnet at low effort, reading only state files, and
-  runs only when run_state.py says the run log changed.
+  runs only when run_state.py says the run log changed. With a 15-minute interval the coordinator
+  writes the report itself from the same state files: an agent costs about 83K tokens even for a
+  one-word answer, so a 15-minute reporter would spend about 2M tokens on a run.
 - In chat, paste the full report text and its path, never a digest; PushNotification its first
   sentence; post the full report to the owner's Slack channel when one is set. In copilot shape the
   reporter loads the personal-copilot-talk skill first, so chat gets real copilot text.
+- When the user writes mid-run, answer in personal-copilot-talk style whatever the report shape: the
+  answer first, short sentences, one decision at a time. A past owner asked mid-run for copilot talk
+  because a chat answer was too long. Write a longer answer to a file and link it.
 
 ## References
 
@@ -332,3 +452,4 @@ Each run is also a test of this skill, so each run leaves evidence for the next 
 | [references/reporter-brief.md](references/reporter-brief.md) | each report; boss report on request |
 | [references/retro-template.md](references/retro-template.md) | closing actions; retro mode |
 | [references/glossary.md](references/glossary.md) | writing any report, prompt, log row or spec |
+| [scripts/box_health.ps1](scripts/box_health.ps1) | pre-flight check 17; reading a box warning |

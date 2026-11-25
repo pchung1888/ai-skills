@@ -107,6 +107,16 @@ $tests = @(
         }
     }
     ,@{
+        Name = 'gain_rules: SKILL.md keeps the outside oracle, frozen baseline, hidden answers, old-skill RED and pass-mark owner'
+        Run = {
+            $s = Get-Content $Skill -Raw
+            foreach ($k in @('oracle the skill under test does not control', 'Freeze the baseline', 'out of the runner',
+                             'old skill must fail', 'gives the answer away', 'only the user changes a pass mark')) {
+                if ($s -notmatch [regex]::Escape($k)) { throw "SKILL.md lost: $k" }
+            }
+        }
+    }
+    ,@{
         Name = 'rationalizations: section exists and every row has a non-empty Source cell'
         Run = {
             $chk = {

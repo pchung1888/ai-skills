@@ -76,6 +76,37 @@ def text_rows(text):
     return rows
 
 
+DAY_TIME = re.compile(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (\d\d)-(\d\d) (\d\d):(\d\d)$")
+# Codes a manager would not understand: task/decision ids (T8, D27), stage codes (W4),
+# git hashes, workflow run ids. Times like 08:15 and units like 5h do not match.
+OWNER_CODES = re.compile(r"\b[A-Z]{1,3}\d+[a-z]?\b|\b[0-9a-f]{7,40}\b|\bwf_[0-9a-f-]+")
+COST_LINE = re.compile(r"Cost estimate:\s*([\d.]+)\s*([KkMm]?)\s*-\s*([\d.]+)\s*([KkMm]?)")
+
+
+def day_key(cell):
+    """Sort key "MM-DD HH:MM" of a "Day MM-DD HH:MM" log time, or None for any other text."""
+    m = DAY_TIME.match(str(cell).strip())
+    # ponytail: no year in the cell, so a run crossing New Year sorts January first; add the year if that happens
+    return f"{m.group(2)}-{m.group(3)} {m.group(4)}:{m.group(5)}" if m else None
+
+
+def owner_codes(text):
+    """Every id, hash or run code in an owner-facing text (rule 7 forbids them unless the owner asked)."""
+    return [m.group(0) for m in OWNER_CODES.finditer(text)]
+
+
+def tokens_of(number, unit):
+    return float(number) * {"k": 1e3, "m": 1e6}.get((unit or "").lower(), 1)
+
+
+def cost_estimate(text):
+    """(low, high) tokens from the GOAL-BRIEF.md line "Cost estimate: 1.0M-1.5M", or None."""
+    m = COST_LINE.search(text or "")
+    if not m:
+        return None
+    return tokens_of(m.group(1), m.group(2) or m.group(4)), tokens_of(m.group(3), m.group(4))
+
+
 TICK = re.compile(r"\d+-minute tick")  # the tick prompt names its interval: 15-minute, 30-minute, ...
 # One class per owner message (log/owner-feedback.md), so each message feeds one scorecard metric only.
 OWNER_CLASSES = ("setup", "steer", "fix", "complaint", "premature", "praise", "answer", "score")
@@ -106,7 +137,8 @@ def task_rows(path):
     if not os.path.exists(path):
         return []
     _, section, _ = task_section(read_text(path))
-    return [] if section is None else text_rows(section)
+    # The section also holds the stage budget table (5 cells); task rows have the 10 cells of build_table.HEADER.
+    return [] if section is None else [r for r in text_rows(section) if len(r) >= 10]
 
 
 def journal_dirs(inputs):

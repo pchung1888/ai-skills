@@ -1,7 +1,7 @@
 ---
 name: personal-prototype
 model: sonnet
-description: Prototype-before-you-commit conductor. Hand it a feature and it generates N genuinely distinct implementation approaches (default 5), researches the problem space, builds an HTML artifact comparing them (live mockup for UI features, decision-matrix doc for non-UI), previews and iterates it with /browse, helps you pick the winner with explicit why/pros/cons/cost, then implements the chosen option, verifies it, matches the host style, and opens a PR with a screenshot. TRIGGER on /personal-prototype or natural phrases like "prototype this feature", "give me N options for", "mock up a few approaches to", "compare implementation options for", "I cannot decide how to build X -- show me choices". Use it whenever the user wants to SEE and COMPARE several ways to build something before committing code, not just one.
+description: Prototype-before-you-commit conductor. Hand it a feature and it generates N genuinely distinct implementation approaches (default 5), researches the problem space, builds an HTML artifact comparing them (live mockup for UI features, decision-matrix doc for non-UI), previews and iterates it in the Claude app built-in browser, helps you pick the winner with explicit why/pros/cons/cost, then implements the chosen option, verifies it, matches the host style, and opens a PR with a screenshot. TRIGGER on /personal-prototype or natural phrases like "prototype this feature", "give me N options for", "mock up a few approaches to", "compare implementation options for", "I cannot decide how to build X -- show me choices". Use it whenever the user wants to SEE and COMPARE several ways to build something before committing code, not just one.
 ---
 
 # /personal-prototype
@@ -47,14 +47,13 @@ flag the conductor may propose it on a high-stakes choice but asks first.
 
 ```
 BRAINSTORM  = superpowers:brainstorming     # when the feature is underspecified
-RESEARCHER  = deep-research / WebSearch      # prior art, common approaches, gotchas
-PREVIEW     = /browse                        # render + screenshot the HTML artifact
-                                             # (CLAUDE.md: never the chrome MCP)
+RESEARCHER  = personal-online-research (lookup mode) / WebSearch      # prior art, common approaches, gotchas
+PREVIEW     = the Claude app built-in browser (mcp__Claude_Browser__* tools)   # render + screenshot the HTML artifact
 ITERATE     = inline bounded loop (2-4 passes)  # refine the artifact in-session
                                              # (cross-session runs: see Phase 5)
 IMPLEMENTER = bunny (if present) / inline    # write the chosen option into the host repo
-VERIFY      = verify / /browse               # prove the feature works, capture evidence
-SHIP        = /ship or commit-commands:commit-push-pr   # PR with screenshot
+VERIFY      = superpowers:verification-before-completion + the built-in browser   # prove the feature works, capture evidence
+SHIP        = commit-commands:commit-push-pr   # PR with screenshot
 ```
 
 These are model-context entities, not discovered from the host filesystem. If a
@@ -124,7 +123,7 @@ base64 `data:` URI present, no `position:fixed`, ASCII-only source, required mar
 Fix any `CHECK-FAIL` before previewing.
 
 ### 5. PREVIEW + ITERATE
-Preview the artifact with PREVIEW (`/browse`). Then iterate: preview -> critique
+Preview the artifact with PREVIEW (the built-in browser). Then iterate: preview -> critique
 against the feature's goal -> refine the HTML -> re-preview. A bounded inline loop, a
 few passes (typically 2-4) until the comparison reads clearly and, in UI mode, the
 mockups look real. Screenshot each pass so the progression is on record. Stop when a

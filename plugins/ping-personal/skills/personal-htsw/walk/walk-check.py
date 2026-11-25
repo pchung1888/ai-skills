@@ -82,6 +82,65 @@ class Tree(html.parser.HTMLParser):
             c[1].append(data)
 
 
+# Average glyph width of IBM Plex Sans, in em, for the svg-text-fits estimate. Raise it to flag more labels.
+CHAR_EM = 0.5
+SVG_TAG = re.compile(r"<(/?)(\w+)\b([^>]*?)(/?)>|([^<]+)")
+
+
+def num_attr(attrs, name):
+    m = re.search(r'(?:^|[\s;"])%s\s*[:=]\s*"?\s*(-?[\d.]+)' % name, attrs)
+    return float(m.group(1)) if m else None
+
+
+def text_overflow(svg):
+    """Labels whose estimated width runs past the smallest <rect> that holds their anchor point.
+    Font size and text-anchor are inherited from parent <g> tags. Anything under a transform is skipped."""
+    rects, texts, stack, cur = [], [], [], None
+    for close, tag, attrs, selfclose, data in SVG_TAG.findall(svg):
+        if data:
+            if cur is not None:
+                cur["parts"][-1] += data
+            continue
+        tag = tag.lower()
+        if close:
+            if tag == "text" and cur is not None:
+                texts.append(cur)
+                cur = None
+            elif tag == "tspan" and cur is not None:
+                cur["parts"].append("")
+            elif stack and tag == "g":
+                stack.pop()
+            continue
+        top = stack[-1] if stack else {"fs": 16.0, "anchor": "start", "tf": False}
+        here = {"fs": num_attr(attrs, "font-size") or top["fs"],
+                "anchor": (re.search(r'text-anchor\s*[:=]\s*"?(start|middle|end)', attrs) or [None, top["anchor"]])[1],
+                "tf": top["tf"] or "transform" in attrs}
+        if tag == "g" and not selfclose:
+            stack.append(here)
+        elif tag == "rect" and not here["tf"]:
+            v = [num_attr(attrs, k) for k in ("x", "y", "width", "height")]
+            if None not in v[2:]:
+                rects.append((v[0] or 0, v[1] or 0, v[2], v[3]))
+        elif tag == "text" and not here["tf"] and num_attr(attrs, "x") is not None and num_attr(attrs, "y") is not None:
+            cur = dict(here, x=num_attr(attrs, "x"), y=num_attr(attrs, "y"), parts=[""])
+        elif tag == "tspan" and cur is not None:
+            cur["parts"].append("")
+    out = []
+    for t in texts:
+        cy = t["y"] - t["fs"] * 0.35
+        box = [r for r in rects if r[0] <= t["x"] <= r[0] + r[2] and r[1] <= cy <= r[1] + r[3]]
+        if not box:
+            continue
+        rx, _, rw, _ = min(box, key=lambda r: r[2] * r[3])
+        for part in t["parts"]:
+            label = html_unescape(part).strip()
+            w = len(label) * t["fs"] * CHAR_EM
+            x0 = t["x"] - {"start": 0, "middle": w / 2, "end": w}[t["anchor"]]
+            if label and (x0 < rx - 2 or x0 + w > rx + rw + 2):
+                out.append(label[:30])
+    return out
+
+
 def words(s):
     return len(re.findall(r"[A-Za-z0-9][\w'./+-]*", s))
 
@@ -93,6 +152,8 @@ def sentences(s):
 def check(page_path, spec_path=None):
     raw = Path(page_path).read_bytes()
     text = raw.decode("utf-8", "replace")
+    # Revision mode stamps data-rev-id on every element; drop the stamp so the rules see the page as authored.
+    text = re.sub(r' data-rev-id="[^"]*"', "", text)
     t = Tree()
     t.feed(text)
     spec = json.loads(Path(spec_path).read_text(encoding="utf-8")) if spec_path else None
@@ -190,6 +251,7 @@ def check(page_path, spec_path=None):
     q_ok = [("Why it matters:" in q and 'class="note"' in q and ('value="other"' in q or 'class="free"' in q)) for q in qs]
     rule("questions-complete", "Answers", qs and all(q_ok), "%d of %d questions have why, Other or free text, and a note" % (sum(q_ok), len(qs)))
     rule("comments-script", "Answers", "Save comment" in text and "has-c" in text, "Comment, Save, Delete and menu marker")
+    rule("answers-saved", "Answers", 'save("answers"' in text and 'load("answers"' in text, "picked choices and typed answers are kept in the browser, like comments")
     rule("respond-fallback", "Answers", "execCommand(\"copy\")" in text and "clipboard.writeText" in text, "clipboard plus select-and-copy fallback")
     rule("respond-unsaved-warning", "Answers", "not saved" in text, "warns about unsaved comments")
     rule("floating-answer-button", "Answers", 'class="fab" href="#answers"' in text, "floating answer sheet button")
@@ -207,6 +269,8 @@ def check(page_path, spec_path=None):
     rule("no-placeholder-text", "Content", not placeholder, "reader-facing text outside code has no 'to be set', 'TBD' or 'TODO'%s" % (": found " + ", ".join(placeholder) if placeholder else ""))
     rule("theme-picker", "Look", all(x in text for x in ('data-t="auto"', 'data-t="light"', 'data-t="dark"', ':root[data-theme="dark"]', "prefers-color-scheme:dark")), "Auto, Light, Dark with a dark token set")
     rule("type-scale-tokens", "Look", "--fs-1" in text and "--s3" in text, "type scale and spacing tokens")
+    rule("table-zebra", "Look", "tbody tr:nth-child(even){background:var(--row-alt)}" in text and text.count("--row-alt:") >= 3,
+         "every table stripes alternate rows, with a --row-alt color for light, auto-dark and dark")
     rule("focus-rings", "Look", ":focus-visible" in text, "focus rings")
     rule("plex-fonts", "Look", "IBM+Plex+Sans" in text and "IBM+Plex+Serif" in text, "IBM Plex Sans and Serif")
     rule("reduced-motion", "Motion", "prefers-reduced-motion" in text and "matchMedia" in text, "motion off under reduced motion")
@@ -251,6 +315,12 @@ def check(page_path, spec_path=None):
     bad_f = [x for x in fonts if x != "var(--sans)"]
     rule("svg-font-tokens", "Idea", not bad_f, "%d figure fonts, %d not var(--sans)%s" % (len(fonts), len(bad_f), ": " + "; ".join(bad_f[:2]) if bad_f else ""), must=False)
     rule("svg-emphasis", "Idea", any("var(--hi)" in svg for svg in figs), "%d of %d step figures use var(--hi) for the one thing to look at" % (sum("var(--hi)" in svg for svg in figs), len(figs)), must=False)
+    pics = re.findall(r'<div class="fig">(<svg.*?</svg>)', text, re.S) + ([hv_root + hv_m.group(2) + "</svg>"] if hv_m else [])
+    spill = [t for svg in pics for t in text_overflow(svg)]
+    rule("svg-text-fits", "Idea", not spill, "%d svg labels run past their box (estimate: %.2f em per character)%s" % (
+        len(spill), CHAR_EM, ": " + "; ".join(spill[:3]) if spill else ""), must=False)
+    loose = sum(1 for svg in pics for m in re.findall(r"<marker\b[^>]*>", svg) if 'markerUnits="userSpaceOnUse"' not in m)
+    rule("svg-marker-units", "Idea", not loose, "%d arrow markers scale with the line width (set markerUnits=\"userSpaceOnUse\" so a short arrow does not hide its label)" % loose, must=False)
     n_an = sum(sec_html(sid).count('class="analogy"') for sid in step_ids)
     rule("idea-analogy-cap", "Idea", n_an <= 5, "%d analogies in the steps (more than 5 stops being special)" % n_an, must=False)
     verbish = {"is", "are", "has", "have", "gets", "goes", "runs", "sets", "picks", "needs", "keeps", "moves", "ends", "starts", "builds", "makes", "shows", "checks", "tests", "proves"}

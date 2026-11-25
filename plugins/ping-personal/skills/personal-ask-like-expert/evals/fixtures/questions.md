@@ -38,3 +38,14 @@ the client insists we drop the trade file on their FTP server every night, set t
 ## F9 - client ask that has a better idea behind it
 
 the client wants us to email them an Excel file of all their trades every 5 minutes
+
+## F10 - planning a migration with unknown unknowns (from a real roadmap session)
+
+our web app is ASP Classic with VB6 COM+ and a .NET Framework 4.8 API on SQL Server, some clients
+host it on-prem. we want a roadmap to move it to a modern stack feature by feature over a year,
+long-term support matters and we are a tiny team. what stack and what phases?
+
+Expected blind spots (C9): the routing layer in front of old and new pages (strangler fig
+facade); login and session shared between old and new pages; a per-feature switch with
+rollback; old and new running side by side on the same database; how on-prem clients install
+and upgrade both halves. The person asking named none of these.

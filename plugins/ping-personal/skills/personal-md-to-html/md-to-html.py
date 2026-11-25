@@ -252,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--theme", default=None)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--code-accent", default=None)
+    parser.add_argument("--revision", choices=("on", "off"), default="off")
     args = parser.parse_args(argv)
 
     text = read_md(args.input)
@@ -290,6 +291,21 @@ def main(argv: list[str] | None = None) -> int:
 
     out_path = args.out or args.input.with_suffix(".html")
     out_path.write_bytes(html.encode("utf-8"))
+    if args.revision == "on":
+        # Revision mode: stamp data-rev ids and add the toolbar blocks (revision/revision.py).
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("revision", HERE / "revision" / "revision.py")
+        revision = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(revision)
+        original_html, html, _, inject_notes, _ = revision.inject_page(out_path, "on", args.input.name)
+        for inject_note in inject_notes:
+            print(inject_note)
+        text_diff_offset = revision.compare_content_text(original_html, html)
+        if text_diff_offset is not None:
+            print("TEXT DIFF: %d" % text_diff_offset)
+            return 1
+        with open(out_path, "w", encoding="utf-8", newline="") as out_file:
+            out_file.write(html)
     print(str(out_path.resolve()))
 
     if args.check:

@@ -99,9 +99,16 @@
   function count(){var n=0;qs.forEach(function(q){var r=$("input[type=radio]:checked",q),o=$("input.other-in, input.free",q);
       var ok=r?(r.value!=="other"||(o&&o.value.trim())):(o&&o.value.trim());q.classList.toggle("answered",!!ok);if(ok)n++});
     if(qc)qc.textContent=n+" of "+qs.length+" answered"}
+  /* Answers: the picked choice and the typed text (other, free, note) stay in this browser, like comments. */
+  function saveAns(){var a={};qs.forEach(function(q){var v={},r=$("input[type=radio]:checked",q);if(r)v.r=r.value;
+      $$("input[type=text]",q).forEach(function(t){if(t.value)v[t.className]=t.value});a[q.id]=v});save("answers",a)}
+  var A0=load("answers",{});
+  qs.forEach(function(q){var v=A0[q.id];if(!v)return;
+    if(v.r){var r0=$('input[type=radio][value="'+v.r+'"]',q),o0=$("input.other-in",q);if(r0)r0.checked=true;if(o0)o0.hidden=v.r!=="other"}
+    $$("input[type=text]",q).forEach(function(t){if(v[t.className])t.value=v[t.className]})});
   qs.forEach(function(q){$$("input[type=radio]",q).forEach(function(r){r.addEventListener("change",function(){
-      var o=$("input.other-in",q);if(o){o.hidden=r.value!=="other";if(!o.hidden)o.focus()}count()})});
-    $$("input[type=text]",q).forEach(function(t){t.addEventListener("input",count)})});
+      var o=$("input.other-in",q);if(o){o.hidden=r.value!=="other";if(!o.hidden)o.focus()}count();saveAns()})});
+    $$("input[type=text]",q).forEach(function(t){t.addEventListener("input",function(){count();saveAns()})})});
   count();
   var out=$("#out"),st=$("#status"),rb=$("#respond");
   if(rb)rb.addEventListener("click",function(){
@@ -126,7 +133,7 @@
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(out.value).then(function(){done("Copied to clipboard.")},fallback);
     else fallback();
   });
-  var cl=$("#clear");if(cl)cl.addEventListener("click",function(){form.reset();out.value="";st.textContent="";$$("input.other-in").forEach(function(x){x.hidden=true});count()});
+  var cl=$("#clear");if(cl)cl.addEventListener("click",function(){form.reset();out.value="";st.textContent="";$$("input.other-in").forEach(function(x){x.hidden=true});count();saveAns()});
   function burst(el){if(!A)return;var r=el.getBoundingClientRect(),i,dots=[];
     for(i=0;i<14;i++){var p=D.createElement("i");p.style.cssText="position:fixed;z-index:60;width:8px;height:8px;border-radius:99px;pointer-events:none;left:"+(r.left+r.width/2)+"px;top:"+(r.top+r.height/2)+"px;background:"+(i%2?"var(--hi)":"var(--ok)");D.body.appendChild(p);dots.push(p)}
     an(dots,{translateX:function(){return A.utils.random(-90,90)},translateY:function(){return A.utils.random(-80,30)},opacity:[1,0],scale:[1,.3],duration:800,ease:"outExpo",onComplete:function(){dots.forEach(function(p){p.remove()})}})}
@@ -154,6 +161,7 @@
   function shown(e){return !!e&&e.getClientRects().length>0}
   function goTo(id,fromBack){
     var el=D.getElementById(id),m=/^box-(.+)$/.exec(id);if(!el&&m)el=D.getElementById("pbox-"+m[1]);if(!el)return;
+    var shut=el.closest("details:not([open])");if(shut)shut.open=true; /* a step box inside the folded step map */
     var sec=el.closest("main section.sec");
     if(D.body.classList.contains("presenting")){
       var k=sec?order.indexOf(sec):-1;

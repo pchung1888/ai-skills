@@ -10,6 +10,7 @@
   --arc-accent: #B83A20;
   --arc-ink: #1F1A17;
   --arc-rule: #D8CFC4;
+  --arc-row-alt: #F3EDE4; /* every other table row, so wide tables stay readable */
   --arc-code-bg: #1C1A16;
   --arc-code-fg: #EEECE8;
   --arc-code-path: #B97371;
@@ -142,6 +143,9 @@ tbody td {
 }
 tbody tr:last-child td {
   border-bottom: 0;
+}
+tbody tr:nth-child(even) td {
+  background: var(--arc-row-alt);
 }
 tbody td:first-child {
   color: var(--arc-accent);

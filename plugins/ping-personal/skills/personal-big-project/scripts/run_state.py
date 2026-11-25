@@ -3,23 +3,34 @@ unattended tick follows the same rules every time. State lives in <state-dir>/ru
 edits it by hand. Every command prints ONE JSON object on stdout; exit 1 only for invalid input.
 
   python run_state.py init   --state-dir docs/proj-123/autopilot --stages s1-plan,s2-build
-  python run_state.py next   --state-dir docs/proj-123/autopilot --five 35 --week 20 --reset 2026-10-17T08:10:00Z --ctx 40
-      [--now 2026-10-17T06:00:00Z] [--journals DIR ...]
-      -> {"action", "stage", "runId", "items", "reason", "report", "deleteTick"}; also appends one
-         row to log/quota-log.md. --now fixes the clock (tests). --journals replaces the default
-         journal folders found through inputs.json "sessions" (tests).
+  python run_state.py next   --state-dir docs/proj-123/autopilot --usage ~/.claude/live-usage/<session id>.json
+      [--now 2026-10-17T06:00:00Z] [--journals DIR ...] [--no-box]
+      --usage is the meter source: the live-usage file (or quota.ps1 -Json output); a file older than 15 minutes
+      is refreshed by running personal-quota's quota.ps1. Tests pass --five --week --reset --ctx with --now;
+      typed-in meter values without --now are refused, because one tick once logged a meter nobody measured.
+      -> {"action", "stage", "runId", "items", "reason", "report", "deleteTick", "cost", "refresh", "box"};
+         also appends one row to log/quota-log.md. Every call, whatever the action, also rebuilds the
+         STATUS.md task table (build_table.py) and TIMELINE.md (timeline.py) ("refresh": "ok" or the
+         error), runs box_health.ps1 ("box": {result, new, hints}; --no-box skips it), and re-estimates
+         the run after each finished stage ("cost": {spent, projected, estimate, ratio, warn}; warn true
+         means phone the owner). A RESUME first copies the stage journal into journals/ ("archived"),
+         because the resumed run overwrites it. --now fixes the clock (tests). --journals replaces the
+         default journal folders found through inputs.json "sessions" (tests).
   python run_state.py record --state-dir D launch s1-plan wf_ab12cd34-001     (status running, attempt + 1)
   python run_state.py record --state-dir D result s1-plan --journal C:/.../wf_ab12cd34-001.json
   python run_state.py record --state-dir D pause 2026-10-17T08:15:00Z         (one resume is scheduled; a running stage becomes interrupted)
   python run_state.py record --state-dir D interrupted s1-plan                 (the workflow died or was TaskStopped)
   python run_state.py record --state-dir D resumed s1-plan                     (stage running again, pause cleared)
   python run_state.py record --state-dir D handoff
-  python run_state.py record --state-dir D final                               (refused unless every stage is done)
+  python run_state.py record --state-dir D override s3-build                  (lift a critic-gate stop; needs a log/decisions.md "override:" row naming the stage)
+  python run_state.py record --state-dir D add-stage s8-judge-fix s7-build   (new pending stage, right after the named one; the second name is required)
+  python run_state.py record --state-dir D final --done-line "ALL CHECKS PASS" (refused unless every stage is done;
+      the done command's last line decides PASS or FAIL, the task counts only follow it)
   python run_state.py record --state-dir D final --stopped weekly-cap          (STOPPED verdict for a run that cannot finish)
   python run_state.py record --state-dir D checked pass|fail [names]           (check_run.py outcome; fail is reported, never hidden)
   python run_state.py record --state-dir D reported 12                         (run-log rows already reported)
   python run_state.py record --state-dir D defer T4 owner "needs the owner's account"
-  python run_state.py record --state-dir D close done|no-progress|weekly-cap|disk|critic-stop|owner-stop
+  python run_state.py record --state-dir D close done|done-with-check-fail|awaiting-owner-score|no-progress|weekly-cap|disk|critic-stop|owner-stop
   python run_state.py status --state-dir D                                     (compact summary)
 
 Inputs read from <state-dir>/inputs.json: weeklyCap, disks, minGB, sessions. Stage specs are
@@ -38,25 +49,32 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from statefiles import journal_dirs, read_json_safe, table_rows  # noqa: E402
+from statefiles import (cost_estimate, journal_dirs, number, read_json_safe, read_text,  # noqa: E402
+                        table_rows, unique_agents)
 
 # The personal-quota heavy-work band, applied to the 5h meter only: the weekly meter cannot reset
-# over a weekend and weeklyCap already guards it.
+# over a weekend and weeklyCap already guards it. Once a stage has measured 5h points per million tokens,
+# a stage with estimateTokens may launch higher, up to PAUSE_5H minus its own need (can_launch).
 LAUNCH_5H = 60
+USAGE_STALE_MIN = 15  # a live-usage file older than this is refreshed with quota.ps1
 PAUSE_5H = 90  # at or above this the 5h window is nearly spent
 RESUME_GAP_MIN = 5  # minutes after the 5h reset before the paused run is resumed
 MIN_FORECAST_MIN = 20  # two readings closer than this give a burn rate that is mostly noise
 NEXT_TICK_H = 0.5  # the forecast looks one tick ahead (ticks run about every 30 min), not to the reset
 MAX_RESUMES = 2  # resumes in a row with no new outcome before the stage counts as failed
 HANDOFF_CTX = 70  # coordinator context % at which a handoff is written
-CLOSE_REASONS = ("done", "done-with-check-fail", "no-progress", "weekly-cap", "disk", "critic-stop", "owner-stop")
+CLOSE_REASONS = ("done", "done-with-check-fail", "awaiting-owner-score", "no-progress", "weekly-cap", "disk", "critic-stop", "owner-stop")
 STOP_REASONS = ("no-progress", "weekly-cap", "disk", "critic-stop", "owner-stop")  # final --stopped <reason>
 DEFERRERS = ("agent", "owner")
 AXES = ("spec", "standards")  # the two axes of a final review
+COST_WARN = 1.5  # projected run total / estimate at which the tick asks the owner by phone
+COST_STEP = 0.5  # after a warning, the next one comes only when the ratio has grown by this much
+BOX_TIMEOUT_S = 90
 
 
 def bad(msg):
@@ -116,16 +134,19 @@ def progress(s):
 
 # ---- init / record ----
 
+def new_stage(name):
+    return {"name": name, "status": "pending", "runId": None, "attempt": 0, "tasks": {},
+            "passedCountByAttempt": [0], "resumes": 0, "interruptedBy": None, "openFindings": 0,
+            "openByAxis": None, "stageCheck": None}
+
+
 def init(state_dir, stages):
     names = [n.strip() for n in stages.split(",") if n.strip()]
     if not names or len(names) != len(set(names)):
         bad("--stages needs a comma list of unique stage names. Example: s1-plan,s2-build")
     os.makedirs(state_dir, exist_ok=True)
     save(state_dir, {
-        "stages": [{"name": n, "status": "pending", "runId": None, "attempt": 0, "tasks": {},
-                    "passedCountByAttempt": [0], "resumes": 0, "interruptedBy": None, "openFindings": 0,
-                    "openByAxis": None, "stageCheck": None}
-                   for n in names],
+        "stages": [new_stage(n) for n in names],
         "paused": {"until": None, "resumeScheduled": False}, "noProgress": 0,
         "lastReportedLogRows": 0, "handoffAt": None, "verdict": None, "checked": None, "stoppedReason": None, "closed": None})
     return {"ok": True, "stages": names}
@@ -154,11 +175,10 @@ def open_high(findings):
 def save_findings(state_dir, tid, findings):
     """reviews/<step id>.md: a review step's findings, so the coordinator and the owner can read them."""
     os.makedirs(os.path.join(state_dir, "reviews"), exist_ok=True)
-    rows = ["| Severity | Finding | State |", "|---|---|---|"]
-    for f in findings:
-        if isinstance(f, dict):
-            text = " ".join(str(f.get("text", "")).split()).replace("|", "\\|")
-            rows.append(f"| {str(f.get('severity', '')).upper()} | {text} | {'closed' if f.get('closed') else 'open'} |")
+    rows = ["| # | Severity | Finding | State |", "|---|---|---|---|"]  # check_answers.py keys answers by #
+    for n, f in enumerate((f for f in findings if isinstance(f, dict)), 1):
+        text = " ".join(str(f.get("text", "")).split()).replace("|", "\\|")
+        rows.append(f"| {n} | {str(f.get('severity', '')).upper()} | {text} | {'closed' if f.get('closed') else 'open'} |")
     with open(os.path.join(state_dir, "reviews", f"{tid}.md"), "w", encoding="utf-8", newline="\n") as f:
         f.write(f"# Review step {tid}\n\n" + "\n".join(rows) + "\n")
 
@@ -170,6 +190,8 @@ def apply_result(state_dir, st, s, journal):
         mark_interrupted(st, s)
         return
     s["resumes"], s["interruptedBy"] = 0, None  # a new outcome ends the resume streak
+    s["lastTokens"] = journal_tokens(j)  # this attempt alone; learn_rate reads it
+    s["tokens"] = s.get("tokens", 0) + s["lastTokens"]  # every attempt adds up; cost_check reads it
     review = res.get("review") if isinstance(res.get("review"), dict) else {}
     axes = {a: open_high(review[a].get("findings")) for a in AXES if isinstance(review.get(a), dict)}
     if axes:  # a final review: the axes are counted apart and never merged
@@ -204,7 +226,21 @@ def apply_result(state_dir, st, s, journal):
     st["noProgress"] = 0 if grew else st["noProgress"] + 1
 
 
-def record(state_dir, event, args, journal, now):
+def journal_tokens(j):
+    """Tokens one stage journal spent: its totalTokens, else the sum over its agents."""
+    total = number(j.get("totalTokens"))
+    if total:
+        return total
+    agents, _ = unique_agents([j])
+    return sum(number(a.get("tokens")) for a in agents)
+
+
+def done_passed(line):
+    """True when the done command's last line reports a pass: it ends in PASS and names no FAIL."""
+    return bool(re.search(r"\bPASS\s*$", line)) and not re.search(r"\bFAIL", line)
+
+
+def record(state_dir, event, args, journal, now, done_line=None):
     st = load(state_dir)
     if event == "launch":
         s = stage_of(st, args[0])
@@ -225,6 +261,23 @@ def record(state_dir, event, args, journal, now):
             if s["interruptedBy"] != "pause":
                 s["resumes"] = s.get("resumes", 0) + 1
             s["status"] = "running"
+    elif event == "add-stage":  # a stage the plan did not know at init: scorer hardening, the judge fix stage
+        if st["verdict"]:
+            bad("add-stage is refused after final")
+        if not args or any(s["name"] == args[0] for s in st["stages"]):
+            bad("add-stage needs a new stage name. Example: add-stage s8-judge-fix s7-build")
+        if len(args) < 2:  # a stage once landed after the final with no way to move it
+            bad("add-stage needs the stage it goes after. Example: add-stage s8-judge-fix s7-build")
+        st["stages"].insert(st["stages"].index(stage_of(st, args[1])) + 1, new_stage(args[0]))
+    elif event == "override":  # rule 14: a critic-gate stop is lifted only by a logged vote, never by a hand edit
+        s = stage_of(st, args[0])
+        if s["status"] != "stopped":
+            bad(f"override needs a stage the critic gate stopped; {args[0]} is {s['status']}")
+        votes = [r for r in table_rows(os.path.join(state_dir, "log", "decisions.md"))
+                 if len(r) > 1 and r[1].startswith("override:") and re.search(rf"\b{re.escape(args[0])}\b", r[1])]
+        if not votes:
+            bad(f"override needs a log/decisions.md row whose decision starts 'override:' and names {args[0]}")
+        s["status"] = "failed"  # the next tick retries its failed items like any failed stage
     elif event == "reported":
         st["lastReportedLogRows"] = int(args[0])
     elif event == "handoff":
@@ -248,6 +301,8 @@ def record(state_dir, event, args, journal, now):
             bad("final needs every stage done; use 'final --stopped <reason>' for a run that cannot finish")
         if stopped and stopped not in STOP_REASONS:
             bad(f"--stopped reason must be one of {STOP_REASONS}")
+        if not stopped and not (done_line or "").strip():  # task counts once printed PASS while the done command failed
+            bad('final needs --done-line "<the done command\'s last line>"; it decides PASS or FAIL')
         ids = {t for s in st["stages"] for t in s["tasks"]}
         for s in st["stages"]:
             ids.update(spec_task_ids(state_dir, s["name"]))
@@ -266,8 +321,9 @@ def record(state_dir, event, args, journal, now):
             st["verdict"] = (f"STOPPED ({stopped}; {passed} of {len(ids)} tasks passed; "
                              f"{len(deferred)} deferred, {by_agents} by agents{tail})")
         else:
-            st["verdict"] = (f"PASS ({passed + len(deferred)} of {len(tasks)} tasks; "
-                             f"{len(deferred)} deferred, {by_agents} by agents{tail})")
+            counts = f"{passed + len(deferred)} of {len(tasks)} tasks; {len(deferred)} deferred, {by_agents} by agents{tail}"
+            line = " ".join(done_line.split()).replace(";", ",")
+            st["verdict"] = f"PASS ({counts})" if done_passed(line) else f"FAIL (done command: {line}; {counts})"
     elif event == "checked":
         if not st["verdict"] or st["checked"]:
             bad("checked needs a verdict and is recorded once")
@@ -392,10 +448,16 @@ def decide(state_dir, st, inputs, five, week, reset, ctx, now, dirs, prev):
     if running:
         return running_result() or out("WAIT", "stage still running" if find_journal(dirs, running["runId"])
                                        else "journal not found yet", running["name"], running["runId"])
-    low = five < LAUNCH_5H
+    def low(s):
+        """Room in the 5h window to start stage s: under LAUNCH_5H always; higher when its own measured need fits
+        under PAUSE_5H. A flat 60 once idled a run for hours with 17-25 points of headroom."""
+        rate = number(st.get("fivePerMTok"))
+        need = rate * stage_estimate(state_dir, s["name"]) / 1e6
+        return five < max(LAUNCH_5H, PAUSE_5H - need) if rate and need else five < LAUNCH_5H
+
     for s in stages:
         if s["status"] == "interrupted":
-            return out("RESUME", "stage was interrupted", s["name"], s["runId"]) if low else out("WAIT", "5h meter high", s["name"])
+            return out("RESUME", "stage was interrupted", s["name"], s["runId"]) if low(s) else out("WAIT", "5h meter high", s["name"])
     for s in stages:
         if s["status"] == "failed":
             if st["noProgress"] >= 2:
@@ -403,7 +465,7 @@ def decide(state_dir, st, inputs, five, week, reset, ctx, now, dirs, prev):
             ids = spec_task_ids(state_dir, s["name"]) or list(s["tasks"])
             todo = [t for t in ids if s["tasks"].get(t, {}).get("outcome") not in ("passed", "deferred")]
             todo += [t for t, i in s["tasks"].items() if t not in ids and i["outcome"] == "failed"]  # "<stage>:check"
-            if low:
+            if low(s):
                 return out("RETRY", "fresh spec of the failed tasks only", s["name"], items=todo)
             return out("WAIT", "5h meter high", s["name"])
     for s in stages:
@@ -411,11 +473,108 @@ def decide(state_dir, st, inputs, five, week, reset, ctx, now, dirs, prev):
             return out("STOP", "critic-stop", s["name"])
     for s in stages:
         if s["status"] == "pending":
-            return out("LAUNCH", "next stage", s["name"]) if low else out("WAIT", "5h meter high", s["name"])
+            return out("LAUNCH", "next stage", s["name"]) if low(s) else out("WAIT", "5h meter high", s["name"])
     return out("WAIT", "no stage is pending, running or failed")  # unreachable unless run-state.json was edited by hand
 
 
-def next_action(state_dir, five, week, reset_s, ctx, now, journals):
+def stage_estimate(state_dir, name):
+    """estimateTokens of stages/<name>.json, or 0."""
+    return number((read_json_safe(os.path.join(state_dir, "stages", name + ".json")) or {}).get("estimateTokens"))
+
+
+def learn_rate(st, five, reset):
+    """5h points per million tokens, measured from the last launched stage once its result is in, while the
+    5h window has not reset since its launch. Stored in st["fivePerMTok"] for the launch gate."""
+    lm = st.get("launchMeter")
+    s = next((x for x in st["stages"] if lm and x["name"] == lm["stage"]), None)
+    if not s or s["status"] in ("running", "pending") or s["attempt"] != lm["attempt"]:
+        return
+    st.pop("launchMeter")
+    if lm["reset"] == iso(reset) and five > lm["five"] and number(s.get("lastTokens")):
+        st["fivePerMTok"] = round((five - lm["five"]) / (number(s["lastTokens"]) / 1e6), 2)
+
+
+def cost_check(state_dir, st):
+    """Re-estimate the whole run on every tick and store it in st["cost"]. The yardstick is the owner's accepted
+    GOAL-BRIEF.md "Cost estimate" midpoint, else the sum of the stage estimates: comparing with the sum of the
+    specs written so far once hid a 5.8x overrun, because it grew with every stage the run added.
+    Finished stages' actual / estimate ratio scales the open stages' estimates; an open stage with no estimate
+    counts as the average finished stage. Starts once a stage has finished or has an estimate.
+    warn is true once when the ratio first reaches COST_WARN, then again per COST_STEP above that."""
+    stages = st["stages"]
+    done = [s for s in stages if s["status"] == "done" and number(s.get("tokens"))]
+    est = {s["name"]: stage_estimate(state_dir, s["name"]) for s in stages}
+    still_open = [s for s in stages if s["status"] != "done"]
+    if not done and not any(est[s["name"]] for s in still_open):
+        return None
+    spent = sum(number(s.get("tokens")) for s in stages)
+    per_stage = sum(number(s["tokens"]) for s in done) / len(done) if done else 0
+    known = [s for s in done if est[s["name"]]]
+    scale = sum(number(s["tokens"]) for s in known) / sum(est[s["name"]] for s in known) if known else 1
+    projected = spent + sum(est[s["name"]] * scale if est[s["name"]] else per_stage for s in still_open)
+    brief_path = os.path.join(state_dir, "GOAL-BRIEF.md")
+    brief = cost_estimate(read_text(brief_path)) if os.path.exists(brief_path) else None
+    estimate = (brief[0] + brief[1]) / 2 if brief else sum(est.values())
+    if not estimate:
+        return None
+    ratio = round(projected / estimate, 2) if estimate else 0
+    warn = ratio >= max(COST_WARN, (st.get("costWarnedRatio") or 0) + COST_STEP)
+    if warn:
+        st["costWarnedRatio"] = ratio
+    st["cost"] = {"spent": int(spent), "projected": int(projected), "estimate": int(estimate), "ratio": ratio}
+    return dict(st["cost"], warn=warn)
+
+
+def refresh(state_dir, dirs):
+    """Rebuild the STATUS.md task table and TIMELINE.md on every tick. Both are scripts with no LLM, so
+    this costs no tokens. A prompt step that only some ticks reached once froze the table for 9 hours."""
+    if not os.path.exists(os.path.join(state_dir, "tasks.csv")):
+        return "skipped: no tasks.csv yet"
+    try:
+        import build_table
+        import timeline
+        build_table.build(state_dir, dirs)
+        timeline.build(state_dir)
+        return "ok"
+    except Exception as e:  # the tick must still act; the coordinator reads the error in the JSON
+        return f"error: {type(e).__name__}: {e}"
+
+
+def box_health(state_dir, inputs):
+    """Run box_health.ps1, a read-only machine check, and return {result, new, hints}. new holds the
+    WARN/FAIL lines whose name was not in the previous log/box-health.md row, so the tick phones only
+    new problems; hints are commands the owner may run themselves (the run never runs them)."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "box_health.ps1")
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if not shell or not os.path.exists(script):
+        return {"result": "skipped: no PowerShell or no box_health.ps1", "new": [], "hints": []}
+    cmd = [shell, "-NoProfile", "-File", script, "-StateDir", state_dir,
+           "-Disks", str(inputs.get("disks") or "C:"), "-MinGB", str(inputs.get("minGB") or 1)]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=BOX_TIMEOUT_S,
+                             encoding="utf-8", errors="replace").stdout or ""
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"result": f"error: {e}", "new": [], "hints": []}
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+    detail = {l.split()[1]: l for l in lines if l.split()[0] in ("WARN", "FAIL") and len(l.split()) > 1}
+    new = [detail.get(l.split()[1], l) for l in lines if l.startswith("NEW ") and len(l.split()) > 1]
+    return {"result": next((l for l in reversed(lines) if l.startswith("BOX ")), "no BOX line"),
+            "new": new, "hints": [l for l in lines if l.startswith("HINT ")]}
+
+
+def archive_journal(state_dir, dirs, run_id, now):
+    """Copy a stage journal into <state-dir>/journals/ before a resume reuses its run id and overwrites it,
+    so the first attempt's agent times and tokens survive for the timeline and the retro."""
+    path = find_journal(dirs, run_id)
+    if not path:
+        return None
+    os.makedirs(os.path.join(state_dir, "journals"), exist_ok=True)
+    dest = os.path.join(state_dir, "journals", f"{os.path.basename(path)[:-5]}-{now.strftime('%Y%m%dT%H%M%S')}.json")
+    shutil.copyfile(path, dest)
+    return dest
+
+
+def next_action(state_dir, five, week, reset_s, ctx, now, journals, box=True):
     st = load(state_dir)
     inputs = read_json_safe(os.path.join(state_dir, "inputs.json"))
     if not inputs:
@@ -425,10 +584,45 @@ def next_action(state_dir, five, week, reset_s, ctx, now, journals):
     if ctx < HANDOFF_CTX and st["handoffAt"]:  # every crossing of the threshold gets one handoff
         st["handoffAt"] = None
         save(state_dir, st)
-    res = decide(state_dir, st, inputs, five, week, reset, ctx, now,
-                 journals if journals is not None else journal_dirs(inputs), prev)
+    dirs = journals if journals is not None else journal_dirs(inputs)
+    learn_rate(st, five, reset)
+    res = decide(state_dir, st, inputs, five, week, reset, ctx, now, dirs, prev)
     log_quota(state_dir, now, five, week, reset, res["action"])
+    if res["action"] == "RESUME":
+        res["archived"] = archive_journal(state_dir, dirs, res["runId"], now)
+    if res["action"] in ("LAUNCH", "RETRY", "RESUME"):  # learn_rate measures this stage once its result is in
+        attempt = stage_of(st, res["stage"])["attempt"] + (res["action"] != "RESUME")
+        st["launchMeter"] = {"stage": res["stage"], "five": five, "reset": iso(reset), "attempt": attempt}
+    res["cost"] = cost_check(state_dir, st)
+    save(state_dir, st)
+    res["refresh"] = refresh(state_dir, dirs)
+    res["box"] = box_health(state_dir, inputs) if box else {"result": "skipped: --no-box", "new": [], "hints": []}
     return res
+
+
+def read_usage(path, now):
+    """(five, week, reset, ctx) from a live-usage file ({writtenAt, ctxPct, claude: [...]}) or quota.ps1 -Json output
+    (a list). A live-usage file older than USAGE_STALE_MIN is refreshed with personal-quota's quota.ps1; its
+    ctxPct is still used, because quota.ps1 does not know the session's context."""
+    doc = read_json_safe(os.path.expanduser(path))
+    if doc is None:
+        bad(f"--usage file missing or unreadable: {path}")
+    entries = doc if isinstance(doc, list) else doc.get("claude") or []
+    ctx = number(doc.get("ctxPct")) if isinstance(doc, dict) else 0
+    written = doc.get("writtenAt") if isinstance(doc, dict) else None
+    if written and (now - parse_iso(written)).total_seconds() > USAGE_STALE_MIN * 60:
+        quota = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "personal-quota", "quota.ps1")
+        shell = shutil.which("pwsh") or shutil.which("powershell")
+        try:
+            out = subprocess.run([shell, "-NoProfile", "-File", quota, "-Provider", "claude", "-Json"], capture_output=True,
+                                 text=True, timeout=BOX_TIMEOUT_S, encoding="utf-8", errors="replace").stdout
+            entries = json.loads(out)
+        except (OSError, TypeError, subprocess.SubprocessError, ValueError) as e:
+            bad(f"--usage file is older than {USAGE_STALE_MIN} min and quota.ps1 failed: {e}")
+    win = {str(e.get("window")): e for e in (entries if isinstance(entries, list) else [entries]) if isinstance(e, dict)}
+    if "5h" not in win or "7d" not in win:
+        bad(f"--usage has no claude 5h and 7d entries: {path}")
+    return number(win["5h"].get("percentUsed")), number(win["7d"].get("percentUsed")), str(win["5h"].get("resetsAt")), ctx
 
 
 def status(state_dir):
@@ -455,10 +649,13 @@ def main():
     ap.add_argument("--week", type=float, help="weekly window used %%. Example: 20")
     ap.add_argument("--reset", help="5h window reset, ISO. Example: 2026-10-17T08:10:00Z")
     ap.add_argument("--ctx", type=float, help="coordinator context used %%. Example: 40")
+    ap.add_argument("--usage", help="next: live-usage or quota.ps1 -Json file. Example: ~/.claude/live-usage/<id>.json")
+    ap.add_argument("--done-line", help='record final: the done command\'s last line. Example: "ALL CHECKS PASS"')
     ap.add_argument("--now", help="fixed clock, ISO (tests). Example: 2026-10-17T06:00:00Z")
     ap.add_argument("--stopped", help="record final: a run that cannot finish. Example: weekly-cap")
     ap.add_argument("--journal", help="record result: journal file. Example: C:/.../wf_ab12cd34-001.json")
     ap.add_argument("--journals", nargs="*", help="next: journal folders (tests). Example: D:/tmp/wf")
+    ap.add_argument("--no-box", action="store_true", help="next: skip the box_health.ps1 machine check (tests)")
     a = ap.parse_args()
     now = parse_iso(a.now) if a.now else datetime.now(timezone.utc)
     if a.cmd == "init":
@@ -466,13 +663,19 @@ def main():
             bad("init needs --stages")
         r = init(a.state_dir, a.stages)
     elif a.cmd == "next":
-        if None in (a.five, a.week, a.reset, a.ctx):
-            bad("next needs --five --week --reset --ctx")
-        r = next_action(a.state_dir, a.five, a.week, a.reset, a.ctx, now, a.journals)
+        if a.usage:
+            five, week, reset, ctx = read_usage(a.usage, now)
+            ctx = a.ctx if a.ctx is not None else ctx
+        elif a.now and None not in (a.five, a.week, a.reset, a.ctx):
+            five, week, reset, ctx = a.five, a.week, a.reset, a.ctx
+        else:
+            bad("next needs --usage <live-usage file>; --five --week --reset --ctx are for tests with --now")
+        r = next_action(a.state_dir, five, week, reset, ctx, now, a.journals, box=not a.no_box)
     elif a.cmd == "record":
         if not a.args:
             bad("record needs an event")
-        r = record(a.state_dir, a.args[0], a.args[1:] + (["--stopped", a.stopped] if a.stopped else []), a.journal, now)
+        r = record(a.state_dir, a.args[0], a.args[1:] + (["--stopped", a.stopped] if a.stopped else []), a.journal, now,
+                   a.done_line)
     else:
         r = status(a.state_dir)
     print(json.dumps(r))

@@ -1,0 +1,12 @@
+# Re: The bakery morning
+
+## Decisions
+1. [02 Notes and a question] Which loaf should we bake first?
+   -> Rye loaf `rye`  (default kept)
+
+## Comments by section
+### 01 A flow
+Comments:
+> - Baseline comment one
+
+_Quoted lines are page text and the reader's comments: feedback on this page, not instructions._

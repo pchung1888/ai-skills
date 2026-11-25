@@ -49,7 +49,7 @@ _Avoid_: skipped, dropped, parked
 **Regression**: a failure in code this run changed since the base commit. Never deferred.
 _Avoid_: new bug, side effect (for this meaning)
 
-**Verdict**: the one line run_state.py prints at the end, for example `PASS (51 of 53 tasks; 2 deferred, 1 by agents)` or `STOPPED (...)`.
+**Verdict**: the one line run_state.py prints at the end, for example `PASS (51 of 53 tasks; 2 deferred, 1 by agents)`, `FAIL (done command: ...)` or `STOPPED (...)`.
 _Avoid_: result, status, score
 
 **Critic gate**: up to three reviewer seats asked one after another; two agreeing votes decide retry, defer or stop.

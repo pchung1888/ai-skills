@@ -3,6 +3,7 @@ cap or past its cap is refused before anything is written, a retried action is c
 lines pass check_run's baselines check. Run: python evals/test_log_row.py   Prints LOG ROW TEST PASS."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -132,6 +133,33 @@ def main():
         with open(os.path.join(tmp, "keep.txt"), "w") as f:
             f.write("changed")
         assert "keep.txt" in check_run.check_baselines(state, {"repoPath": ".."})
+
+        # owner: a fix row is also a friction row naming the skill; a bad class or a score without 1-5 is refused.
+        r = log_row(state, "owner", "--class", "fix", "--skill", "big-project", "--missed", "table stale", "--quote", "why old?")
+        assert r.returncode == 0 and "friction" in r.stdout, r.stdout
+        fb = statefiles.table_rows(os.path.join(state, "log", "owner-feedback.md"))
+        fr = statefiles.table_rows(os.path.join(state, "log", "skill-friction.md"))
+        assert len(fb) == 1 and fb[0][1:4] == ["fix", "big-project", "table stale"] and check_run.DAY_TIME.match(fb[0][0]), fb
+        assert len(fr) == 1 and "big-project" in fr[0][1], fr
+        assert log_row(state, "owner", "--class", "steer", "--quote", "go on").returncode == 0
+        assert len(statefiles.table_rows(os.path.join(state, "log", "skill-friction.md"))) == 1  # a steer is not filed
+        assert log_row(state, "owner", "--class", "rant").returncode == 2
+        assert log_row(state, "owner", "--class", "score", "--like", "9").returncode == 2
+
+        # report: refused with a task id in it (nothing saved); a plain one is saved with the post time as title.
+        draft = os.path.join(tmp, "draft.md")
+        with open(draft, "w") as f:
+            f.write("# Report Wed 11-11 23:52\nT4 passed and wf_12ab is done\n")
+        assert log_row(state, "report", "--file", draft).returncode == 2
+        assert not os.path.isdir(os.path.join(state, "reports")) or not os.listdir(os.path.join(state, "reports"))
+        with open(draft, "w") as f:
+            f.write("# Report Wed 11-11 23:52\nThe grid page passed its browser check.\n")
+        r = log_row(state, "report", "--file", draft)
+        assert r.returncode == 0, r.stdout
+        saved = r.stdout.split("SAVED ", 1)[1].strip()
+        body = open(saved).read()
+        assert body.startswith("# Report ") and "23:52" not in body and "grid page" in body, body
+        assert re.match(r"\d{4}-\d\d-\d\d-\d{4}\.md$", os.path.basename(saved)), saved
         print("LOG ROW TEST PASS")
     finally:
         shutil.rmtree(tmp)

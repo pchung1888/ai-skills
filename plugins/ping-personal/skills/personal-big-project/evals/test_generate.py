@@ -218,16 +218,36 @@ def main():
         r = gen(state, "stage", "--spec", spec9)
         assert r.returncode == 0, r.stderr
         js9 = open(os.path.join(state, "stages", "s9.js"), encoding="utf-8").read()
-        assert 'await reviewStep("J1", "ping-personal:ms-mario", "Judge", "judge the plan")' in js9, js9
+        assert 'await reviewStep("J1", "ping-personal:ms-mario", "Judge", "judge the plan", undefined)' in js9, js9
         out9 = run_node(js9)
         j1 = out9["r"]["results"]["J1"]
         assert j1["passed"] and j1["findings"][0]["severity"] == "HIGH" and out9["types"]["J1"] == "ping-personal:ms-mario", j1
         assert "T1" in out9["calls"] and "J1:verify" not in out9["calls"], out9["calls"]  # no verifier for a review step
         refused(state, spec9, dict(judged, steps=[dict(judged["steps"][0], commits=True)]), "review step J1")
         refused(state, spec9, dict(judged, steps=[dict(judged["steps"][0], kind="judge")]), "kind")
+        # Advisor model: "advisor" uses inputs.json advisorModel for a task or a review seat; refused without it.
+        adv = dict(judged, steps=[dict(judged["steps"][0], model="advisor"), dict(judged["steps"][1], model="advisor")])
+        refused(state, spec9, adv, "advisorModel")
+        json.dump(dict(INPUTS, advisorModel="fable"), open(inputs_path, "w"))
+        json.dump(adv, open(spec9, "w"))
+        r = gen(state, "stage", "--spec", spec9)
+        assert r.returncode == 0, r.stderr
+        js9 = open(os.path.join(state, "stages", "s9.js"), encoding="utf-8").read()
+        assert 'reviewStep("J1", "ping-personal:ms-mario", "Judge", "judge the plan", "fable")' in js9, js9
+        assert 'run("T1", "ping-personal:bunny", "Fix", "fable",' in js9, js9
+        json.dump(INPUTS, open(inputs_path, "w"))
+        # Tool dry check: a brief that names a tool its agent lacks is refused (amanda has no Bash); a "never" mention is fine.
+        told = {"name": "s9", "summary": "x", "steps": [{**R, "id": "T1", "agent": "ping-personal:amanda", "phase": "P",
+                                                          "text": "Run the tests with the Bash tool."}]}
+        refused(state, spec9, told, "Bash tool")
+        told["steps"][0]["text"] = "Never use the Bash tool; write the plan."
+        json.dump(told, open(spec9, "w"))
+        assert gen(state, "stage", "--spec", spec9).returncode == 0
         # Item 2: the run's base commit is inserted as a JSON string and drives "changed by this run".
         assert 'const BASE_COMMIT = "4b8d`3b26"' in js6
         assert "git diff 4b8d`3b26" in out["prompts"]["T3"]
+        assert out["prompts"]["T3"].startswith("YOUR TASK: T3 only") and out["prompts"]["T3"].rstrip().endswith('"Task T3").')
+        assert '"check-signoff:"' in out["prompts"]["T3:verify"], "a signed-off check edit is not CHECK EDITED"
         out = run_node(js4, "defer,defer,defer")
         assert "(git diff 4b8d`3b26)" in out["prompts"][[c for c in out["calls"] if ":gate:" in c][0]], "the gate's own rule names the base commit"
         # Item 1+5 stageCheck: after every task, one rhea verifier (sonnet, low) runs the full done command once.
@@ -257,8 +277,11 @@ def main():
         assert gen(state, "stage", "--spec", spec9).returncode == 0
         js9 = open(os.path.join(state, "stages", "s9.js"), encoding="utf-8").read()
         out = run_node(js9)
-        assert out["calls"][-2:] == ["final:spec", "final:standards"], out["calls"]
+        assert out["calls"][-3:] == ["final:diff", "final:spec", "final:standards"], out["calls"]
         assert out["types"]["final:spec"] == "ping-personal:amanda" and out["types"]["final:standards"] == "ping-personal:ms-mario"
+        # amanda and ms-mario have no shell: an agent with one (rhea) writes the diff to a file they can Read.
+        assert out["types"]["final:diff"] == "ping-personal:rhea" and "final-diff.patch" in out["prompts"]["final:diff"]
+        assert all("final-diff.patch" in out["prompts"][k] and "no shell" in out["prompts"][k] for k in ("final:spec", "final:standards"))
         assert "git diff 4b8d`3b26...HEAD" in out["prompts"]["final:spec"] and "GOAL-BRIEF.md" in out["prompts"]["final:spec"]
         assert "CLAUDE.md" in out["prompts"]["final:standards"]
         rv = out["r"]["review"]
@@ -269,6 +292,50 @@ def main():
 
         # Refusals.
         a, b ={**R, "id": "T1", "phase": "P"}, {**R, "id": "T2", "phase": "P"}
+        # List checks and RED tasks run through run_check.py, which generate.py wires up and writes a checks JSON for.
+        base = {**R, "agent": "general-purpose", "phase": "P", "text": "x"}
+        spec10 = os.path.join(state, "stages", "s10.json")
+        json.dump({"name": "s10", "summary": "list and red", "estimateTokens": 300000, "steps": [
+            dict(base, id="L1", check=["python a.py", "python b.py"]),
+            dict(base, id="L2", expect="fail", redFile="tests/**/test_x.*", check="python -m pytest tests/test_x.py -q"),
+            dict(base, id="L3", check="python plain.py", ui=False)]}, open(spec10, "w"))
+        r = gen(state, "stage", "--spec", spec10)
+        assert r.returncode == 0, r.stderr
+        js10 = open(os.path.join(state, "stages", "s10.js"), encoding="utf-8").read()
+        l1 = json.load(open(os.path.join(state, "checks", "L1.json"), encoding="utf-8"))
+        assert l1 == {"task": "L1", "commands": ["python a.py", "python b.py"], "expect": "pass"}, l1
+        l2 = json.load(open(os.path.join(state, "checks", "L2.json"), encoding="utf-8"))
+        assert l2["expect"] == "fail" and l2["file"] == "tests/**/test_x.*" and l2["commands"] == ["python -m pytest tests/test_x.py -q"], l2
+        for tid, line in (("L1", "L1 CHECK PASS"), ("L2", "L2 RED PASS")):
+            cmd = 'python \\"' + os.path.dirname(os.path.dirname(os.path.abspath(GEN))).replace("\\", "/") + '/scripts/run_check.py\\" \\"' \
+                  + os.path.join(state, "checks", tid + ".json").replace("\\", "/") + '\\"'
+            assert f'run("{tid}", "general-purpose", "P", WORKER_MODEL, [], false, "x", "{line}", "{cmd}")' in js10, (tid, js10)
+        assert 'run("L3", "general-purpose", "P", WORKER_MODEL, [], false, "x", "", "python plain.py")' in js10, js10
+        assert not os.path.exists(os.path.join(state, "checks", "L3.json")), "a plain string check writes no checks JSON"
+        assert "estimateTokens" not in js10, "estimateTokens is read from the spec file, not copied"
+        listed = lambda *steps, **extra: dict(SPEC, steps=list(steps), review=None, **extra)  # noqa: E731
+        refused(state, spec, listed(dict(base, id="L1", check=["a.py"], passLine="L1 CHECK PASS")), "gets its passLine")
+        refused(state, spec, listed(dict(base, id="L1", check="a.py", expect="fail", passLine="x PASS")), "gets its passLine")
+        refused(state, spec, listed(dict(base, id="L1", check=[])), "list check")
+        refused(state, spec, listed(dict(base, id="L1", check=["a.py", " "])), "list check")
+        refused(state, spec, listed(dict(base, id="L1", expect="maybe")), "expect must be")
+        refused(state, spec, listed(dict(base, id="L1", redFile="t/*")), "redFile")
+        refused(state, spec, listed(dict(base, id="L1", check="x.py", expect="fail", redFile="")), "redFile")
+        refused(state, spec, listed(dict(base, id="L1", check=["a.py"]), dict(base, id="L2", check=["a.py"])), "same check")
+        # A string that chains commands is refused with a pointer to the list form; a list element may not chain either.
+        for chain in ("a.py ; b.py", "a.py && b.py", "a.py || b.py", "a.py\nb.py"):
+            refused(state, spec, listed(dict(base, id="L1", check=chain)), "hand-joined chain")
+        refused(state, spec, listed(dict(base, id="L1", check=["a.py", "b.py && c.py"])), "hand-joined chain")
+        for ok_chars in ("python -c \"print(1);print(2)\"", "python a.py --x=1&&2"):  # no spaces around the operator: not a chain
+            json.dump(listed(dict(base, id="L1", check=ok_chars)), open(spec, "w"))
+            assert gen(state, "stage", "--spec", spec).returncode == 0, ok_chars
+        # estimateTokens is a whole number above 0; ui is a bool.
+        for bad_est in (0, -5, True, "300000", 1.5):
+            refused(state, spec, listed(dict(base, id="L1"), estimateTokens=bad_est), "estimateTokens")
+        for bad_ui in ("yes", 1, None):
+            refused(state, spec, listed(dict(base, id="L1", ui=bad_ui)), "ui must be")
+        json.dump(listed(dict(base, id="L1", ui=True)), open(spec, "w"))
+        assert gen(state, "stage", "--spec", spec).returncode == 0
         refused(state, spec, dict(SPEC, steps=[[]]), "empty group")
         # Task ids go into a shell command, so only letters, digits, '-' and '_' (1-16) pass.
         for bad_id in ("T\"`1", "T3; rm -rf x", "$(id)", "T" * 17):
