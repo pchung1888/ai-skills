@@ -25,14 +25,18 @@ If the Main goal or the Subtask is missing, stop and ask the user in one line. N
 
 ## Before dispatch
 
-1. Say the cost. Full run: 5 seats plus the judge, about 435K tokens (measured on a past ticket: 434,654
-   tokens, 6 agents, 334 s). Light run (seats 1, 2 and 5 plus the judge, for a small subtask):
-   about 290K. Seat 5 is in every run: on a past ticket it alone found every "fix now" finding.
+1. Say the cost. Full run: 5 seats plus the judge, about 750K tokens (measured on a review-response
+   run; PROJ-759's smaller diff took 435K, and seven-seat runs took 0.74M to 1.08M). Light run (seats
+   1, 2 and 5 plus the judge, for a small subtask): about 290K on PROJ-759, not re-measured since.
+   Seat 5 is in every run: on PROJ-759 it alone found every "fix now" finding.
 2. For a diff, run `python plugins/ping-personal/skills/personal-critic-gate/lib/floor_guard.py --base <ref>`
    and keep its rows for every brief. Record the reviewed commit as `Reviewed: <sha>`.
 3. Pick seat 3, the domain seat, with personal-critic-gate's "Seat 4 Domain Routing Table": vex
    for data work (`.sql`, parser, csv, migration script), maggie for design and UI, vex when
-   mixed. Use that table, do not copy it, so the two skills cannot drift.
+   mixed. Use that table, do not copy it, so the two skills cannot drift. One exception: when the
+   work changes a page, seat 3 is maggie and her brief adds a SCREENSHOTS: line (the old-vs-new
+   pairs, or the side-by-side page). She opens every screenshot pair and compares by eye. A final
+   review that read only code once passed pages that looked nothing like the old ones.
 4. Pick seat 5. Run the codex probe from personal-critic-gate's "Preflight Codex Probe" section.
    If it passes, seat 5 is codex. If not, seat 5 is iris.
 5. Write the run header: date, artifact, `Reviewed: <sha>`, floor guard result, the domain seat
@@ -64,8 +68,9 @@ REVIEW PURPOSE: <why now>
 YOUR LENS: <the seat's lens from the table>
 ARTIFACT: <path, diff or text>
 FLOOR GUARD ROWS: <rows, or "none">
+SCREENSHOTS: <seat 3 when a page changed: paths of the old-vs-new pairs; otherwise leave the line out>
 Review only. Do not edit anything. Do not vote.
-Write your findings in English, ASCII only. No emoji, no box drawing.
+Write your findings in English, ASCII only, even if your persona speaks another language. No emoji, no box drawing.
 Return a list of findings. Each finding has: a short title, severity (high, medium or low),
 evidence (file:line or quoted output), and which input it serves (main goal, subtask or neither).
 ```
@@ -114,13 +119,18 @@ VERDICT: FIX (<n> fix now, <n> flagged, <n> later, <n> never)   or   VERDICT: CL
 
 ## After the judge
 
-1. Fix every "fix now" row. Fix nothing else.
-2. Send the same judge one verify pass on the fixed rows only: "For each fixed row, did the fix
-   close the finding, and did it change anything outside it?" A failed row goes back to "later"
-   with a note. The verify pass finds nothing new. That is its whole job.
-3. Show the user the verdict line, the final table, the list of fixes made, and any
+1. Count the When cells yourself and compare with the verdict line. When they differ, the table
+   wins: rewrite the verdict counts from the table and note the change. A verdict once said 10 fix
+   now while its table held 13.
+2. Fix every "fix now" row. Fix nothing else.
+3. Send the same judge one verify pass on the fixed rows only: "For each fixed row, did the fix
+   close the finding, and did it change anything outside it?" Give it fresh output for each row
+   and for every gate the fix could touch (the test, the timing, the screenshot), never just "all
+   fixed": a fix round once slowed cold load from 63 ms to 112 ms. A row with no fresh output, or
+   a failed row, goes back to "later" with a note. The verify pass finds nothing new. That is its whole job.
+4. Show the user the verdict line, the final table, the list of fixes made, and any
    "later - flagged for the owner" rows first.
-4. There is no second panel. If the user wants another review, they run the skill again.
+5. There is no second panel. If the user wants another review, they run the skill again.
 
 To check a judge table by hand: `pwsh plugins/ping-personal/skills/personal-critic-judge/evals/eval.ps1 -TableFile <table.md>`.
 
@@ -128,6 +138,8 @@ To check a judge table by hand: `pwsh plugins/ping-personal/skills/personal-crit
 
 Save the header, the verdict, the table and each seat's text verbatim. Never replace or strip
 characters to make a file ASCII. If non-ASCII text remains, stop and ask the user how to save it.
+Under `UNATTENDED` nobody can answer, so never stop: save an English ASCII digest of every
+finding of that seat, and write in the file that the verbatim text is in the session transcript.
 
 ## Unattended runs
 

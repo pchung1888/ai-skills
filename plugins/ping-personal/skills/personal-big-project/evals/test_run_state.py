@@ -40,11 +40,13 @@ def spec(state, name, ids):
 
 def nxt(state, five=10, week=20, ctx=10, now=NOW, reset=RESET):
     return run(state, "next", "--five", str(five), "--week", str(week), "--reset", reset, "--ctx", str(ctx),
-               "--now", now, "--journals", os.path.join(state, "wf"))
+               "--now", now, "--journals", os.path.join(state, "wf"), "--no-box")
 
 
-def journal(state, run_id, status="completed", results=None, stopped_by=None):
+def journal(state, run_id, status="completed", results=None, stopped_by=None, tokens=None):
     body = {"status": status}
+    if tokens is not None:
+        body["totalTokens"] = tokens
     if results is not None:
         body["result"] = {"results": results, "stoppedBy": stopped_by}
     path = os.path.join(state, "wf", run_id + ".json")
@@ -226,12 +228,45 @@ def main():
         launch_and_result(s, "s1", "wf_a", {"T1": res()}, stopped_by="critic-gate")
         r = nxt(s)
         assert (r["action"], r["reason"]) == ("STOP", "critic-stop"), r
+        # override clears the stop only after a log/decisions.md "override:" row names the stage (rule 14)
+        ov = subprocess.run([sys.executable, RS, "record", "override", "s1", "--state-dir", s], capture_output=True, text=True)
+        assert ov.returncode != 0 and "override:" in ov.stderr, ov.stdout + ov.stderr
+        os.makedirs(os.path.join(s, "log"), exist_ok=True)
+        with open(os.path.join(s, "log", "decisions.md"), "w", encoding="utf-8") as f:
+            f.write("| Sat 11-14 01:00 | override: s1 stop rule, rhea + ms-mario voted retry | a, b | new root cause | low |\n")
+        run(s, "record", "override", "s1")
+        r = nxt(s)
+        assert (r["action"], r["stage"]) == ("RETRY", "s1"), r
 
         # 11 first pending stage -> LAUNCH; WAIT when 5h >= 60
         s = new_state()
         r = nxt(s)
         assert (r["action"], r["stage"]) == ("LAUNCH", "s1"), r
         assert nxt(s, five=65)["action"] == "WAIT"
+        #   measured launch gate: s1 moved the 5h meter 20 points for 1M tokens, so s2 (1M estimated) may
+        #   launch at 65 (65 + 20 < 90); at 75 it waits. Without a measurement the flat 60 holds (above).
+        s = new_state()
+        json.dump({"steps": [{"id": "T2"}], "estimateTokens": 1000000}, open(os.path.join(s, "stages", "s2.json"), "w"))
+        assert nxt(s, five=10)["action"] == "LAUNCH"
+        run(s, "record", "launch", "s1", "wf_g1")
+        run(s, "record", "result", "s1", "--journal", journal(s, "wf_g1", "completed", {"T1": res(passed=True)}, tokens=1000000))
+        assert nxt(s, five=30)["action"] == "LAUNCH"
+        assert json.load(open(os.path.join(s, "run-state.json")))["fivePerMTok"] == 20.0
+        r = nxt(s, five=65)
+        assert (r["action"], r["stage"]) == ("LAUNCH", "s2"), r
+        assert nxt(s, five=75)["action"] == "WAIT"
+        #   meter values come from the usage file; typed-in numbers are refused outside tests (--now)
+        s = new_state()
+        usage = os.path.join(s, "usage.json")
+        json.dump({"writtenAt": NOW, "ctxPct": 12, "claude": [
+            {"window": "5h", "percentUsed": 35, "resetsAt": "2026-10-17T12:00:00.000Z"},
+            {"window": "7d", "percentUsed": 20, "resetsAt": "2026-10-20T12:00:00.000Z"}]}, open(usage, "w"))
+        r = run(s, "next", "--usage", usage, "--now", NOW, "--journals", os.path.join(s, "wf"), "--no-box")
+        assert r["action"] == "LAUNCH", r
+        assert "| 35% | 20% | 2026-10-17T12:00:00Z |" in open(os.path.join(s, "log", "quota-log.md")).read()
+        typed = subprocess.run([sys.executable, RS, "next", "--state-dir", s, "--five", "35", "--week", "20",
+                                "--reset", RESET, "--ctx", "10", "--no-box"], capture_output=True, text=True)
+        assert typed.returncode != 0 and "--usage" in typed.stdout + typed.stderr, typed
 
         # H4: STOP names the running stage so the tick can TaskStop it first
         s = new_state(minGB=1e9)
@@ -258,7 +293,7 @@ def main():
         run(s, "record", "defer", "T3", "owner", "needs", "an", "account")
         assert stage_info(s, "s2")["status"] == "done"
         assert nxt(s)["action"] == "FINAL"
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
 
         # 13 verdict set -> CHECK, then CLOSE done after checked pass, delete the tick
         v = run(s, "status")["verdict"]
@@ -271,7 +306,7 @@ def main():
         #   H3: a failing check is written into the verdict and the run still closes (never loops)
         s = new_state(stages="s1")
         launch_and_result(s, "s1", "wf_a", {"T1": res(passed=True)})
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         assert nxt(s)["action"] == "CHECK"
         run(s, "record", "checked", "fail", "baselines,verdict")
         v = run(s, "status")["verdict"]
@@ -279,12 +314,23 @@ def main():
         r = nxt(s)
         assert (r["action"], r["reason"], r["deleteTick"]) == ("CLOSE", "done-with-check-fail", True), r
         run(s, "record", "close", "done-with-check-fail")
+        run(s, "record", "close", "awaiting-owner-score")
+        #   the verdict follows the done command's last line, never the task count alone
+        s = new_state(stages="s1")
+        launch_and_result(s, "s1", "wf_a", {"T1": res(passed=True)})
+        run(s, "record", "final", "--done-line", "ALL CHECKS FAIL; 2 of 9 failed")
+        v = run(s, "status")["verdict"]
+        assert v == "FAIL (done command: ALL CHECKS FAIL, 2 of 9 failed; 1 of 1 tasks; 0 deferred, 0 by agents)", v
+        s = new_state(stages="s1")
+        launch_and_result(s, "s1", "wf_a", {"T1": res(passed=True)})
+        r = subprocess.run([sys.executable, RS, "record", "final", "--state-dir", s], capture_output=True, text=True)
+        assert r.returncode != 0 and "--done-line" in r.stderr, r
 
         # M1: a resolved run finishes before the disk, quota and weekly checks
         s = new_state(stages="s1", minGB=1e9)
         launch_and_result(s, "s1", "wf_a", {"T1": res(passed=True)})
         assert nxt(s, five=95, week=99, ctx=99)["action"] == "FINAL"
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         assert nxt(s, five=95, week=99)["action"] == "CHECK"
 
         # M2: final is refused while a stage is not done; --stopped writes a STOPPED verdict (CLOSE gives the stop reason)
@@ -312,7 +358,7 @@ def main():
             {"severity": "HIGH", "text": "c", "closed": True}, {"severity": "LOW", "text": "d", "closed": False}]}
         json.dump(body, open(p, "w"))
         run(s, "record", "result", "s1", "--journal", p)
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         v = run(s, "status")["verdict"]
         assert v == "PASS (1 of 1 tasks; 0 deferred, 0 by agents; 2 open review findings)", v
 
@@ -325,10 +371,10 @@ def main():
         p = journal(s, "wf_a", "completed", {"J1": judge, "T1": res(passed=False)})
         run(s, "record", "result", "s1", "--journal", p)
         saved = open(os.path.join(s, "reviews", "J1.md"), encoding="utf-8").read()
-        assert "| HIGH | reply order \\| wrong | open |" in saved and "| LOW | wording | open |" in saved, saved
+        assert "| 1 | HIGH | reply order \\| wrong | open |" in saved and "| 2 | LOW | wording | open |" in saved, saved
         run(s, "record", "launch", "s1", "wf_b")
         run(s, "record", "result", "s1", "--journal", journal(s, "wf_b", "completed", {"T1": res(passed=True)}))
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         v = run(s, "status")["verdict"]
         assert v == "PASS (2 of 2 tasks; 0 deferred, 0 by agents; 1 open review findings)", v
 
@@ -378,7 +424,7 @@ def main():
                                                          {"severity": "LOW", "text": "e", "closed": False}]}})
         run(s, "record", "result", "s1", "--journal", p)
         assert stage_info(s, "s1")["openByAxis"] == {"spec": 2, "standards": 1}, stage_info(s, "s1")
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         v = run(s, "status")["verdict"]
         assert v == "PASS (1 of 1 tasks; 0 deferred, 0 by agents; spec: 2 open, standards: 1 open)", v
         #   one axis clean: it is still listed (with 0), not hidden or folded into the other
@@ -387,7 +433,7 @@ def main():
         p = journal(s, "wf_a", "completed", {"T1": res(passed=True)})
         with_extra(p, review={"spec": {"findings": []}, "standards": {"findings": [{"severity": "HIGH", "text": "d", "closed": False}]}})
         run(s, "record", "result", "s1", "--journal", p)
-        run(s, "record", "final")
+        run(s, "record", "final", "--done-line", "ALL CHECKS PASS")
         v = run(s, "status")["verdict"]
         assert v.endswith("; spec: 0 open, standards: 1 open)"), v
 
@@ -399,6 +445,66 @@ def main():
         assert nxt(s)["report"] is True
         run(s, "record", "reported", "2")
         assert nxt(s)["report"] is False
+        # add-stage: a stage added after every stage is done launches before FINAL; a duplicate is refused
+        s = new_state("s1")
+        spec(s, "s1", ["T1"])
+        launch_and_result(s, "s1", "wf_add1", {"T1": res(passed=True)})
+        run(s, "record", "add-stage", "s0-harden", "s1")
+        run(s, "record", "add-stage", "s2-fix", "s0-harden")
+        assert [x["name"] for x in run(s, "status")["stages"]] == ["s1", "s0-harden", "s2-fix"]
+        no_after = subprocess.run([sys.executable, RS, "record", "add-stage", "s3-x", "--state-dir", s], capture_output=True, text=True)
+        assert no_after.returncode != 0 and "goes after" in no_after.stdout + no_after.stderr, no_after
+        r = nxt(s)
+        assert (r["action"], r["stage"]) == ("LAUNCH", "s0-harden"), r
+        dup = subprocess.run([sys.executable, RS, "record", "add-stage", "s1", "--state-dir", s], capture_output=True, text=True)
+        assert dup.returncode != 0
+        # cost: stage estimates scale the open stages; one warning at 1.5x, the next only at +0.5
+        s = new_state("s1,s2,s3")
+        for n in ("s1", "s2", "s3"):
+            json.dump({"steps": [{"id": n + "T"}], "estimateTokens": 1000}, open(os.path.join(s, "stages", n + ".json"), "w"))
+        run(s, "record", "launch", "s1", "wf_c1")
+        run(s, "record", "result", "s1", "--journal", journal(s, "wf_c1", "completed", {"s1T": res(passed=True)}, tokens=2000))
+        c = nxt(s)["cost"]
+        assert (c["spent"], c["projected"], c["estimate"], c["ratio"], c["warn"]) == (2000, 6000, 3000, 2.0, True), c
+        assert nxt(s)["cost"]["warn"] is False  # warned once at 2.0; the next warning needs 2.5
+        assert run(s, "status")["stages"][0]["name"] == "s1"
+        # cost without stage estimates: GOAL-BRIEF.md midpoint; under 1.5x no warning
+        s = new_state("s1,s2")
+        spec(s, "s1", ["T1"])
+        open(os.path.join(s, "GOAL-BRIEF.md"), "w").write("Cost estimate: 2K-4K\n")
+        run(s, "record", "launch", "s1", "wf_c2")
+        run(s, "record", "result", "s1", "--journal", journal(s, "wf_c2", "completed", {"T1": res(passed=True)}, tokens=1500))
+        c = nxt(s)["cost"]
+        assert (c["projected"], c["estimate"], c["ratio"], c["warn"]) == (3000, 3000, 1.0, False), c
+        assert nxt(new_state())["cost"] is None  # nothing finished yet
+        #   the accepted GOAL-BRIEF.md range is the yardstick even with stage estimates, and the re-estimate
+        #   starts before any stage finishes (the sum of specs written so far once hid a 5.8x overrun)
+        s = new_state("s1,s2,s3")
+        for n in ("s1", "s2", "s3"):
+            json.dump({"steps": [{"id": n + "T"}], "estimateTokens": 2000}, open(os.path.join(s, "stages", n + ".json"), "w"))
+        open(os.path.join(s, "GOAL-BRIEF.md"), "w").write("Cost estimate: 2K-4K\n")
+        c = nxt(s)["cost"]
+        assert (c["projected"], c["estimate"], c["ratio"], c["warn"]) == (6000, 3000, 2.0, True), c
+        # refresh: every next rebuilds the task table and TIMELINE.md, whatever the action
+        s = new_state("s1")
+        assert nxt(s)["refresh"].startswith("skipped"), "no tasks.csv yet"
+        open(os.path.join(s, "tasks.csv"), "w").write("id,stage,what,estimate,added\nT1,s1,do it,10,\n")
+        os.makedirs(os.path.join(s, "log"), exist_ok=True)
+        open(os.path.join(s, "log", "decisions.md"), "w").write("| When | Decision | Options | Why | Cost |\n|---|---|---|---|---|\n| Sat 10-17 01:00 | go | a or b | cheap | 0 |\n")
+        r = nxt(s)
+        assert r["refresh"] == "ok", r["refresh"]
+        assert "| T1 |" in open(os.path.join(s, "STATUS.md")).read()
+        assert "decision: go" in open(os.path.join(s, "TIMELINE.md")).read()
+        assert r["box"]["result"].startswith("skipped")
+        # RESUME copies the journal into journals/ before the resumed run overwrites it
+        s = new_state("s1")
+        spec(s, "s1", ["T1"])
+        run(s, "record", "launch", "s1", "wf_r1")
+        journal(s, "wf_r1", "running", tokens=5)
+        run(s, "record", "interrupted", "s1")
+        r = nxt(s)
+        assert r["action"] == "RESUME" and r["archived"] and os.path.exists(r["archived"]), r
+        assert json.load(open(r["archived"]))["totalTokens"] == 5
         print("RUN STATE TEST PASS")
     finally:
         shutil.rmtree(TMP, ignore_errors=True)

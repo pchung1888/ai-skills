@@ -14,7 +14,9 @@ import argparse
 import html
 import json
 import re
+import shutil
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -114,13 +116,36 @@ def unsafe(text, what):
         raise SystemExit("walk-build: %s contains %r (script, event handler, external link or url, foreignObject, iframe, object and embed are refused)" % (what, m.group(0).strip()[:60]))
 
 
+PATH_D = re.compile(r"<path\b[^>]*?\sd\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", re.I)
+NUM = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+ARITY = {"m": 2, "l": 2, "t": 2, "h": 1, "v": 1, "c": 6, "s": 4, "q": 4, "z": 0}
+
+
+def lint_paths(svg, what):
+    """Refuse path data a browser drops silently, such as "M12748V1014" (a missing space leaves M one number).
+    Each command must get whole groups of numbers. Paths with arcs are skipped: arc flags may be packed ("011")."""
+    for m in PATH_D.finditer(svg):
+        d = m.group(1) if m.group(1) is not None else m.group(2)
+        if not d.strip() or re.search(r"[Aa]", d):
+            continue
+        bad = re.search(r"[^MmLlHhVvCcSsQqTtZz0-9eE.,+\-\s]", d)
+        if bad or not re.match(r"\s*[Mm]", d):
+            raise SystemExit("walk-build: %s has path data %r that must start with M and hold only commands and numbers" % (what, d[:60]))
+        for cmd, args in re.findall(r"([MmLlHhVvCcSsQqTtZz])([^MmLlHhVvCcSsQqTtZz]*)", d):
+            n, k = len(NUM.findall(args)), ARITY[cmd.lower()]
+            if (k == 0 and n) or (k and (n == 0 or n % k)):
+                raise SystemExit("walk-build: %s has malformed path data %r: %s takes %d number(s) per segment, got %d. Look for a missing space between two numbers." % (
+                    what, d[:60], cmd, k, n))
+
+
 def check_svg(svg, what):
-    """Same checks for svg_file and inline svg: nothing unsafe, exactly one <svg> element."""
+    """Same checks for svg_file and inline svg: nothing unsafe, exactly one <svg> element, path data that draws."""
     svg = svg.strip()
     unsafe(svg, what)
     low = svg.lower()
     if not (low.startswith("<svg") and low.endswith("</svg>")) or low.count("<svg") != 1:
         raise SystemExit("walk-build: %s must hold exactly one <svg>...</svg> element and nothing else" % what)
+    lint_paths(svg, what)
     return svg
 
 
@@ -153,6 +178,40 @@ def validate(spec):
                 raise SystemExit("walk-build: steps[%d].alongside cannot follow another alongside step" % i)
 
 
+def svg_files(node):
+    """Every svg file name the spec points at (svg_file blocks, hero_visual, flow_visual)."""
+    if isinstance(node, list):
+        return [f for x in node for f in svg_files(x)]
+    if not isinstance(node, dict):
+        return []
+    out = []
+    for key, val in node.items():
+        if key == "svg_file":
+            name = val.get("file") if isinstance(val, dict) else val
+            if isinstance(name, str):
+                out.append(name)
+        out += svg_files(val)
+    return out
+
+
+def check_stale(spec):
+    """stale_terms: words that changed (an old release number, an old owner). The build stops while any of them
+    is still in the spec text or in an svg file the spec uses, so one forgotten label cannot survive a round."""
+    terms = spec.get("stale_terms") or []
+    if not isinstance(terms, list) or not all(isinstance(t, str) and t.strip() for t in terms):
+        raise SystemExit("walk-build: stale_terms must be a list of non-empty strings, for example [\"until 7.40\"]")
+    if not terms:
+        return
+    places = [("the spec", json.dumps({k: v for k, v in spec.items() if k != "stale_terms"}))]
+    for name in sorted(set(svg_files(spec))):
+        p = (BASE / name).resolve()
+        if p.is_file() and (BASE.resolve() == p.parent or BASE.resolve() in p.parents):
+            places.append((name, p.read_text(encoding="ascii", errors="replace")))
+    hits = ["%r in %s" % (t, where) for t in terms for where, text in places if t.lower() in text.lower()]
+    if hits:
+        raise SystemExit("walk-build: stale term still present (update it or drop it from stale_terms): %s" % "; ".join(hits))
+
+
 def block_html(b, il):
     if not isinstance(b, dict) or len(b) != 1:
         raise SystemExit("walk-build: each block must be an object with one key, got %r" % (b,))
@@ -175,6 +234,8 @@ def block_html(b, il):
         return '<div class="note %s">%s%s</div>' % (esc(tone), title, il(v["text"]))
     if kind == "analogy":
         return analogy_html(v, il)
+    if kind == "swimlane":
+        return swimlane_html(v, il)
     if kind == "svg_file":
         path = (BASE / v["file"]).resolve()
         if BASE.resolve() != path and BASE.resolve() not in path.parents:
@@ -224,6 +285,109 @@ ICON_DONE = icon('<circle cx="12" cy="12" r="10"/>', '<path d="m8 12 3 3 5-6"/>'
 def analogy_html(text, il):
     return ('<div class="analogy"><div class="ic" aria-hidden="true">' + ICON_BULB + '</div><div><div class="k">Think of it like this</div>'
             '<p class="say">%s</p></div></div>' % il(text))
+
+
+LANE_TONES = ("a", "b", "c", "ok", "info")  # lane i boxes use --X-soft fill and --X stroke, cycling
+SWIM_COUNT = [0]  # numbers each swimlane on the page so its marker ids stay unique
+
+
+def swimlane_html(v, il):
+    """Who-does-what chart drawn from data: one column per lane (person or group), one row per numbered
+    step, top to bottom. A gate gets a thick outline; "back" draws a loop-back arrow to an earlier step
+    in a channel on the right. Optional bands bracket a range of steps on the left (Plan, Build, Release)."""
+    if not isinstance(v, dict):
+        raise SystemExit("walk-build: swimlane must be an object with lanes, steps and label")
+    lanes, steps, bands = v.get("lanes"), v.get("steps"), v.get("bands") or []
+    if not isinstance(lanes, list) or not 2 <= len(lanes) <= 8 or not all(isinstance(x, str) and x.strip() for x in lanes):
+        raise SystemExit("walk-build: swimlane lanes must be a list of 2 to 8 non-empty names")
+    if not isinstance(steps, list) or not 2 <= len(steps) <= 30:
+        raise SystemExit("walk-build: swimlane steps must be a list of 2 to 30 steps")
+    label = v.get("label")
+    if not isinstance(label, str) or len(label.strip()) < 8:
+        raise SystemExit("walk-build: swimlane needs a label of at least 8 characters that says what the chart shows (screen readers read it)")
+    for i, s in enumerate(steps):
+        if not isinstance(s, dict) or not isinstance(s.get("text"), str) or not s["text"].strip():
+            raise SystemExit("walk-build: swimlane steps[%d] needs a text" % i)
+        if not isinstance(s.get("lane"), int) or not 0 <= s["lane"] < len(lanes):
+            raise SystemExit("walk-build: swimlane steps[%d].lane must be a lane number from 0 to %d" % (i, len(lanes) - 1))
+        b = s.get("back")
+        if b is not None and (not isinstance(b, int) or not 1 <= b <= i):
+            raise SystemExit("walk-build: swimlane steps[%d].back must be the number of an earlier step (1 to %d)" % (i, i))
+    for j, bd in enumerate(bands):
+        if not isinstance(bd, dict) or not isinstance(bd.get("label"), str) or not all(isinstance(bd.get(k), int) for k in ("from", "to")) \
+                or not 1 <= bd["from"] <= bd["to"] <= len(steps):
+            raise SystemExit("walk-build: swimlane bands[%d] needs a label and from <= to, both step numbers from 1 to %d" % (j, len(steps)))
+    k = SWIM_COUNT[0]
+    SWIM_COUNT[0] += 1
+    W, fs, line = 760, 13, 17
+    nback = sum(1 for s in steps if s.get("back"))
+    left = 10 + (34 if bands else 0)
+    right = 14 + 14 * nback
+    lw = (W - left - right) / float(len(lanes))
+    chars = max(8, int((lw - 30) / (fs * 0.56)))  # keeps walk-check svg-text-fits (0.55 em per character) inside the box
+    heads = [wrap_lines(x, chars) for x in lanes]
+    head_h = 14 + line * max(len(x) for x in heads)
+    y = head_h + 18
+    boxes = []
+    for i, s in enumerate(steps):
+        text = s["text"] + (" (optional)" if s.get("optional") else "")
+        lines = wrap_lines("%d. %s" % (i + 1, text), chars)
+        h = max(40, 14 + line * len(lines))
+        x = left + s["lane"] * lw + 8
+        boxes.append((x, y, lw - 16, h, lines))
+        y += h + 28
+    H = y - 28 + 14
+    st = "font-family:var(--sans);font-size:%dpx" % fs
+    out = []
+    for j, name in enumerate(lanes):
+        x = left + j * lw
+        if j % 2:
+            # A path, not a rect: the stripe is a background, so walk-check does not treat it as a label's box.
+            out.append('<path d="M%.1f 0 H%.1f V%d H%.1f Z" style="fill:var(--bg2)"/>' % (x, x + lw, H, x))
+        for n, ln in enumerate(heads[j]):
+            out.append('<text x="%.1f" y="%d" text-anchor="middle" style="%s;font-weight:600;fill:var(--ink)">%s</text>' % (x + lw / 2, 18 + line * n, st, esc(ln)))
+    out.append('<path d="M%d %d H%d" style="stroke:var(--line);stroke-width:1.5"/>' % (left, head_h + 4, W - right))
+    for bd in bands:
+        y1, y2 = boxes[bd["from"] - 1][1] - 8, boxes[bd["to"] - 1][1] + boxes[bd["to"] - 1][3] + 8
+        out.append('<rect x="6" y="%d" width="26" height="%d" rx="6" style="fill:var(--c-soft);stroke:var(--c)"/>' % (y1, y2 - y1))
+        cy = (y1 + y2) // 2
+        out.append('<text x="23" y="%d" text-anchor="middle" transform="rotate(-90 23 %d)" style="%s;font-weight:600;fill:var(--ink)">%s</text>' % (cy, cy, st, esc(bd["label"])))
+    for i in range(len(boxes) - 1):  # forward arrows: straight down in one lane, an elbow between lanes
+        x, y, w, h, _ = boxes[i]
+        x2, y2, w2, _, _ = boxes[i + 1]
+        cx, cx2, yb = x + w / 2, x2 + w2 / 2, y + h
+        d = "M%.1f %d V%d" % (cx, yb, y2 - 2) if abs(cx - cx2) < 1 else "M%.1f %d V%d H%.1f V%d" % (cx, yb, yb + 14, cx2, y2 - 2)
+        out.append('<path d="%s" style="stroke:var(--muted);stroke-width:1.5;fill:none" marker-end="url(#wb-sl%d-ah)"/>' % (d, k))
+    ch = W - right + 6
+    for i, s in enumerate(steps):  # loop-back arrows run in their own channel on the right
+        if not s.get("back"):
+            continue
+        x, y, w, h, _ = boxes[i]
+        tx, ty, tw, th, _ = boxes[s["back"] - 1]
+        out.append('<path d="M%.1f %d H%d V%d H%.1f" style="stroke:var(--warn);stroke-width:2;stroke-dasharray:6 4;fill:none" marker-end="url(#wb-sl%d-back)"/>' % (
+            x + w, y + h // 2, ch, ty + th // 2, tx + tw + 2, k))
+        if s.get("back_label"):
+            out.append('<text x="%.1f" y="%d" style="%s;fill:var(--warn)">%s</text>' % (x + w + 6, y + h // 2 - 6, st, esc(s["back_label"])))
+        ch += 14
+    for i, (s, (x, y, w, h, lines)) in enumerate(zip(steps, boxes)):
+        tone = LANE_TONES[s["lane"] % len(LANE_TONES)]
+        stroke = "var(--hi);stroke-width:3" if s.get("hi") else ("var(--warn);stroke-width:3" if s.get("gate") else "var(--%s);stroke-width:1.5" % tone)
+        out.append('<rect x="%.1f" y="%d" width="%.1f" height="%d" rx="8" style="fill:var(--%s-soft);stroke:%s"/>' % (x, y, w, h, tone, stroke))
+        for n, ln in enumerate(lines):
+            out.append('<text x="%.1f" y="%d" style="%s;fill:var(--ink)">%s</text>' % (x + 8, y + 20 + line * n, st, esc(ln)))
+    mk = ('<marker id="wb-sl%d-%s" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">'
+          '<path d="M0 0 L10 5 L0 10 z" style="fill:var(--%s)"/></marker>')
+    svg = '<svg viewBox="0 0 %d %d" role="img" aria-label="%s"><defs>%s%s</defs>%s</svg>' % (
+        W, H, esc(label), mk % (k, "ah", "muted"), mk % (k, "back", "warn"), "".join(out))
+    legend = ["Read top to bottom. Each column is one person or group."]
+    if any(s.get("gate") for s in steps):
+        legend.append("A thick red outline is a gate that can send work back.")
+    if nback:
+        legend.append("Dashed red arrows show where work goes back.")
+    if any(s.get("hi") for s in steps):
+        legend.append("The yellow outline is the main work step.")
+    cap = (il(v["caption"]) + "<br>" if v.get("caption") else "") + " ".join(legend)
+    return '<figure><div class="fig">%s</div><figcaption>%s</figcaption></figure>' % (svg, cap)
 
 
 def wrap_lines(text, width):
@@ -455,31 +619,38 @@ def hero_map(spec):
         W, H, W, H, d, cap, "".join(edges), d, "".join(dots), tail)
 
 
+def picture_svg(pv, key):
+    """Load and check the svg file a top-level picture key (hero_visual, flow_visual) names: inside the spec
+    folder, ASCII, safe, role="img" with an aria-label of 8+ characters, and a viewBox so it scales."""
+    name = pv.get("svg_file") if isinstance(pv, dict) else None
+    if not isinstance(name, str) or not name:
+        raise SystemExit("walk-build: %s needs an svg_file key naming an svg in the spec folder" % key)
+    path = (BASE / name).resolve()
+    if BASE.resolve() != path and BASE.resolve() not in path.parents:
+        raise SystemExit("walk-build: %s svg_file %r is outside the spec folder" % (key, name))
+    if not path.is_file():
+        raise SystemExit("walk-build: %s svg_file %s does not exist in the spec folder" % (key, name))
+    try:
+        raw = path.read_text(encoding="ascii")
+    except UnicodeDecodeError:
+        raise SystemExit("walk-build: %s svg_file %s must be ASCII only" % (key, name))
+    svg = check_svg(raw, "%s svg_file %s" % (key, name))
+    root = re.match(r"<svg\b[^>]*>", svg, re.I).group(0)
+    lab = re.search(r"\baria-label\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", root, re.I)
+    if not re.search(r"\brole\s*=\s*[\"']img[\"']", root, re.I) or not lab or len((lab.group(1) or lab.group(2) or "").strip()) < 8:
+        raise SystemExit("walk-build: %s svg_file %s needs role=\"img\" and an aria-label of at least 8 characters on the <svg>" % (key, name))
+    if not re.search(r"\bviewBox\s*=", root, re.I):
+        raise SystemExit("walk-build: %s svg_file %s needs a viewBox on the <svg> so it scales" % (key, name))
+    return svg
+
+
 def hero_visual(spec):
     """The hero picture of the idea: the spec's hero_visual svg_file in the glass card with a caption.
     Without hero_visual the mini flow chart is used. The svg keeps its own role and aria-label."""
     hv = spec.get("hero_visual")
     if not hv:
         return hero_map(spec)
-    name = hv.get("svg_file") if isinstance(hv, dict) else None
-    if not isinstance(name, str) or not name:
-        raise SystemExit("walk-build: hero_visual needs an svg_file key naming an svg in the spec folder")
-    path = (BASE / name).resolve()
-    if BASE.resolve() != path and BASE.resolve() not in path.parents:
-        raise SystemExit("walk-build: hero_visual svg_file %r is outside the spec folder" % name)
-    if not path.is_file():
-        raise SystemExit("walk-build: hero_visual svg_file %s does not exist in the spec folder" % name)
-    try:
-        raw = path.read_text(encoding="ascii")
-    except UnicodeDecodeError:
-        raise SystemExit("walk-build: hero_visual svg_file %s must be ASCII only" % name)
-    svg = check_svg(raw, "hero_visual svg_file %s" % name)
-    root = re.match(r"<svg\b[^>]*>", svg, re.I).group(0)
-    lab = re.search(r"\baria-label\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", root, re.I)
-    if not re.search(r"\brole\s*=\s*[\"']img[\"']", root, re.I) or not lab or len((lab.group(1) or lab.group(2) or "").strip()) < 8:
-        raise SystemExit("walk-build: hero_visual svg_file %s needs role=\"img\" and an aria-label of at least 8 characters on the <svg>" % name)
-    if not re.search(r"\bviewBox\s*=", root, re.I):
-        raise SystemExit("walk-build: hero_visual svg_file %s needs a viewBox on the <svg> so it scales" % name)
+    svg = picture_svg(hv, "hero_visual")
     cap = '<p class="hv-cap">%s</p>' % esc(hv["caption"]) if hv.get("caption") else ""
     links = spec.get("hero_links")
     hint = ""
@@ -536,6 +707,8 @@ def build(spec):
         if key not in spec:
             raise SystemExit("walk-build: spec is missing %r" % key)
     validate(spec)
+    check_stale(spec)
+    SWIM_COUNT[0] = 0
     il = Inline(spec["glossary"])
     steps = spec["steps"]
     for s in steps:  # an unknown category id falls back to a
@@ -570,14 +743,19 @@ def build(spec):
     if has_al:
         legend += '<span><i class="dash"></i>runs alongside</span>'
     arrows = '<figcaption class="arrows">Arrows show reading order.%s</figcaption>' % (" A dashed step ends in an open circle. The next step does not wait." if has_al else "")
+    chart = ('<figure>%s<div class="fig flowfig">%s</div><div class="pflow">%s</div><div class="legend">%s<span><i style="background:var(--ok)"></i>opened</span>'
+             '<span><i style="background:var(--hi)"></i>you are here</span></div>%s%s</figure>') % (
+        arrows if has_al else "", chart_svg(spec), phone_chart(spec), legend, "<figcaption>%s</figcaption>" % "<br>".join(il(c) for c in cap) if cap else "",
+        "" if has_al else arrows)
+    fv = spec.get("flow_visual")
+    if fv:  # the author's own picture leads the section; the clickable step chart folds under it
+        fcap = "<figcaption>%s</figcaption>" % il(fv["caption"]) if fv.get("caption") else ""
+        chart = '<figure><div class="fig">%s</div>%s</figure><details class="stepmap"><summary>Step map: the %d steps as a clickable chart</summary>%s</details>' % (
+            picture_svg(fv, "flow_visual"), fcap, len(steps), chart)
     sec.append(
-        '<section class="sec" id="flow"><h2 data-name="%s">%s</h2><p class="lead">%s</p>'
-        '<figure>%s<div class="fig flowfig">%s</div><div class="pflow">%s</div><div class="legend">%s<span><i style="background:var(--ok)"></i>opened</span>'
-        '<span><i style="background:var(--hi)"></i>you are here</span></div>%s%s</figure>%s</section>' % (
+        '<section class="sec" id="flow"><h2 data-name="%s">%s</h2><p class="lead">%s</p>%s%s</section>' % (
             esc(spec.get("flow_title", "The flow")), esc(spec.get("flow_title", "The flow")),
-            il(spec.get("flow_lead", "Click a step to open it. Each step ends with Back, Previous and Next.")),
-            arrows if has_al else "", chart_svg(spec), phone_chart(spec), legend, "<figcaption>%s</figcaption>" % "<br>".join(il(c) for c in cap) if cap else "",
-            "" if has_al else arrows,
+            il(spec.get("flow_lead", "Click a step to open it. Each step ends with Back, Previous and Next.")), chart,
             walk_links([("next", "#" + steps[0]["id"], "Start: %s -&gt;" % esc(lbl(0)), None)])))
 
     # One section per step.
@@ -710,6 +888,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("spec")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--revision", choices=("on", "off"), default="on")
     a = ap.parse_args()
     raw = Path(a.spec).read_text(encoding="utf-8")
     bad = [(i, ch) for i, ch in enumerate(raw) if ord(ch) > 126 or (ord(ch) < 32 and ch not in "\n\r\t")]
@@ -721,8 +900,30 @@ def main():
     BASE = Path(a.spec).resolve().parent
     page = build(json.loads(raw))
     page.encode("ascii")  # fails loudly if anything non-ASCII slipped in
-    Path(a.out).write_text(page, encoding="ascii", newline="\n")
+    out = Path(a.out)
+    out.write_text(page, encoding="ascii", newline="\n")
+    if a.revision == "on":
+        # Revision mode on by default: stamp data-rev ids and inline the vendored runtime (walk/revision/).
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("revision", HERE / "revision" / "revision.py")
+        revision = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(revision)
+        original_html, page, _, inject_notes, _ = revision.inject_page(out, "on", Path(a.spec).name)
+        for inject_note in inject_notes:
+            print(inject_note)
+        text_diff_offset = revision.compare_content_text(original_html, page)
+        if text_diff_offset is not None:
+            sys.exit("TEXT DIFF: %d" % text_diff_offset)
+        page.encode("ascii")
+        out.write_text(page, encoding="ascii", newline="\n")
     print("walk-build: wrote %s (%d bytes, %d steps)" % (a.out, len(page), len(json.loads(raw)["steps"])))
+    # Keep every build: each edit round the reader sees stays as its own page and spec in _versions/.
+    vdir = out.resolve().parent / "_versions"
+    vdir.mkdir(exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    shutil.copyfile(out, vdir / ("%s-%s.html" % (out.stem, stamp)))
+    shutil.copyfile(a.spec, vdir / ("%s-%s.walk.json" % (out.stem, stamp)))
+    print("walk-build: kept this round as _versions/%s-%s.html" % (out.stem, stamp))
 
 
 if __name__ == "__main__":

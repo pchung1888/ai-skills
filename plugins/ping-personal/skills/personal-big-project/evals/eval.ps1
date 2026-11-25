@@ -20,7 +20,7 @@ $Agents   = Join-Path $SkillDir '../../agents'
 # Rules that must stay in SKILL.md. Shared by the real check and its calibration mutation.
 $Invariants = @(
     'model: inherit',                        # coordinator runs at the user's session tier, never pinned down
-    'disable-model-invocation: true',        # starts unattended work: only the user may start it
+    'disable-model-invocation: false',       # the session can start it when the user's request names the skill
     'It must be Opus',                       # coordinator model gate
     'Ask only while the user is present',        # questions at the door, never after
     'Pass comes only from the done command', # no trust in agent claims
@@ -51,7 +51,11 @@ $Invariants = @(
     'finalReview: true',                     # two-axis final review, never merged
     'Transcript sample for the retro',       # retro reads raw transcripts, not only self-reports
     'references/glossary.md',                # one vocabulary for owner and agents
-    'interview them in rounds',             # dependency-graph rounds with recommended answers
+    'one decision per turn',                 # dependency-ordered questions, one at a time, each with a default
+    'tested in a real browser',              # UI passes only in headless Chromium, never on stubs
+    'proof/<task id>/',                      # UI checks save a screenshot or trace that check_run verifies
+    'under "Deliverable"',                   # first-run test, manifest and folder contract settled at the door
+    'record add-stage',                      # judge fix and unforeseen stages run through run_state.py
     'real downstream chain',                 # the done command proves the change end to end
     'scripts/log_row.py',                    # log rows and side effects go through one script
     'Report shape'                           # the user picks the report interval and shape at start
@@ -66,6 +70,13 @@ $Invariants = @(
     'the closing ask',                       # the owner score is asked before close, not left to retro mode
     'scorecard.py trend',                    # improve mode starts from the scored trend
     'is improved in THAT skill'              # complaints route to the skill at fault
+    'scripts/timeline.py'                    # TIMELINE.md is a script output, rebuilt every tick
+    'scripts/box_health.ps1'                 # the box is watched like the quota, read-only
+    'A stop rule is overridden only by a vote' # the coordinator never overrides a stop rule alone
+    'plan_to_stage.py'                       # stage specs come from the plan table, not by hand
+    '"expect": "fail"'                       # RED tasks have their own check type
+    'log_row.py report'                      # reports are checked and saved before they are posted
+    'table-fresh'                            # a frozen task table fails the run check
 )
 function Get-Missing([string]$text) {
     @($Invariants | Where-Object { -not $text.Contains($_) })
@@ -120,7 +131,7 @@ $tests = @(
     @{
         Name = 'python self-tests: run_state transitions, check_run fail-closed, retro_metrics parsing'
         Run = {
-            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'), @('test_log_row.py', 'LOG ROW TEST PASS'), @('test_scorecard.py', 'SCORECARD TEST PASS'))) {
+            foreach ($t in @(@('test_run_state.py', 'RUN STATE TEST PASS'), @('test_check_run.py', 'CHECK RUN TEST PASS'), @('test_retro_metrics.py', 'RETRO METRICS TEST PASS'), @('test_log_row.py', 'LOG ROW TEST PASS'), @('test_scorecard.py', 'SCORECARD TEST PASS'), @('test_box_health.py', 'BOX HEALTH TEST PASS'), @('test_timeline.py', 'TIMELINE TEST PASS'), @('test_run_check.py', 'RUN CHECK TEST PASS'), @('test_plan_to_stage.py', 'PLAN TO STAGE TEST PASS'), @('test_check_answers.py', 'CHECK ANSWERS TEST PASS'))) {
                 $out = (python (Join-Path $PSScriptRoot $t[0]) 2>&1) -join "`n"
                 if ($LASTEXITCODE -ne 0 -or $out -notmatch [regex]::Escape($t[1])) { throw "$($t[0]):`n$out" }
             }
@@ -218,6 +229,16 @@ $tests = @(
         }
     },
     @{
+        # Measured floor: about 150K per agent on a recent build run; a lower default makes every cost estimate too small.
+        Name = 'cost_floor: pre-flight check 13 default tokens per agent is at least 120K'
+        Run = {
+            $pf = Get-Content (Join-Path $SkillDir 'references/pre-flight.md') -Raw
+            $m = [regex]::Match($pf, 'without one, (\d+)K to (\d+)K')
+            if (-not $m.Success) { throw 'pre-flight check 13 lost its "without one, <low>K to <high>K" default' }
+            if ([int]$m.Groups[1].Value -lt 120) { throw "pre-flight per-agent default starts at $($m.Groups[1].Value)K; measured runs cost about 150K" }
+        }
+    }
+    ,@{
         Name = 'reviewed_sha_rule: SKILL.md carries the literal Reviewed: <sha>'
         Run = {
             if (-not (Get-Content $Skill -Raw).Contains('Reviewed: <sha>')) { throw 'SKILL.md lost the literal Reviewed: <sha>' }

@@ -132,7 +132,7 @@ The Storm Research pipeline with firecrawl as the fetch layer.
 
 ## Codex runtime note
 
-On Codex (skills shared via ~/.agents/skills junctions) there is no Claude
+On Codex there is no Claude
 Agent tool: run storm lenses and verifiers sequentially in one context, keep
 every other step identical. See runtime-compatibility.md at the plugin root.
 

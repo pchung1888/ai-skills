@@ -72,8 +72,13 @@ every step here). Templates live in `references/templates/`.
    pwsh plugins/ping-personal/evals/run-all.ps1                 # the whole suite -> ALL EVALS PASS
    ```
    Quote the output; never claim PASS without it.
-10. **Iterate by the loop:** pin a baseline, change ONE lever, rerun the SAME cases, compare
-    per-case deltas, lock every new regression as a fixture. Never claim improvement from vibes.
+10. **Iterate by the loop, and prove the gain.** Freeze the baseline (the cases and the old skill's
+    outputs) before the skill changes. Grade against an oracle the skill under test does not control
+    (the old system, a reference output), never against the skill's own rules: a wrong rule cannot
+    fail an eval that grades rule-following. Keep rubrics, expected answers, answer-bearing memory
+    and uncommitted answer files out of the runner's reach. The old skill must fail some cases
+    first; a RED that passes means the case gives the answer away. Then change ONE lever, rerun the
+    SAME cases, compare per-case deltas, and lock every new regression as a fixture.
 11. **Write trigger cases** (prompts that should fire the skill, prompts that should stay quiet) from
     `references/templates/trigger-cases-template.md`, then run `python lib/collision_check.py` to see
     which descriptions overlap (report only, never fails).
@@ -126,7 +131,7 @@ every step here). Templates live in `references/templates/`.
 
 | Excuse | Why it is wrong | Do instead | Source |
 |---|---|---|---|
-| "Loosen the grader so it goes green" | A red grader with a real cause is a finding | Surface the bug, keep the grader | `plugins/ping-personal/skills/personal-create-eval/SKILL.md` Honesty bullet |
+| "Loosen the grader or lower the pass mark so it goes green" | A red grader with a real cause is a finding; an agent once lowered a pass mark from 7 to 4 | Surface the bug, keep the grader; only the user changes a pass mark | `plugins/ping-personal/skills/personal-create-eval/SKILL.md` Honesty bullet |
 | "Re-implement the target's test suite" | Two suites drift apart | Invoke the existing suite from the eval | `plugins/ping-personal/skills/personal-create-eval/SKILL.md` Wrap, don't duplicate |
 | "A broken script is harmless in an eval" | One reached the real API | Mutation-run the eval and stub the network | `plugins/ping-personal/skills/personal-create-eval/references/how-to-create-an-eval.md` line 511 |
 

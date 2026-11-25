@@ -45,6 +45,37 @@ $tests = @(
             python $Smoke *> $null
             if ($LASTEXITCODE -ne 0) { throw "wrapped smoke suite failed (exit $LASTEXITCODE) -- run python tests/smoke.py to see which layer" }
         }
+    },
+    @{
+        Name = 'table_zebra_rows: arc and midnight stripe every other table row, with --arc-row-alt set for light, midnight and Night mode'
+        Run = {
+            foreach ($t in @('arc', 'midnight')) {
+                $css = Get-Content (Join-Path $SkillDir "themes/$t/tokens.css") -Raw
+                if ($css -notmatch 'tbody tr:nth-child\(even\) td \{\s*background: var\(--arc-row-alt\);') { throw "$t tokens.css has no zebra row rule" }
+                if ($css -notmatch '--arc-row-alt: #') { throw "$t tokens.css does not set --arc-row-alt" }
+            }
+            $night = Get-Content (Join-Path $SkillDir 'themes/arc/interactive.css') -Raw
+            if ($night -notmatch ':root\[data-theme="dark"\] \{[^}]*--arc-row-alt: #') { throw "Night mode does not set --arc-row-alt" }
+        }
+    },
+    @{
+        Name = 'revision_py_tests: tests/test_revision.py prints REVISION PY TESTS PASS'
+        Run = {
+            $out = python (Join-Path $SkillDir 'tests/test_revision.py') InjectTests ExtractTests CarryTests ReportTests CssTests VendorTests 2>&1 | Out-String
+            if ($out -notmatch 'REVISION PY TESTS PASS') { throw "revision python tests did not pass: $($out.Trim().Split("`n")[-1])" }
+        }
+    },
+    @{
+        Name = 'revision_gates: run-gates.mjs selected steps print SELECTED REVISION STEPS PASS (SKIPPED when Playwright is missing)'
+        Run = {
+            # NODE_PATH must hold a node_modules folder with playwright. Example: D:/tools/node_modules
+            if (-not $env:NODE_PATH) { $env:NODE_PATH = 'D:/playground/gstack/gstack/node_modules' }
+            $pw = $env:NODE_PATH.Split(';') | Where-Object { $_ -and (Test-Path (Join-Path $_ 'playwright')) } | Select-Object -First 1
+            if (-not $pw -or -not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Host 'SKIPPED revision_gates: node or Playwright not found (set NODE_PATH)' -ForegroundColor Yellow; return }
+            $steps = 'mount,idparity,oldpage,newpage,rc-kinds,rc-inner,rc-shift,postit,persist,save-file,toc,panel,comments,roundtrip,roundtrip-fail,place-click,place-drag,measure'
+            $out = node (Join-Path $SkillDir 'evals/revision/run-gates.mjs') --steps $steps 2>&1 | Out-String
+            if ($out -notmatch 'SELECTED REVISION STEPS PASS') { throw "revision gates failed: $($out.Trim().Split("`n")[-1])" }
+        }
     }
 )
 

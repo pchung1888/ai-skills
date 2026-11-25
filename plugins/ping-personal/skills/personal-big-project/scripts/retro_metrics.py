@@ -160,15 +160,18 @@ def metrics_json(state, journal_dirs, transcript):
     fb_path = os.path.join(state, "log", "owner-feedback.md")
     fb = [r for r in statefiles.table_rows(fb_path) if len(r) >= 6] if os.path.exists(fb_path) else None
     count = (lambda cls: sum(1 for r in fb if r[1] == cls)) if fb is not None else (lambda cls: None)
-    score = next((int(r[4]) for r in reversed(fb or []) if r[1] == "score" and r[4].strip() in "12345" and r[4].strip()), None)
-    add("ownerScore", score, "1-5", "log/owner-feedback.md score row")
+    # The first score row is this run's: a repair or follow-up run in the same folder logs its score after it.
+    scores = [int(r[4]) for r in fb or [] if r[1] == "score" and r[4].strip() in "12345" and r[4].strip()]
+    add("ownerScore", scores[0] if scores else None, "1-5",
+        "log/owner-feedback.md first score row" + (f" ({len(scores)} score rows; later ones are other runs)" if len(scores) > 1 else ""))
 
     run_state = statefiles.read_json_safe(os.path.join(state, "run-state.json"))
     run_state = run_state if isinstance(run_state, dict) else {}
     verdict = str(run_state.get("verdict") or "")
     found = re.search(r"(\d+) deferred", verdict)
     add("verdict", ("all" if found and found.group(1) == "0" else "deferred") if verdict.startswith("PASS")
-        else "stopped" if verdict.startswith("STOPPED") else None, "", "run-state.json verdict")
+        else "failed" if verdict.startswith("FAIL") else "stopped" if verdict.startswith("STOPPED") else None, "",
+        "run-state.json verdict")
     tasks = [t for s in run_state.get("stages") or [] for t in (s.get("tasks") or {}).values() if isinstance(t, dict)]
     owner_deferred = sum(1 for t in tasks if t.get("outcome") == "deferred" and t.get("deferredBy") == "owner")
     passed = sum(1 for t in tasks if t.get("outcome") == "passed")

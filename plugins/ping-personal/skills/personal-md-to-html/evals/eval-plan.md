@@ -41,6 +41,8 @@ input must produce byte-stable canonical HTML (golden render-diff against
 - `scripts_present`: md-to-html.py and md-to-html-check.py exist.
 - `smoke_suite_passes`: runs `python tests/smoke.py`; requires exit 0 (the bulk
   grader -- validator self-test, golden render-diff, 6 negative tests).
+- `revision_py_tests`: runs `python tests/test_revision.py InjectTests ExtractTests CarryTests ReportTests CssTests VendorTests`; requires `REVISION PY TESTS PASS`.
+- `revision_gates`: runs `node evals/revision/run-gates.mjs --steps <every step except client-text and client-pins>`; requires `SELECTED REVISION STEPS PASS`. Prints SKIPPED with the reason when node or Playwright is missing.
 
 ### Model Judge (`judge-rubric.md`, added Phase 4)
 

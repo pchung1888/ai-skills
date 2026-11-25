@@ -41,7 +41,7 @@ $tests = @(
         Run = {
             Assert-Has (Get-Content $Skill -Raw) @('**Research first.**', 'personal-online-research',
                 'the date checked', '**Check the ask.**', '**Term check.**', '**Status check.**',
-                '**Counter-option.**', '**The counter-option prompt.**', 'Did you mean Y?', 'personal-grill-me', 'with docs',
+                '**Counter-option.**', '**Blind-spot sweep.**', '**The counter-option prompt.**', 'Did you mean Y?', 'personal-grill-me', 'with docs',
                 'vendor or primary-doc URL', 'add asks to the main prompt', 'unverified list',
                 'never skip it', 'Tool and method names stay in the main answer')
         }
@@ -60,13 +60,14 @@ $tests = @(
         }
     },
     @{
-        Name = 'metric_files: rubric with C1-C8 and at least 9 fixtures'
+        Name = 'metric_files: rubric with C1-C9, at least 10 fixtures, one with Expected blind spots'
         Run = {
             $r = Get-Content (Join-Path $PSScriptRoot 'judge-rubric.md') -Raw
-            foreach ($c in 1..8) { if ($r -notmatch "\| C$c \|") { throw "rubric lost C$c" } }
+            foreach ($c in 1..9) { if ($r -notmatch "\| C$c \|") { throw "rubric lost C$c" } }
             $q = Get-Content (Join-Path $PSScriptRoot 'fixtures\questions.md') -Raw
             $n = ([regex]::Matches($q, '(?m)^## F\d+')).Count
-            if ($n -lt 9) { throw "only $n fixtures" }
+            if ($n -lt 10) { throw "only $n fixtures" }
+            if ($q -notmatch 'Expected blind spots \(C9\)') { throw 'no fixture lists Expected blind spots (C9)' }
         }
     }
 )

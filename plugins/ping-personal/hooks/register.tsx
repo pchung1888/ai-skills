@@ -13,7 +13,7 @@ export const register: Register = on => {
   // Composes: our rows above whatever the hooks beneath draw, so other mods' band content still shows.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
-    // Other plugins' notes (you-should-know) draw first, so a note never scrolls out of view below the band.
+    // next(e) is core's own drawing of this row; other plugins' rows are ordered by the AbovePromptList hook below.
     const below = await next(e), other = hasContent(below)
     const rows = await bandRows($, e)
     if (!rows) return below
@@ -23,6 +23,13 @@ export const register: Register = on => {
     if (!other) return ours
     const { Box } = ui
     return <Box key="hudwrap" flexDirection="column">{below}{ours}</Box>
+  })
+  // Each plugin draws its own band row and core stacks them in chain order, so next(e) above never holds another
+  // mod's note. Move the other plugins' rows above ours, so a note never scrolls out of view below the band.
+  on('ui.render', { component: 'AbovePromptList' }, ($, e, next) => {
+    const mine = (r: { plugin: string }) => r.plugin === 'ping-personal'
+    const rows = e.props.rows
+    return next({ ...e, props: { ...e.props, rows: [...rows.filter(r => !mine(r)), ...rows.filter(mine)] } })
   })
   // The band is hidden while a question form is open. The question call gets an explain option, so every surface
   // draws it; picking it explains the questions in the Explanation pane and tells the model to ask them again.

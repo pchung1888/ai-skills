@@ -44,6 +44,8 @@ function Invoke-WalkBuild([string]$spec, [string]$out) {
     $o = (python (Join-Path $WalkDir 'walk-build.py') $spec --out $out 2>&1 | Out-String)
     return [pscustomobject]@{ Code = $LASTEXITCODE; Out = $o }
 }
+# Read a built page as text with the data-rev-id stamps removed (same regex as walk-check.py), so exact-tag checks see the page as authored.
+function Read-WalkPageText([string]$page) { return [regex]::Replace([IO.File]::ReadAllText($page), ' data-rev-id="[^"]*"', '') }
 function Invoke-WalkCheck([string]$page, [string]$spec) {
     $o = (python (Join-Path $WalkDir 'walk-check.py') $page --spec $spec 2>&1 | Out-String)
     return [pscustomobject]@{ Code = $LASTEXITCODE; Out = $o }
@@ -58,7 +60,7 @@ function Assert-WalkRuleFails([string]$rule, [string]$from = '', [string]$to = '
         $b = Invoke-WalkBuild $spec $page
         if ($b.Code -ne 0) { throw "walk-build failed on the patched spec (exit $($b.Code)): $($b.Out)" }
         if ($editHtml) {
-            $h = [IO.File]::ReadAllText($page)
+            $h = (Read-WalkPageText $page)
             $h2 = & $editHtml $h
             if ($h2 -ceq $h) { throw "HTML edit changed nothing" }
             [IO.File]::WriteAllText($page, $h2, [Text.UTF8Encoding]::new($false))
@@ -106,7 +108,7 @@ function Get-WalkPage([string]$from = '', [string]$to = '') {
         $page = Join-Path $d 'page.html'
         $b = Invoke-WalkBuild $spec $page
         if ($b.Code -ne 0) { throw "walk-build failed on the patched spec (exit $($b.Code)): $($b.Out)" }
-        return [IO.File]::ReadAllText($page)
+        return (Read-WalkPageText $page)
     }
     finally { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
 }
@@ -118,7 +120,7 @@ function Get-WalkRuleLineEdited([string]$rule, [scriptblock]$editHtml) {
         $page = Join-Path $d 'page.html'
         $b = Invoke-WalkBuild $spec $page
         if ($b.Code -ne 0) { throw "walk-build failed (exit $($b.Code)): $($b.Out)" }
-        $h = [IO.File]::ReadAllText($page)
+        $h = (Read-WalkPageText $page)
         $h2 = & $editHtml $h
         if ($h2 -ceq $h) { throw "HTML edit changed nothing" }
         [IO.File]::WriteAllText($page, $h2, [Text.UTF8Encoding]::new($false))
@@ -836,6 +838,106 @@ $tests = @(
             }
             if ($s -notmatch [regex]::Escape('references/walk-page.md')) { throw "SKILL.md does not point at references/walk-page.md" }
             if ($n -notmatch [regex]::Escape('references/walk-page.md')) { throw "now.md does not point at references/walk-page.md" }
+        }
+    },
+    @{
+        Name = 'walk_table_zebra: the built page stripes table rows per theme; without the rule table-zebra FAILs'
+        Run = { Assert-WalkRuleFails 'table-zebra' -editHtml { param($h) $h.Replace('tbody tr:nth-child(even){background:var(--row-alt)}', '') } }
+    },
+    @{
+        Name = 'walk_answers_saved: walk.js saves and restores answers; a page without save("answers" FAILs answers-saved'
+        Run = {
+            $j = [IO.File]::ReadAllText($WalkJs)
+            if ($j -notmatch 'var A0=load\("answers",\{\}\)') { throw "walk.js does not restore saved answers on load" }
+            if ($j -notmatch 'addEventListener\("input",function\(\)\{count\(\);saveAns\(\)\}\)') { throw "typed answers are not saved on input" }
+            Assert-WalkRuleFails 'answers-saved' -editHtml { param($h) $h.Replace('save("answers"', 'save("answerz"') }
+        }
+    },
+    @{
+        Name = 'walk_build_rejects_bad_path: path data "M12748V1014" (a missing space) makes walk-build exit non-zero naming malformed path data'
+        Run = { Assert-WalkBuildRejects '"svg_file": {"file": "strangler.svg"' '"svg": {"svg": "<svg viewBox=\"0 0 10 10\"><path d=\"M12748V1014\"/></svg>"' 'malformed path data' }
+    },
+    @{
+        Name = 'walk_versions_kept: each build copies the page and spec into _versions next to the page'
+        Run = {
+            $d = New-WalkTmp
+            try {
+                $spec = Write-WalkSpec $d
+                $b = Invoke-WalkBuild $spec (Join-Path $d 'page.html')
+                if ($b.Code -ne 0) { throw "walk-build failed (exit $($b.Code)): $($b.Out)" }
+                $v = Join-Path $d '_versions'
+                if (-not @(Get-ChildItem $v -Filter 'page-*.html' -ErrorAction SilentlyContinue).Count) { throw "no _versions/page-*.html after a build" }
+                if (-not @(Get-ChildItem $v -Filter 'page-*.walk.json' -ErrorAction SilentlyContinue).Count) { throw "no _versions/page-*.walk.json after a build" }
+            }
+            finally { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+    },
+    @{
+        Name = 'walk_stale_terms: a stale term still in the spec or an svg stops the build; an absent one builds'
+        Run = {
+            Assert-WalkBuildRejects '"key": "proj824-phase0",' '"key": "proj824-phase0", "stale_terms": ["Decisions to record"],' 'stale term still present.*in the spec'
+            Assert-WalkBuildRejects '"key": "proj824-phase0",' '"key": "proj824-phase0", "stale_terms": ["System Settings"],' 'stale term still present.*strangler\.svg'
+            $null = Get-WalkPage '"key": "proj824-phase0",' '"key": "proj824-phase0", "stale_terms": ["no such words anywhere"],'
+        }
+    },
+    @{
+        Name = 'walk_swimlane: a swimlane block draws lanes, a gate and a loop-back arrow, passes every must rule, and bad lane or back numbers are refused'
+        Run = {
+            $from = '"svg_file": {"file": "strangler.svg", "caption": "Old and new run side by side. System Settings decides per feature, and switching back loses no data."}'
+            $sl = '"swimlane": {"label": "Who builds one feature set", "lanes": ["PM", "Dev with Claude", "QA"], "steps": [{"lane": 0, "text": "Pick the feature"}, {"lane": 1, "text": "Implementation", "hi": true}, {"lane": 2, "text": "QA test", "gate": true, "back": 2, "back_label": "bug"}]}'
+            $h = Get-WalkPage $from $sl
+            foreach ($k in @('id="wb-sl0-ah"', 'id="wb-sl0-back"', 'stroke:var(--warn);stroke-width:3', 'stroke-dasharray:6 4', 'stroke:var(--hi);stroke-width:3', 'Dashed red arrows show where work goes back.')) {
+                if ($h -notmatch [regex]::Escape($k)) { throw "swimlane page lacks $k" }
+            }
+            $l = Get-WalkRuleLine 'svg-text-fits' $from $sl
+            if ($l -notmatch '^PASS') { throw "swimlane labels overflow their boxes: $l" }
+            Assert-WalkBuildRejects $from $sl.Replace('{"lane": 2, "text": "QA test"', '{"lane": 5, "text": "QA test"') 'steps\[2\]\.lane must be'
+            Assert-WalkBuildRejects $from $sl.Replace('"back": 2', '"back": 3') 'steps\[2\]\.back must be the number of an earlier step'
+        }
+    },
+    @{
+        Name = 'walk_flow_visual: flow_visual leads the flow section, the step chart folds into a Step map, walk-check passes, and Back unfolds it'
+        Run = {
+            $d = New-WalkTmp
+            try {
+                [IO.File]::WriteAllText((Join-Path $d 'roadmap.svg'), '<svg viewBox="0 0 700 120" role="img" aria-label="Releases in order"><rect id="rm-a" x="10" y="10" width="200" height="40" style="fill:var(--a-soft)"/></svg>')
+                $spec = Write-WalkSpec $d '"key": "proj824-phase0",' '"key": "proj824-phase0", "flow_visual": {"svg_file": "roadmap.svg", "caption": "The roadmap at a glance."},'
+                $page = Join-Path $d 'page.html'
+                $b = Invoke-WalkBuild $spec $page
+                if ($b.Code -ne 0) { throw "walk-build failed (exit $($b.Code)): $($b.Out)" }
+                $h = (Read-WalkPageText $page)
+                $flow = [regex]::Match($h, 'id="flow".*?</section>', 'Singleline').Value
+                $iv, $im = $flow.IndexOf('aria-label="Releases in order"'), $flow.IndexOf('<details class="stepmap">')
+                if ($iv -lt 0 -or $im -lt 0 -or $iv -gt $im) { throw "flow_visual is not ahead of the folded step map" }
+                if ($flow -notmatch '<details class="stepmap">.*id="box-s1"') { throw "the step chart boxes are not inside the step map" }
+                $c = Invoke-WalkCheck $page $spec
+                if ($c.Code -ne 0) { throw "walk-check rejected the flow_visual page: $($c.Out)" }
+            }
+            finally { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
+            $j = [IO.File]::ReadAllText($WalkJs)
+            if ($j -notmatch 'el\.closest\("details:not\(\[open\]\)"\);if\(shut\)shut\.open=true') { throw "goTo does not unfold a closed step map" }
+        }
+    },
+    @{
+        Name = 'walk_svg_text_fits: a label longer than its box is a MISS on svg-text-fits; the good fixture PASSes'
+        Run = {
+            $l = Get-WalkRuleLine 'svg-text-fits'
+            if ($l -notmatch '^PASS') { throw "good fixture flagged: $l" }
+            $bad = '"svg": {"svg": "<svg viewBox=\"0 0 600 100\" role=\"img\" aria-label=\"tiny box test\"><rect x=\"10\" y=\"10\" width=\"40\" height=\"30\"/><text x=\"14\" y=\"30\" style=\"font-family:var(--sans);font-size:15px\">A much too long label here</text></svg>"'
+            $l = Get-WalkRuleLine 'svg-text-fits' '"svg_file": {"file": "strangler.svg"' $bad
+            if ($l -notmatch '^MISS.*A much too long label') { throw "overflowing label not flagged: $l" }
+        }
+    },
+    @{
+        Name = 'visuals_catalog_wired: references/visuals.md exists, holds the chart and table catalogs, and SKILL.md, now.md and walk-page.md point at it'
+        Run = {
+            $v = Join-Path $Refs 'visuals.md'
+            if (-not (Test-Path $v)) { throw "references/visuals.md missing" }
+            $t = Get-Content $v -Raw
+            foreach ($k in @('## Charts', '## Tables', 'Swimlane', 'Risk with its fix', 'zebra')) { if ($t -notmatch [regex]::Escape($k)) { throw "visuals.md lacks $k" } }
+            foreach ($f in @($Skill, (Join-Path $Refs 'now.md'), (Join-Path $Refs 'walk-page.md'))) {
+                if ((Get-Content $f -Raw) -notmatch [regex]::Escape('references/visuals.md')) { throw "$f does not point at references/visuals.md" }
+            }
         }
     }
 )

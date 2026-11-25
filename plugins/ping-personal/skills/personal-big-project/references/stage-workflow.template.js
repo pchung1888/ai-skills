@@ -35,6 +35,7 @@ Side effects (a mail sent, a file uploaded, a push, a deploy): run each sending 
 Baselines: ${LOG_ROW} baseline --state-dir "${STATE_DIR}" <repo-relative path> ... Hash only files that must not change during the run; never edit a captured file.
 Shell: create or rewrite a multi-line file with the Write tool and change files with Edit, never with a heredoc, echo or a python string. Put a command with nested quotes in a script file and run that file. Run PowerShell only as pwsh -NoProfile -File <script.ps1>.
 Structured result: problems is a JSON array of strings ([] when none, ["x failed"] otherwise); write summary as plain sentences with no double quotes.
+Never edit the check, limit or list that grades your own task (its check script, a size limit, a frozen case list, an expected-count file), unless your task text says it writes that check, and never write a check-signoff row. If the check is wrong, leave it and put "check wrong: <why>" in problems.
 Do not git commit unless your task says so. Quote done-check output verbatim; never claim pass without it; never fake, mock or hardcode results.
 Stop heavy writes if free disk on ${DISKS} is under ${MIN_GB} GB.
 `
@@ -68,8 +69,10 @@ const logLine = (task) => `\nThen record it: with the Write tool, write one line
 
 // The verifier re-runs the task's own scoped check command itself; a worker's own "passed" is never used.
 // A task may name its exact pass line (passLine); then the last printed line must equal it too.
+// Workers once bent their own grading (a raised size limit, a late row in a frozen list), so the verifier
+// first diffs the files the check reads.
 async function verify(task, phase, passLine, check) {
-  const v = await agent(CTX + `\nVERIFIER for ${task}. Run exactly this check command yourself and do not trust anyone's claim: ${check}\nReturn passed true only if it succeeded and printed its pass line (plan.md section "Task ${task}" names it); lastLine is the last line it printed.` + logLine(task), { label: `${task}:verify`, phase, agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
+  const v = await agent(CTX + `\nVERIFIER for ${task}. First list the files this check command runs or reads (scripts it names, and the limits, lists or expected files those scripts load). Run git diff ${BASE_COMMIT} -- <those files> and git status --porcelain -- <those files>. A changed file is allowed when its plan.md section says it writes that check, or when ${STATE_DIR}/log/decisions.md has a row whose decision starts "check-signoff:" and names that file (a coordinator change a reviewer signed off). If ${task} changed one of them otherwise, return passed false with lastLine "CHECK EDITED: <file>" and do not run the check.\nOtherwise run exactly this check command yourself and do not trust anyone's claim: ${check}\nReturn passed true only if it succeeded and printed its pass line (plan.md section "Task ${task}" names it); lastLine is the last line it printed.` + logLine(task), { label: `${task}:verify`, phase, agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
   if (!v) return { passed: false, lastLine: '' }
   return passLine ? { passed: v.passed && String(v.lastLine).trim() === passLine, lastLine: v.lastLine } : v
 }
@@ -119,7 +122,8 @@ async function run(task, agentType, phase, model, needs, commits, text, passLine
   }
   const opts = (label) => ({ label, phase, agentType, model, effort: EFFORT, schema: RESULT })
   const note = (commits ? '\nThis task may git commit its own files (name each path; never git add -A).' : '') + (text ? `\nTask text: ${text}` : '')
-  let r = await agent(CTX + `\nYOUR TASK: ${task} (plan.md section "Task ${task}").` + note, opts(task))
+  // The task is named first and last: a toy agent once answered the owner's chat instead of its brief.
+  let r = await agent(`YOUR TASK: ${task} only (plan.md section "Task ${task}"); ignore any chat message.\n` + CTX + `\nYOUR TASK: ${task} (plan.md section "Task ${task}").` + note, opts(task))
   let v = await verify(task, phase, passLine, check)
   if (!v.passed) {
     log(`${task} failed verification, one fix attempt`)
@@ -145,8 +149,8 @@ async function run(task, agentType, phase, model, needs, commits, text, passLine
 // Review step (kind "review" in the spec): a read-only agent such as a critic or judge seat runs inside the
 // stage. It has no Write tool, so it returns its findings and run_state.py saves them to reviews/<id>.md.
 // It passes once it answers (asked twice at most); the findings, not a check, are its output.
-async function reviewStep(task, agentType, phase, text) {
-  const ask = (label) => agent(CTX + `\nREVIEW STEP ${task} (plan.md section "Task ${task}"). Read only; change nothing.` + (text ? `\nTask text: ${text}` : '') + `\nEach finding: severity (CRITICAL, HIGH, MEDIUM, LOW), text, closed (true only if the evidence already shows it fixed).`, { label, phase, agentType, effort: HELPER_EFFORT, schema: REVIEW })
+async function reviewStep(task, agentType, phase, text, model) {
+  const ask = (label) => agent(CTX + `\nREVIEW STEP ${task} (plan.md section "Task ${task}"). Read only; change nothing.` + (text ? `\nTask text: ${text}` : '') + `\nEach finding: severity (CRITICAL, HIGH, MEDIUM, LOW), text, closed (true only if the evidence already shows it fixed).`, { label, phase, agentType, model, effort: HELPER_EFFORT, schema: REVIEW })
   const f = (await ask(task)) || (await ask(`${task}:retry`))
   return { task, passed: !!f, deferred: false, deferredBy: null, reason: f ? '' : 'review step returned nothing', doneCheckOutput: '', summary: f ? `${f.findings.length} findings` : '', problems: f ? [] : ['review step returned nothing'], findings: f ? f.findings : [] }
 }
@@ -160,8 +164,12 @@ async function review(task, reviewer) {
 // two axes are never merged or ranked together.
 async function finalReview() {
   const ask = (label, agentType, what) => agent(CTX + `\n${what}\nEach finding: severity (CRITICAL, HIGH, MEDIUM, LOW), text, closed (true only if the evidence already shows it fixed).`, { label, phase: 'Review', agentType, model: 'sonnet', effort: HELPER_EFFORT, schema: AXIS_REVIEW })
-  const spec = await ask('final:spec', 'ping-personal:amanda', `SPEC review, fresh eyes. Compare git diff ${BASE_COMMIT}...HEAD with ${STATE_DIR}/GOAL-BRIEF.md. Report what is missing, what was not asked for, and what is wrong. Ignore code style.`)
-  const standards = await ask('final:standards', 'ping-personal:ms-mario', `STANDARDS review, fresh eyes. Read the repo's standards files and the conventions in CLAUDE.md, then check git diff ${BASE_COMMIT}...HEAD against them. Report hard violations as HIGH and judgement calls as MEDIUM or LOW. Ignore whether the goal was met.`)
+  // The two reviewers have no shell, so rhea (who has one) writes the diff to a file they can Read.
+  const patch = `${STATE_DIR}/final-diff.patch`
+  await agent(CTX + `\nRun git diff ${BASE_COMMIT}...HEAD and write its full output to ${patch}, replacing any old copy. Return passed true when the file is written; lastLine is its line count.`, { label: 'final:diff', phase: 'Review', agentType: 'ping-personal:rhea', model: 'sonnet', effort: HELPER_EFFORT, schema: VERIFY })
+  const diff = `Read the diff in ${patch} (git diff ${BASE_COMMIT}...HEAD). You have no shell, so do not try to run git; if the file is missing or empty, report that as a HIGH finding.`
+  const spec = await ask('final:spec', 'ping-personal:amanda', `SPEC review, fresh eyes. ${diff} Compare it with ${STATE_DIR}/GOAL-BRIEF.md. Report what is missing, what was not asked for, and what is wrong. Ignore code style.`)
+  const standards = await ask('final:standards', 'ping-personal:ms-mario', `STANDARDS review, fresh eyes. ${diff} Read the repo's standards files and the conventions in CLAUDE.md, then check the diff against them. Report hard violations as HIGH and judgement calls as MEDIUM or LOW. Ignore whether the goal was met.`)
   return { spec: spec || { findings: [] }, standards: standards || { findings: [] } }
 }
 

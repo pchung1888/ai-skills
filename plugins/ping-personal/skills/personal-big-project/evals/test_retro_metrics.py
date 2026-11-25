@@ -40,7 +40,8 @@ def scorecard_case(tmp, talk):
           "| Sat 10-17 01:00 | steer | big-project | - | - | how is it going? |\n"
           "| Sat 10-17 01:45 | score | big-project | - | 4 | score 4 |\n"
           "| Sat 10-17 01:50 | complaint | copilot-talk | report too long | dislike | too long |\n"
-          "| Sat 10-17 01:55 | fix | big-project | release chain untested | - | test the chain |\n")
+          "| Sat 10-17 01:55 | fix | big-project | release chain untested | - | test the chain |\n"
+          "| Sat 10-17 01:58 | score | big-project | - | 2 | the repair run after it gets 2 |\n")  # a later run's score: not this run's
     write(os.path.join(st, "log", "status-log.md"), "| When | What |\n|---|---|\n| Sat 10-17 00:00 | Now rewritten |\n"
           "| Sat 10-17 00:30 | Now rewritten |\n| Sat 10-17 01:30 | Now rewritten |\n")  # largest gap 60 min = 4 ticks of 15
     write(os.path.join(st, "log", "quota-log.md"), "".join(f"| Sat 10-17 0{i}:00 | 10% | 5% | x | WAIT |\n" for i in range(4)))

@@ -307,11 +307,3 @@ IF VALUE LOOKS WRONG: escalate via personal-cs-escalate-to-dev.
 - (Diagnostic SELECT mode) emitting an `EXPECTED:` value that isn't grounded
 - Embedding a literal or fabricated `ts` in the metric line instead of
   reading the system clock at write time
-
-## Length budget
-
-Keep this file's content under ~220 lines. Pure graph-traversal and
-ticket-system-query logic live outside this file -- in `/graphify` /
-`/understand-anything` and `references/ticket-system-search.md`
-respectively. This file is the routing-and-telemetry contract; data tables
-live elsewhere.

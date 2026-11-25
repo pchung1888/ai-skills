@@ -29,6 +29,11 @@ inputs.json (written at start step 1; read by every script). Example:
   report: the report shape the user chose at start. Example: {"everyMin": 15, "style": "copilot", "taskList": true, "ids": true}
          everyMin: tick and report interval, 10, 15, 20, 30 or 60 (default 30); style: "plain" (default) or
          "copilot" (narrated, for short weekday runs); taskList: add the full task list; ids: allow task ids.
+  projectSteps: steps this run adds to every tick, each with its condition (filled into the tick prompt).
+         Example: ["After s1-plan has a RESULT, run personal-critic-judge on plan.md"]
+  effort / reviewEffort: worker effort and critic-judge/code-review effort, asked at the door. Example: "low", "medium"
+  baselineChangesApproved: baselined files the plan must change, approved by the owner at the door.
+         check_run.py accepts their change. Example: ["web/MasterInclude.asp"]
   protectedBranches: branches no agent may push, from pre-flight check 14: the target branch of every open
          review request (pushing to it can merge the request). log_row.py effect --kind push refuses them.
          Example: ["feature/123"]
@@ -42,7 +47,11 @@ Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in para
    "review": "T3", "reviewer": "ping-personal:iris"}
   agent: ping-personal:<x> (agents/<x>.md must exist), general-purpose, Explore or Plan.
          codex:codex-rescue is allowed only as inputs.json domainCritic.
-  model: "worker" (default, uses workerModel) or "inherit" (the session model).
+  model: "worker" (default, uses workerModel), "inherit" (the session model) or "advisor" (inputs.json advisorModel,
+         for a task or a review step that needs a stronger model). Example inputs.json: "advisorModel": "fable"
+  Tool check: a task whose text or plan.md section names "<Tool> tool" (Edit, Bash, Write, WebFetch, WebSearch)
+         that its agent lacks is refused, unless the mention is negated ("never use the Bash tool"): agents once
+         lost 3-16 calls each on tools their brief named but their type did not have.
   needs: task ids that must have passed; ids outside this spec count as already passed (a retry spec).
   commits: true lets the task git commit; the agent's tools line must include Bash.
          Every task agent must have the Write tool (a task always writes its output); ms-mario is a critic seat only.
@@ -51,6 +60,22 @@ Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in para
         <state-dir>/plan.md (example: "## Task T3 - install"), else this fails naming the task.
   check: REQUIRED. The task's own fast, scoped check command (one test file, one script), never the full done
         command. The verifier runs this command. Example: "python -m pytest tests/test_invoice.py -q".
+        A string that chains commands with " ; ", " && ", " || " or a newline is refused: a hand-joined chain
+        hides which part failed and behaves differently in cmd, bash and PowerShell. Give a list instead:
+        "check": ["python -m pytest tests/test_a.py -q", "python tools/lint.py"]. For a list, generate.py writes
+        <state-dir>/checks/<task id>.json and replaces the check with
+        python "<skill>/scripts/run_check.py" "<that json>", and sets passLine to "<id> CHECK PASS".
+        Each command runs in order through the shell (cmd.exe on Windows) and all must exit 0.
+  expect: optional "pass" (default) or "fail". "fail" marks a RED task: its test must FAIL because the code it
+        tests does not exist yet. generate.py then writes the same checks JSON (expect "fail") and sets passLine
+        to "<id> RED PASS"; run_check.py prints that only when every command exits non-zero. A passLine in the
+        spec of a list-check or RED task is refused (generate.py owns it). A plain string check with expect
+        "pass" stays as written.
+        Example: {"id": "T3", "expect": "fail", "redFile": "tests/**/test_invoice.*", "check": "python -m pytest tests/test_invoice.py -q"}
+  redFile: optional, with expect "fail": a glob (relative to the folder the checks run in) that must match a
+        file, so a missing test file cannot pass as RED.
+  ui: optional true or false. check_run.py's ui-browser check reads it: true makes the task a UI task, false
+        opts it out even when its text or check names a .html/.tsx page (review and evidence tasks). Must be a bool.
         Two tasks with the same check (and passLine), or a check equal to stageCheck.command, are refused:
         such a check stays FAIL until the last task is done. sharedCheck: true on both tasks allows it
         when each task alone makes the check pass.
@@ -64,6 +89,8 @@ Stage spec (one per stage). A step is a task, or a list of 1-2 tasks run in para
         "phase": "Judge", "kind": "review", "text": "judge the plan against GOAL-BRIEF.md", "estimateK": 30}
   reviewer: agent for the fresh-eyes review (default ping-personal:iris).
 Per spec (optional):
+  estimateTokens: whole number above 0, the stage's expected total tokens (all agents). run_state.py reads it
+        from the spec file to re-estimate the run after each stage. Only the type is checked here.
   stageCheck: {"command": "<full done command>", "passLine": "<exact last line>"}. After every task, one verifier
         runs the full done command once; the result is returned as stageCheck {passed, lastLine}.
   finalReview: true on the last stage. Replaces review/reviewer with two fresh reviewers run one after the other:
@@ -87,6 +114,7 @@ MAX_PARALLEL = 2  # leaves room for the background reporter so the box never run
 OTHER_AGENTS = ("general-purpose", "Explore", "Plan")  # agents with no file in agents/
 CRITIC_ONLY = ("codex:codex-rescue",)  # allowed as domainCritic, never as a task agent or reviewer
 READ_ONLY_AGENTS = ("Explore", "Plan")  # cannot run git or write files
+CHAINED = re.compile(r" ; | && | \|\| |\n")  # a hand-joined chain of commands in one string
 REPORT_EVERY = (10, 15, 20, 30, 60)  # minutes that divide the hour, so the tick fires at fixed minutes
 
 
@@ -135,6 +163,16 @@ def report_shape(report):
     return ", ".join(words)
 
 
+def project_steps(steps):
+    """inputs.json projectSteps as numbered tick-prompt lines; "   none" when there are none."""
+    if steps in (None, []):
+        return "   none"
+    if not isinstance(steps, list) or not all(isinstance(x, str) and x.strip() for x in steps):
+        fail("inputs.json projectSteps: a list of plain-words steps, each with its condition. "
+             "Example: [\"After s1-plan has a RESULT, run personal-critic-judge on plan.md\"]")
+    return "\n".join(f"   {n}. {' '.join(x.split())}" for n, x in enumerate(steps, 1))
+
+
 def fill(text, values):
     for k, v in values.items():
         text = text.replace(f"<{k}>", str(v))
@@ -164,6 +202,7 @@ def tick(state_dir):
         "GOAL": i["goal"], "STATE_DIR": i["stateDir"], "SESSION_ID": i["sessionId"],
         "QUOTA_PS1": f"{quota_dir}/quota.ps1", "SKILL_DIR": SKILL_DIR.replace("\\", "/"),
         "EVERY": every, "REPORT_SHAPE": report_shape(i["report"]),
+        "PROJECT_STEPS": project_steps(i.get("projectSteps")),
     })
     check_filled(text, "tick prompt")
     write(os.path.join(state_dir, "tick-prompt.txt"), text)
@@ -199,7 +238,82 @@ def has_plan_heading(state_dir, task_id):
     return re.search(rf"^#+ .*Task {re.escape(task_id)}\b", text, re.M) is not None
 
 
-def check_task(t, n, state_dir):
+def refuse_chain(command, task_id):
+    if CHAINED.search(command):
+        fail(f"task {task_id}: the check chains commands with ' ; ', ' && ', ' || ' or a newline; a hand-joined chain "
+             "hides which part failed and behaves differently in cmd, bash and PowerShell. "
+             "Give 'check' as a list of commands instead.")
+
+
+def prepare_check(t, state_dir, write_checks):
+    """List checks and RED tasks run through run_check.py: write <state-dir>/checks/<id>.json (when
+    write_checks) and replace the task's check and passLine. A plain string check with expect pass is left alone."""
+    expect = t.get("expect", "pass")
+    if expect not in ("pass", "fail"):
+        fail(f"task {t['id']}: expect must be 'pass' or 'fail'")
+    if "redFile" in t and not (isinstance(t["redFile"], str) and t["redFile"].strip() and expect == "fail"):
+        fail(f"task {t['id']}: redFile is a non-empty glob string and needs expect: \"fail\"")
+    check = t.get("check")
+    if isinstance(check, list):
+        if not check or not all(isinstance(c, str) and c.strip() for c in check):
+            fail(f"task {t['id']}: a list check holds one or more non-empty command strings")
+        commands = [c.strip() for c in check]
+    elif isinstance(check, str) and check.strip():
+        commands = [check.strip()]
+    else:
+        return  # the missing-check refusal in check_task names it
+    for c in commands:
+        refuse_chain(c, t["id"])
+    if not isinstance(check, list) and expect == "pass":
+        return
+    if "passLine" in t:
+        fail(f"task {t['id']}: a list check or RED task gets its passLine from generate.py; remove passLine")
+    doc = {"task": t["id"], "commands": commands, "expect": expect}
+    if t.get("redFile"):
+        doc["file"] = t["redFile"].strip()
+    path = os.path.abspath(os.path.join(state_dir, "checks", f"{t['id']}.json"))
+    if write_checks:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(doc, f, indent=1)
+    t["_commands"] = commands  # keeps the same-check refusal working after the check text becomes a path
+    t["check"] = f'python "{SKILL_DIR.replace(chr(92), "/")}/scripts/run_check.py" "{path.replace(chr(92), "/")}"'
+    t["passLine"] = f"{t['id']} {'RED' if expect == 'fail' else 'CHECK'} PASS"
+
+
+TOOL_WORDS = re.compile(r"(?<![\w-])(Edit|Bash|Write|WebFetch|WebSearch) tool\b")
+NEGATED = re.compile(r"\b(no|not|never|without|don't|do not)\b[^.;\n]{0,20}$", re.I)
+
+
+def plan_section(state_dir, task_id):
+    """The text under plan.md's 'Task <id>' heading, up to the next heading, or ''."""
+    try:
+        with open(os.path.join(state_dir, "plan.md"), encoding="utf-8-sig") as f:
+            text = f.read()
+    except OSError:
+        return ""
+    m = re.search(rf"^#+ .*Task {re.escape(task_id)}\b.*$", text, re.M)
+    if not m:
+        return ""
+    nxt = re.search(r"^#+ ", text[m.end():], re.M)
+    return text[m.end():m.end() + nxt.start()] if nxt else text[m.end():]
+
+
+def check_tools(t, state_dir):
+    """Refuse a brief that tells the agent to use a tool its type lacks."""
+    if t["agent"] in OTHER_AGENTS and t["agent"] not in READ_ONLY_AGENTS:
+        return
+    tools = "Read, Grep, Glob" if t["agent"] in READ_ONLY_AGENTS else (agent_tools(t["agent"]) or "")
+    if t["agent"] not in READ_ONLY_AGENTS and agent_tools(t["agent"]) is None:
+        return  # no tools line: the agent inherits every tool
+    brief = t.get("text", "") + "\n" + plan_section(state_dir, t["id"])
+    for m in TOOL_WORDS.finditer(brief):
+        if m.group(1) not in tools and not NEGATED.search(brief[max(0, m.start() - 40):m.start()]):
+            fail(f"task {t['id']}: its brief names the {m.group(1)} tool, but agent {t['agent']} has no {m.group(1)} "
+                 "tool; give the task to an agent that has it, or reword the brief")
+
+
+def check_task(t, n, state_dir, write_checks=True, advisor=None):
     for k in ("id", "agent", "phase"):
         if not t.get(k):
             fail(f"step {n} has a task without '{k}'")
@@ -222,6 +336,10 @@ def check_task(t, n, state_dir):
         fail(f"task {t['id']} has no 'text' and {state_dir}/plan.md has no heading containing 'Task {t['id']}'")
     if "passLine" in t and not (isinstance(t["passLine"], str) and t["passLine"].strip()):
         fail(f"task {t['id']}: passLine must be a non-empty string")
+    if "ui" in t and not isinstance(t["ui"], bool):
+        fail(f"task {t['id']}: ui must be true or false")
+    if not review:
+        prepare_check(t, state_dir, write_checks)
     if not review and not (isinstance(t.get("check"), str) and t["check"].strip()):
         fail(f"task {t['id']} has no 'check': give its own fast, scoped check command (one test file, one script), "
              "never the full done command")
@@ -231,8 +349,11 @@ def check_task(t, n, state_dir):
     if est > MAX_ESTIMATE_K:
         fail(f"task {t['id']}: estimateK {est:g} is over {MAX_ESTIMATE_K}; "
              "split it: one task must fit one fresh context (about 100K, beyond which quality drops)")
-    if t.get("model", "worker") not in ("worker", "inherit"):
-        fail(f"task {t['id']}: model must be 'worker' or 'inherit'")
+    if t.get("model", "worker") not in ("worker", "inherit", "advisor"):
+        fail(f"task {t['id']}: model must be 'worker', 'inherit' or 'advisor'")
+    if t.get("model") == "advisor" and not advisor:
+        fail(f"task {t['id']}: model 'advisor' needs inputs.json advisorModel. Example: \"advisorModel\": \"fable\"")
+    check_tools(t, state_dir)
     for k in ("needs", "resources"):
         if not isinstance(t.get(k, []), list):
             fail(f"task {t['id']}: {k} must be a list")
@@ -250,7 +371,7 @@ def check_checks(tasks, stage_check):
     full = (stage_check or {}).get("command", "").strip() if isinstance(stage_check, dict) else ""
     seen = {}
     for t in (t for t in tasks if t.get("kind") != "review"):
-        key = (t["check"].strip(), str(t.get("passLine", "")).strip())
+        key = (json.dumps([t["_commands"], t.get("expect")]), "") if "_commands" in t             else (t["check"].strip(), str(t.get("passLine", "")).strip())
         if full and key[0] == full:
             fail(f"task {t['id']}: its check is the stage's full done command; give the task its own scoped check")
         if key in seen and not (t.get("sharedCheck") and seen[key].get("sharedCheck")):
@@ -260,7 +381,12 @@ def check_checks(tasks, stage_check):
         seen.setdefault(key, t)
 
 
-def stage_body(spec, state_dir):
+def stage_body(spec, state_dir, write_checks=True, advisor=None):
+    """(phases, script body) of a stage spec; fails on a bad spec. Task dicts are changed in place (list
+    and RED checks become run_check.py commands); write_checks False skips writing the checks JSON files."""
+    est = spec.get("estimateTokens")
+    if "estimateTokens" in spec and (isinstance(est, bool) or not isinstance(est, int) or est <= 0):
+        fail("estimateTokens must be a whole number above 0 (the stage's expected total tokens)")
     steps = [s if isinstance(s, list) else [s] for s in spec["steps"]]
     lines, current_phase, ids, step_of = [], None, [], {}
     for n, group in enumerate(steps, 1):
@@ -270,7 +396,7 @@ def stage_body(spec, state_dir):
             fail(f"step {n} runs {len(group)} tasks in parallel; the limit is {MAX_PARALLEL}")
         used = {}
         for t in group:
-            check_task(t, n, state_dir)
+            check_task(t, n, state_dir, write_checks, advisor)
             ids.append(t["id"])
             step_of[t["id"]] = n
             for res in (r.strip().lower() for r in t.get("resources", [])):
@@ -286,14 +412,15 @@ def stage_body(spec, state_dir):
             lines.append(f"phase({json.dumps(current_phase)})")
         calls = []
         for t in group:
+            m = t.get("model", "worker")
+            model = "WORKER_MODEL" if m == "worker" else json.dumps(advisor) if m == "advisor" else "undefined"
             needs = [x for x in t.get("needs", []) if x in step_of]  # ids outside this spec already passed
             if any(step_of[x] >= n for x in needs):
                 fail(f"task {t['id']} needs a task in the same or a later step")
             if t.get("kind") == "review":  # read-only agent: findings only, no verifier, no commit
                 calls.append(f"reviewStep({json.dumps(t['id'])}, {json.dumps(t['agent'])}, {json.dumps(t['phase'])}, "
-                             f"{json.dumps(t.get('text', ''))})")
+                             f"{json.dumps(t.get('text', ''))}, {'undefined' if model == 'WORKER_MODEL' else model})")
                 continue
-            model = "WORKER_MODEL" if t.get("model", "worker") == "worker" else "undefined"
             calls.append(f"run({json.dumps(t['id'])}, {json.dumps(t['agent'])}, {json.dumps(t['phase'])}, {model}, "
                          f"{json.dumps(needs)}, {json.dumps(bool(t.get('commits')))}, {json.dumps(t.get('text', ''))}, "
                          f"{json.dumps(t.get('passLine', ''))}, {json.dumps(t['check'])})")
@@ -349,7 +476,7 @@ def stage(state_dir, spec_path):
     with open(os.path.join(REFS, "stage-workflow.template.js"), encoding="utf-8") as f:
         template = f.read()
     head = template.split("// ---- stage body", 1)[0]
-    phases, body = stage_body(spec, state_dir)
+    phases, body = stage_body(spec, state_dir, advisor=i.get("advisorModel"))
     slug = re.sub(r"[^a-z0-9]+", "-", i["goal"].lower()).strip("-")[:24]
     meta = ("export const meta = {\n"
             f"  name: {json.dumps(slug + '-' + spec['name'])},\n"

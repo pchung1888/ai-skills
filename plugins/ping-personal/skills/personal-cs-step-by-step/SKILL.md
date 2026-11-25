@@ -134,8 +134,3 @@ SOURCE: file:line
 - Composing an answer when `personal-cs-client-question` already escalated
 - Embedding a literal or fabricated `ts` in the metric line instead of
   reading the system clock at write time
-
-## Length budget
-
-Keep this file's content under ~120 lines. Enumeration work is runtime work
-(read the source), not encoded in this file.

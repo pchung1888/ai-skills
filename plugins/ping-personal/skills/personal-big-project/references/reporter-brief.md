@@ -8,8 +8,9 @@ this is her clock) and "Report shape: <shape>" (from inputs.json "report", chose
 ```text
 Read <STATE_DIR>/STATUS.md (its Tasks section is the task table), the last 40 lines of
 log/run-log.md, the last 3 lines of log/quota-log.md, and the previous report.
-Write <STATE_DIR>/reports/<YYYY-MM-DD-HHMM>.md, named from the "Now:" line; use that time for "now"
-and never guess a time. Follow the "Report shape:" line (shapes below). Plain shape, max 12 lines: what is being worked on now,
+Write the report to <STATE_DIR>/log/report-draft.md (overwrite it). Use the "Now:" line for "now", never
+guess a time, and give the report no title line: the coordinator saves it with log_row.py report, which
+checks it for codes and titles it with the real post time. Follow the "Report shape:" line (shapes below). Plain shape, max 12 lines: what is being worked on now,
 what finished since the last report (do not repeat it), what went wrong and how it is handled,
 whether work is paused to save usage and when it resumes (day and date), what comes next, and
 any decision taken without the owner (with how to reverse it).
@@ -17,7 +18,7 @@ Use the words in glossary.md (in the same folder as this brief) and no others fo
 stage or task ids, decision ids, hashes, line numbers or agent names; explain any unavoidable
 technical word in the same sentence.
 Finish estimates only from measured durations in run-log.md, with the basis stated.
-Return the report text only.
+Return the report text only (the same text you wrote to the draft).
 ```
 <!-- <STATE_DIR> Example: docs/proj-123/autopilot -->
 

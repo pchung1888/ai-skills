@@ -6,6 +6,14 @@ no side effect goes past its cap.
   python log_row.py run      --state-dir D --task T3 --what-file log/verify-T3.txt [--evidence <path>]
       -> one row in log/run-log.md: | Day MM-DD HH:MM | T3 | passed: ALL OK | <path> |
          --what-file reads the text from a file, so command output never passes through a shell.
+         Then it rebuilds the STATUS.md task table (build_table.py), so the table never lags the run log.
+  python log_row.py owner    --state-dir D --class fix --skill big-project --missed "table stale since 23:14" --quote "<their words>" [--like 4]
+      -> one row in log/owner-feedback.md with the clock time of receipt (rule 12). Class fix, complaint or
+         premature also adds a log/skill-friction.md row naming the skill, so every complaint reaches the retro.
+  python log_row.py report   --state-dir D --file <draft.md>
+      -> checks an owner report BEFORE it is posted: refused (exit 2, nothing saved) when it holds ids, hashes
+         or run codes, unless inputs.json report.ids is true. Otherwise saves it as reports/YYYY-MM-DD-HHMM.md
+         with the post time as its first line, and prints the saved path. Post that file, never the draft.
   python log_row.py effect   --state-dir D --kind mail --count 1 --note "test statement" [--key send-T3-1]
       -> one row in log/side-effects.md, written BEFORE the action. Refused (exit 2, nothing written)
          when the kind has no cap in inputs.json "caps" or the new total would pass the cap. --key names
@@ -35,6 +43,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -47,7 +56,10 @@ WARN_PCT = 80  # usage prints WARN from this share of a cap, so the owner hears 
 HEADERS = {"run-log.md": "| When | Task | What happened | Evidence |",
            "side-effects.md": "| When | Kind | Count | Note |",
            "decisions.md": "| When | Decision | Options | Why | Cost |",
-           "status-log.md": "| When | What |"}
+           "status-log.md": "| When | What |",
+           "owner-feedback.md": "| When | Class | Skill | Missed what | Like | Quote |",
+           "skill-friction.md": "| When | Skill step | What did not fit | What I did instead |"}
+FILED_CLASSES = ("fix", "complaint", "premature")  # owner rows that are also a friction row for the retro
 
 
 def refuse(msg):
@@ -165,6 +177,61 @@ def raise_cap(state, kind, to, note):
     print(f"RAISED {kind} cap {old} -> {to}")
 
 
+def rebuild_table(state):
+    """Refresh STATUS.md's task table after a run-log row. Never fails the row: a table error is printed."""
+    try:
+        import build_table
+        inputs = statefiles.read_json_safe(os.path.join(state, "inputs.json"))
+        if os.path.exists(os.path.join(state, "tasks.csv")):
+            # ponytail: two verifiers finishing in the same second both rewrite STATUS.md; the later write
+            # wins and holds both rows, because each rebuild reads the whole run log
+            build_table.build(state, statefiles.journal_dirs(inputs if isinstance(inputs, dict) else {}))
+    except Exception as e:
+        print(f"note: task table not rebuilt: {type(e).__name__}: {e}")
+
+
+def owner(state, klass, skill, missed, like, quote):
+    if klass not in statefiles.OWNER_CLASSES:
+        refuse(f"--class must be one of {', '.join(statefiles.OWNER_CLASSES)}")
+    if klass == "score" and like not in ("1", "2", "3", "4", "5"):
+        refuse("a score row needs --like 1-5")
+    when = now_text()
+    append_row(os.path.join(state, "log", "owner-feedback.md"), [when, klass, skill, missed, like, quote])
+    if klass in FILED_CLASSES:
+        append_row(os.path.join(state, "log", "skill-friction.md"),
+                   [when, f"owner {klass} ({skill or 'unknown skill'})", missed or quote,
+                    "filed from the owner's message; the retro proposes the fix"])
+    print(f"LOGGED owner {klass}" + (" + friction row" if klass in FILED_CLASSES else ""))
+
+
+def report(state, draft):
+    """Check a report before it is posted, then save it under reports/ titled with the post time."""
+    try:
+        text = statefiles.read_text(draft).strip()
+    except OSError as e:
+        refuse(f"cannot read --file: {e}")
+    if not text:
+        refuse("the report is empty")
+    shape = inputs_of(state).get("report")
+    if not (isinstance(shape, dict) and shape.get("ids") is True):
+        codes = statefiles.owner_codes(text)
+        if codes:
+            refuse(f"{len(codes)} ids or codes in an owner report ({', '.join(sorted(set(codes))[:5])}); "
+                   "say what each one is in plain words (references/glossary.md), then run report again")
+    lines = text.splitlines()
+    if lines[0].startswith("#") and re.search(r"\d\d:\d\d", lines[0]):
+        lines = lines[1:]  # a title time the writer guessed; the post time replaces it
+    t = datetime.now()
+    folder = os.path.join(state, "reports")
+    os.makedirs(folder, exist_ok=True)
+    path, n = os.path.join(folder, f"{t:%Y-%m-%d-%H%M}.md"), 2
+    while os.path.exists(path):
+        path, n = os.path.join(folder, f"{t:%Y-%m-%d-%H%M}-{n}.md"), n + 1
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"# Report {now_text()}\n\n" + "\n".join(lines).strip() + "\n")
+    print(f"SAVED {path}")
+
+
 def baseline(state, paths, none):
     out = os.path.join(state, "baseline-hashes.txt")
     if none:
@@ -188,7 +255,13 @@ def baseline(state, paths, none):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("what", choices=["run", "effect", "send", "usage", "raise-cap", "status", "baseline"])
+    ap.add_argument("what", choices=["run", "effect", "send", "usage", "raise-cap", "status", "baseline", "owner", "report"])
+    ap.add_argument("--class", dest="klass", help="owner: one class from statefiles.OWNER_CLASSES. Example: fix")
+    ap.add_argument("--skill", default="", help="owner: skill at fault. Example: big-project")
+    ap.add_argument("--missed", default="", help="owner: what the run missed, plain words. Example: task table stale since 23:14")
+    ap.add_argument("--like", default="", help="owner: score row only, 1-5. Example: 4")
+    ap.add_argument("--quote", default="", help="owner: their words on one line. Example: why is the table old?")
+    ap.add_argument("--file", help="report: the draft report file. Example: reports/draft.md")
     ap.add_argument("paths", nargs="*", help="baseline only: repo-relative files. Example: reports/expected.csv")
     ap.add_argument("--state-dir", required=True, help="state folder. Example: docs/proj-123/autopilot")
     ap.add_argument("--task", help="run: task id, or 'stage' for the stage check. Example: T3")
@@ -215,6 +288,13 @@ def main():
         if not a.task or not a.text:
             refuse("run needs --task and --what or --what-file")
         append_row(os.path.join(a.state_dir, "log", "run-log.md"), [now_text(), a.task, a.text, a.evidence])
+        rebuild_table(a.state_dir)
+    elif a.what == "owner":
+        owner(a.state_dir, a.klass, a.skill, a.missed, a.like, a.quote)
+    elif a.what == "report":
+        if not a.file:
+            refuse("report needs --file <draft>")
+        report(a.state_dir, a.file)
     elif a.what == "effect":
         if not a.kind:
             refuse("effect needs --kind")

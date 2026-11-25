@@ -3,7 +3,7 @@
 
 /* Night: the midnight theme for md-to-html parts and matching values for html-plan parts. */
 :root[data-theme="dark"] {
-  --arc-paper: #1A1816; --arc-accent: #E07A60; --arc-ink: #EEECE8; --arc-rule: #3A352F;
+  --arc-paper: #1A1816; --arc-accent: #E07A60; --arc-ink: #EEECE8; --arc-rule: #3A352F; --arc-row-alt: #221F1C;
   --arc-code-bg: #0E0C0A; --arc-code-path: #E07A60;
   --arc-good-bg: #2A3F2E; --arc-good-fg: #B8E0C0; --arc-warn-bg: #3F2820; --arc-warn-fg: #F0BBA8;
   --arc-muted-bg: #2A2722; --arc-muted-fg: #A8A39A;

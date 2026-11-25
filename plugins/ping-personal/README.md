@@ -116,6 +116,14 @@ run by hand on a box the agent cannot reach. Each reply is one step: a verdict o
 the last step, numbered actions, stop points, and a short "Tell me:" list. It
 drops the mechanism and TL;DR sections until you say stop.
 
+### `/personal-teach-me-how-to-code`
+
+Learn a code base you are weak at, such as a React + Vite page or a .NET 10
+service converted from ASP. It plans the files in build order, checks that no
+section is skipped, and maps each section to ASP terms with quiz questions. By
+default it builds one walk page you read and answer in chat. `--interactive`
+teaches one step per reply instead. Findings go into a notes file.
+
 ### `/personal-ask-like-expert`
 
 For a question in a field you do not know. It researches the field online, checks
@@ -123,6 +131,14 @@ your terms and the named technology (wrong term, legacy, better option), answers
 four expert questions, and returns a deeper, not bigger, prompt to paste, plus a
 counter-option prompt for the client. `rate <1-5> <note>` logs a retro row;
 `improve` turns low ratings into proposed edits; `grill` interviews you first.
+
+### `/personal-verify-builder`
+
+Gives a repo its own `.claude/skills/verify/` skill, which Claude Code runs before each commit.
+`create` surveys the repo, writes a feature map, and writes runtime, database and property
+checks, each seen to fail on a planted bug. Before a commit only the touched features run;
+`/verify all` runs everything. `maintain` brings the skill back in line after code changes.
+`rate` and `improve` run the retro loop. The method is adapted from poteto's pstack (MIT).
 
 ### Adapted from Matt Pocock's skills (MIT)
 

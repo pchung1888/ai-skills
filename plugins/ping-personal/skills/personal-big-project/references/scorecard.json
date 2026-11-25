@@ -5,7 +5,7 @@
   "dimensions": [
     {"id": "outcome", "weight": 30, "metrics": [
       {"id": "ownerScore", "weight": 0.6, "grade": "direct"},
-      {"id": "verdict", "weight": 0.4, "grade": "map", "map": {"all": 5, "deferred": 4, "stopped": 1, "none": 0}}
+      {"id": "verdict", "weight": 0.4, "grade": "map", "map": {"all": 5, "deferred": 4, "failed": 2, "stopped": 1, "none": 0}}
     ]},
     {"id": "completion", "weight": 20, "metrics": [
       {"id": "tasksFinished", "weight": 0.4, "grade": "atLeast", "bands": [[0.98, 5], [0.9, 4], [0.8, 3], [0.6, 1]]},

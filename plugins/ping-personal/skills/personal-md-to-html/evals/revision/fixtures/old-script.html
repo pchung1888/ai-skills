@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Harbor Report</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:0 auto}body.night{background:#111;color:#eee}</style>
+<script>
+(function(){var k='fx-theme';try{if(localStorage.getItem(k)==='night'){document.documentElement.className='night';}}catch(e){}})();
+</script>
+</head><body>
+<button id="themebtn" type="button">Night</button>
+<nav class="toc"><a href="#tides">Tides</a><a href="#boats">Boats</a></nav>
+<section id="tides">
+<h2>Tides</h2>
+<p>The tide table lists two highs and two lows each day.</p>
+<ul><li>High at dawn</li><li>Low at noon</li></ul>
+</section>
+<script>
+(function(){var n=document.createElement('div');n.id='late-note';n.textContent='Table updated daily.';document.currentScript.parentNode.insertBefore(n,document.currentScript);})();
+</script>
+<section id="boats">
+<h2>Boats</h2>
+<p>Small boats leave before the second high tide.</p>
+</section>
+<script>
+(function(){var b=document.getElementById('themebtn'),k='fx-theme';
+b.addEventListener('click',function(){var d=document.body.classList.toggle('night');b.textContent=d?'Day':'Night';try{localStorage.setItem(k,d?'night':'day');}catch(e){}});})();
+</script>
+<script>
+document.title=document.title+' (v1)';
+</script>
+</body></html>

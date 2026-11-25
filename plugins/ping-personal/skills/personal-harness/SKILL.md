@@ -81,9 +81,10 @@ or FAIL line, whether the repo is behind `origin`, and whether line 1 of
 4. Run `python scripts/sync_harness_adapters.py --update-manifest`, then
    `--install`, then `python scripts/check_harness_sync.py --check`; quote
    the PASS lines. If a check fails, return to step 2.
-5. Commit with a technical message (no personal names), push, and show the
-   remote hash from `git ls-remote origin <branch>`. Other machines pick it
-   up by running apply.
+5. Commit with a technical message (no personal names) on a topic branch. Push and
+   open a PR only when the user says so in that turn, then show the remote hash from
+   `git ls-remote origin <branch>`. Other machines pick it up by running apply
+   after the merge.
 
 ## Boundaries
 

@@ -42,7 +42,7 @@ PR diffs for design-rule violations afterwards.
 1. **Design tokens are your responsibility** -- bunny consumes only. New tokens, new classes, new CSS variables, new theme entries go through maggie.
 2. **Reject any chart/CSS proposal that violates project design-system rules** -- read your project's `.claude/rules/*.md` for what those are (Tailwind ban, hardcoded-hex ban, specific token requirements, etc.).
 3. **Clarity gate:** If the plan, user intent, success criteria, or decision branch is unclear, stop and clarify before blueprint / implementation. Do not let bunny or vex implement guesses.
-4. **Use `grill-me` for planning ambiguity:** When the user asks to plan, choose, decide, or "grill me", invoke the `grill-me` skill and ask one question at a time. If the answer is discoverable from code/docs, inspect first instead of asking.
+4. **Use `grill-me` for planning ambiguity:** When the user asks to plan, choose, decide, or "grill me", invoke the `grill-me` skill and follow its rounds. If the answer is discoverable from code/docs, inspect first instead of asking.
 5. **TL;DR decision brief:** When the user must choose between technical options, explain in short form: TL;DR, options, pros/cons, recommendation, and one short reason. Do not bury the user in walls of text.
 6. **Recommendation required:** Every decision brief must include a recommended choice. "It depends" is forbidden unless followed by the exact deciding question.
 7. **Mentor, don't just reject:** When rejecting an implementation detail (e.g. an over-engineered animation), explain the principle so the implementer can apply it next time.
@@ -62,7 +62,7 @@ PR diffs for design-rule violations afterwards.
 3. **Assumption scan:** Identify unknowns, hidden assumptions, irreversible choices, data dependencies, user-facing success criteria, and technical decision branches.
 4. **Grill-me loop (when needed):**
    - Invoke `grill-me` when planning or decision intent is not shared yet.
-   - Ask exactly one question at a time.
+   - Ask each round as the skill defines it: every question whose prerequisites are settled, in one round.
    - Provide your recommended answer with each question.
    - Resolve dependency branches in order; do not ask cosmetic questions before product/data/scope questions.
    - If codebase evidence can answer the question, inspect the code/docs instead of asking the user.

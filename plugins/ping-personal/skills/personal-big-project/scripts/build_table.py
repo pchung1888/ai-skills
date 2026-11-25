@@ -137,9 +137,38 @@ def row_for(n, t, agents, log_lines, outcome=None):
         notes.insert(0, t["added"])
     if log_lines:
         notes.append(log_lines[-1][1][:NOTE_CHARS])
+    estimate = t["estimate"].strip()
+    estimate = f"{estimate}K" if re.fullmatch(r"\d+(\.\d+)?", estimate) else estimate or "don't know"
     cells = [str(n), t["stage"], t["id"], t["what"], status_of(agents, log_lines, outcome), started, finished,
-             tokens, t["estimate"] or "don't know", "; ".join(notes)]
+             tokens, estimate, "; ".join(notes)]
     return "| " + " | ".join(c.replace("|", "/") for c in cells) + " |"
+
+
+def millions(n):
+    return f"{n / 1e6:.2f}M" if n else "-"
+
+
+def budget_lines(state_dir):
+    """Stage budget table: each stage's estimateTokens (stage spec) against the tokens run_state.py
+    recorded from its journals, plus the run_state.py cost projection. [] before any stage has a number."""
+    run_state = statefiles.read_json_safe(os.path.join(state_dir, "run-state.json"))
+    stages = run_state.get("stages") if isinstance(run_state, dict) else None
+    rows = []
+    for s in stages or []:
+        spec = statefiles.read_json_safe(os.path.join(state_dir, "stages", f"{s.get('name')}.json")) or {}
+        est = statefiles.number(spec.get("estimateTokens")) if isinstance(spec, dict) else 0
+        used = statefiles.number(s.get("tokens"))
+        ratio = f"{used / est:.1f}x" if est and used else "-"
+        rows.append(f"| {s.get('name')} | {millions(est)} | {millions(used)} | {ratio} | {s.get('status')} |")
+    cost = run_state.get("cost") if isinstance(run_state, dict) else None
+    if not any(statefiles.number(s.get("tokens")) for s in stages or []):
+        return []
+    lines = ["### Stage budget (tokens)", "", "| Stage | Estimate | Actual | Actual / estimate | State |",
+             "|---|---|---|---|---|"] + rows
+    if isinstance(cost, dict) and cost.get("projected"):
+        lines += ["", f"Projected run total {millions(cost['projected'])} against the estimate "
+                      f"{millions(cost.get('estimate'))} ({cost.get('ratio')}x), from run_state.py after each stage."]
+    return lines + [""]
 
 
 def write_section(path, lines):
@@ -186,6 +215,7 @@ def build(state_dir, journal_dirs, now=None):
         f"Built {now.strftime('%a %m-%d %H:%M')} by scripts/build_table.py from tasks.csv, the workflow "
         "journals and log/run-log.md. Times are local, Day MM-DD HH:MM. Rows are never deleted or reordered.",
         "",
+    ] + budget_lines(state_dir) + [
         HEADER,
         "|---|---|---|---|---|---|---|---|---|---|",
     ]

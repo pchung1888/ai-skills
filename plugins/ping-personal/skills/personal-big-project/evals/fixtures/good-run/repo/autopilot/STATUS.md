@@ -9,6 +9,7 @@
 ## Tasks
 
 <!-- tasks:begin - scripts/build_table.py rewrites this section every tick; do not edit it -->
+Built Fri 10-16 21:15 by build_table.py
 | # | Stage | Task | What it does | Status | Started | Finished | Tokens used | Token estimate | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | Build | T1 | Fix invoice rounding | Done | Fri 10-16 19:40 | Fri 10-16 19:52 | 88,000 | don't know |  |

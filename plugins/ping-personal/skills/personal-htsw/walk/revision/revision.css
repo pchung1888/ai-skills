@@ -1,0 +1,234 @@
+/* Revision mode styles. Tokens are the only color source: builders use var(--rev-*), never a raw value.
+   Every selector starts with .rev-, [data-rev-ui] or html[data-rev-]. Class names the runtime must use:
+   rev-toolbar rev-btn rev-tip rev-panel rev-toast rev-hi rev-hi-tag rev-pin rev-note rev-chip rev-ghost
+   rev-orphan rev-toc-badge rev-toc-link-badge. State attributes: html[data-rev-mode=on|off], html[data-rev-mounted]. */
+
+html[data-rev-theme] { --rev-z: 2147482000; }
+
+html[data-rev-theme="day"] {
+  --rev-note-top: #FFF6B8; --rev-note-bot: #FFE873; --rev-note-ink: #33290A;
+  --rev-note-edge: #E3C644; --rev-note-muted: #7A6A24;
+  --rev-pin: #D4472B; --rev-pin-ink: #FFFFFF; --rev-hi: #D4472B;
+  --rev-ok: #2E7D4F; --rev-warn: #B3261E;
+  --rev-ui-bg: #FFFFFF; --rev-ui-ink: #1F2328; --rev-ui-edge: #D9D9D9;
+  --rev-shadow: 0 6px 18px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.20);
+}
+html[data-rev-theme="night"] {
+  --rev-note-top: #EBD768; --rev-note-bot: #D9BF45; --rev-note-ink: #120E00;
+  --rev-note-edge: #B89E2E; --rev-note-muted: #5E5015;
+  --rev-pin: #F0694C; --rev-pin-ink: #1B0E0A; --rev-hi: #FF8A6B;
+  --rev-ok: #6FCF97; --rev-warn: #FF8A80;
+  --rev-ui-bg: #1E1F22; --rev-ui-ink: #E6E6E6; --rev-ui-edge: #3A3C40;
+  --rev-shadow: 0 8px 22px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.6);
+}
+
+/* Arc pages: hide the page's own Day/Night button while the toolbar is mounted (design D4). */
+html[data-rev-mounted] .theme-btn { display: none !important; }
+
+/* Off mode (runtime sets data-rev-mode="off"): only the toggle stays visible. */
+html[data-rev-mode="off"] .rev-pin,
+html[data-rev-mode="off"] .rev-note,
+html[data-rev-mode="off"] .rev-panel,
+html[data-rev-mode="off"] .rev-toc-badge,
+html[data-rev-mode="off"] .rev-toc-link-badge,
+html[data-rev-mode="off"] .rev-hi { display: none; }
+
+[data-rev-ui] { box-sizing: border-box; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--rev-ui-ink); }
+[data-rev-ui] *, [data-rev-ui] *::before, [data-rev-ui] *::after { box-sizing: border-box; }
+/* Page rules such as body>*{margin-left:240px} must not shift the fixed toolbar off its edge. */
+[data-rev-ui]:is(body > *) { margin: 0 !important; }
+
+/* Toolbar */
+.rev-toolbar {
+  position: fixed; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 44px; padding: 4px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--rev-ui-bg); border: 1px solid var(--rev-ui-edge); border-radius: 12px;
+  box-shadow: var(--rev-shadow); z-index: calc(var(--rev-z) + 3);
+}
+.rev-btn {
+  position: relative; width: 36px; height: 36px; padding: 0; display: grid; place-items: center;
+  background: transparent; color: var(--rev-ui-ink); border: 0; border-radius: 12px; cursor: pointer;
+}
+.rev-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.75; fill: none; }
+.rev-btn:hover, .rev-btn:focus-visible { background: var(--rev-ui-edge); }
+.rev-btn:focus-visible { outline: 2px solid var(--rev-ui-ink); outline-offset: 2px; }
+.rev-btn[aria-pressed="true"] { background: var(--rev-pin); color: var(--rev-pin-ink); }
+.rev-btn-count {
+  position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--rev-pin); color: var(--rev-pin-ink); font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+}
+.rev-btn-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--rev-warn); }
+.rev-tip {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); white-space: nowrap;
+  padding: 4px 8px; border-radius: 6px; background: var(--rev-ui-ink); color: var(--rev-ui-bg); font-size: 12px;
+  opacity: 0; pointer-events: none; transition: opacity 90ms linear;
+}
+.rev-btn[aria-pressed="true"]:not(:focus-visible) .rev-tip { opacity: 0; }
+.rev-btn:hover .rev-tip, .rev-btn:focus-visible .rev-tip { opacity: 1; }
+/* Reserve room for the fixed toolbar (8px + 44px + border) so page content at x=0 is not covered. */
+@media (min-width: 900px) { html[data-rev-mounted][data-rev-mode="on"] body { padding-left: 60px; } }
+.rev-toolbar-tab { display: none; }
+@media (max-width: 899px) {
+  .rev-toolbar[data-collapsed] { width: 36px; padding: 0; }
+  .rev-toolbar[data-collapsed] .rev-btn:not(.rev-toolbar-tab) { display: none; }
+  .rev-toolbar-tab { display: grid; }
+}
+
+/* Highlight outline and kind tag */
+.rev-hi {
+  position: absolute; pointer-events: none; z-index: var(--rev-z);
+  outline: 2px solid var(--rev-hi); outline-offset: 2px; border-radius: 3px;
+  background: color-mix(in srgb, var(--rev-hi) 8%, transparent);
+  opacity: 0; transition: opacity 90ms linear;
+}
+.rev-hi[data-on] { opacity: 1; }
+.rev-hi-tag {
+  position: absolute; left: 0; top: -22px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; line-height: 16px; border-radius: 4px;
+  background: var(--rev-hi); color: var(--rev-pin-ink); font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.rev-hi[data-flip] .rev-hi-tag { top: 4px; left: 4px; }   /* no room above: the tag sits inside the outline */
+.rev-hi[data-right] .rev-hi-tag { left: auto; right: 0; }   /* tag would pass the window edge: align it to the right edge */
+.rev-hi[data-pulse] { animation: rev-pulse-outline 450ms ease-in-out 2; }
+
+/* Pin: 22 px teardrop, point down-left */
+.rev-pin {
+  position: absolute; width: 22px; height: 22px; padding: 0; border: 0; cursor: pointer;
+  background: var(--rev-pin); color: var(--rev-pin-ink); font: 700 11px/22px system-ui, sans-serif; text-align: center;
+  border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  box-shadow: var(--rev-shadow); z-index: calc(var(--rev-z) + 1);
+}
+.rev-pin > span { display: block; transform: rotate(45deg); }
+.rev-pin:focus-visible { outline: 2px solid var(--rev-ui-ink); outline-offset: 2px; }
+.rev-pin[data-corner] { opacity: .92; }
+.rev-pin[data-new] { animation: rev-pin-drop 220ms cubic-bezier(.2,.8,.2,1); }
+.rev-pin[data-pulse] { animation: rev-pin-pulse 160ms ease-out; }
+.rev-pin[data-removing] { opacity: 0; transition: opacity 120ms cubic-bezier(.4,0,1,1); }
+.rev-pin[data-done] { background: var(--rev-ok); }
+.rev-pin[data-done] > span::after { content: "\2713"; }
+.rev-pin[data-done] > span > b { display: none; }
+.rev-pin-more {
+  position: absolute; right: -10px; top: -8px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; transform: rotate(45deg);
+  background: var(--rev-ui-ink); color: var(--rev-ui-bg); font: 700 10px/16px system-ui, sans-serif;
+}
+
+/* Ghost pin while dragging from the toolbar */
+.rev-ghost {
+  position: fixed; width: 22px; height: 22px; margin: -22px 0 0 -11px; pointer-events: none; opacity: .85;
+  background: var(--rev-pin); border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  z-index: calc(var(--rev-z) + 3);
+}
+.rev-ghost[data-return] { transition: transform 180ms cubic-bezier(.4,0,.2,1), opacity 180ms cubic-bezier(.4,0,.2,1); opacity: 0; }
+
+/* Post-it: 264 px, gradient, folded corner, rest rotation */
+.rev-note {
+  position: absolute; width: 264px; min-height: 168px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px;
+  color: var(--rev-note-ink);
+  background:
+    linear-gradient(315deg, var(--rev-ui-bg) 0 50%, transparent 50%) right bottom / 18px 18px no-repeat,
+    linear-gradient(180deg, var(--rev-note-top), var(--rev-note-bot));
+  border: 1px solid var(--rev-note-edge); border-radius: 3px;
+  box-shadow: var(--rev-shadow); z-index: calc(var(--rev-z) + 2);
+  transform: rotate(var(--rev-rot, -1.2deg)); transform-origin: var(--rev-ox, 0 0);
+}
+.rev-note[data-parity="even"] { --rev-rot: .8deg; }
+.rev-note[data-state="editing"] { --rev-rot: 0deg; }
+.rev-note[data-new] { animation: rev-note-open 240ms cubic-bezier(.2,.8,.2,1); }
+.rev-note[data-hiding] { opacity: 0; transform: scale(.2); transition: transform 180ms cubic-bezier(.4,0,1,1), opacity 180ms cubic-bezier(.4,0,1,1); }
+.rev-note[data-removing] { opacity: 0; transform: scale(.85) rotate(8deg); transition: transform 200ms cubic-bezier(.4,0,1,1), opacity 200ms cubic-bezier(.4,0,1,1); }
+/* Saved: a green edge on a layer that fades out, so only opacity animates */
+.rev-note[data-saved]::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; box-shadow: 0 0 0 2px var(--rev-ok); pointer-events: none; opacity: 0; animation: rev-note-saved 300ms ease-out; }
+.rev-note[data-compact] { min-height: 0; }   /* a compact note is as short as its content, so it fits a small gap */
+.rev-note[data-compact] .rev-note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rev-note-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--rev-note-muted); }
+.rev-note-head .rev-note-kind { flex: 1; }
+.rev-note-btn {
+  padding: 2px 6px; border: 1px solid var(--rev-note-edge); border-radius: 6px; background: transparent;
+  color: var(--rev-note-ink); font: inherit; font-size: 12px; cursor: pointer;
+}
+.rev-note-btn:hover, .rev-note-btn:focus-visible { background: var(--rev-note-edge); }
+.rev-note-btn:focus-visible { outline: 2px solid var(--rev-note-muted); outline-offset: 1px; }
+.rev-note-btn[data-danger] { font-weight: 700; text-decoration: underline; }
+.rev-note textarea {
+  flex: 1; width: 100%; min-height: 72px; max-height: 320px; resize: none; padding: 4px;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--rev-note-ink);
+  background: transparent; border: 1px dashed var(--rev-note-edge); border-radius: 3px; overflow-y: auto;
+}
+.rev-note textarea:focus { outline: 2px solid var(--rev-note-muted); outline-offset: 0; }
+.rev-note-text { flex: 1; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rev-note-foot { display: flex; gap: 6px; justify-content: flex-end; padding-right: 14px; }
+.rev-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.rev-chip {
+  padding: 1px 8px; border: 1px solid var(--rev-note-edge); border-radius: 10px; background: transparent;
+  color: var(--rev-note-ink); font: inherit; font-size: 12px; cursor: pointer;
+}
+.rev-chip[aria-pressed="true"] { background: var(--rev-note-ink); color: var(--rev-note-top); border-color: var(--rev-note-ink); }
+.rev-chip:focus-visible { outline: 2px solid var(--rev-note-muted); }
+
+/* Pin list text and chips sit on the panel background, so they use the panel ink (WCAG AA in both themes) */
+.rev-panel .rev-chip, .rev-panel .rev-row-quote { color: var(--rev-ui-ink); }
+.rev-panel .rev-chip { border-color: var(--rev-ui-edge); }
+
+/* Panel: 320 px drawer, right edge */
+.rev-panel {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 320px; display: flex; flex-direction: column;
+  background: var(--rev-ui-bg); border-left: 1px solid var(--rev-ui-edge); box-shadow: var(--rev-shadow);
+  z-index: calc(var(--rev-z) + 4); transform: translateX(100%); transition: transform 220ms cubic-bezier(.4,0,.2,1);
+}
+.rev-panel[data-open] { transform: translateX(0); }
+.rev-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--rev-ui-edge); }
+.rev-panel-title { font-size: 14px; font-weight: 700; }
+.rev-panel .rev-panel-close { padding: 2px 10px; border-radius: 6px; }
+.rev-panel .rev-panel-close:hover, .rev-panel .rev-panel-close:focus-visible { background: var(--rev-ui-edge); outline: 0; }
+.rev-panel-body { flex: 1; overflow-y: auto; padding: 8px 12px 44px; }
+.rev-panel-foot { flex: none; border-top: 1px solid var(--rev-ui-edge); background: var(--rev-ui-bg); }
+.rev-panel-group { margin: 10px 0 4px; font-size: 12px; font-weight: 700; color: var(--rev-ui-ink); opacity: .75; }
+.rev-panel-row { padding: 8px 0; border-bottom: 1px solid var(--rev-ui-edge); cursor: pointer; }
+.rev-panel-row:hover { background: var(--rev-ui-edge); }
+.rev-orphan .rev-panel-group, .rev-orphan { color: var(--rev-warn); }
+.rev-panel-empty { padding: 24px 12px; text-align: center; opacity: .75; }
+.rev-panel > input { margin: 10px 12px; padding: 4px 8px; font: inherit; color: inherit; background: none; border: 1px solid var(--rev-ui-edge); }
+.rev-panel-foot, .rev-row-head, .rev-row-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 12px; }
+.rev-panel button { font: inherit; color: inherit; background: none; border: 1px solid var(--rev-ui-edge); cursor: pointer; }
+.rev-panel-foot { flex-wrap: nowrap; gap: 4px; padding: 4px 8px; }
+.rev-panel-foot button { padding: 2px 6px; font-size: 12px; white-space: nowrap; }
+.rev-row-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rev-row-quote { overflow-wrap: anywhere; margin-top: 2px; font-size: 12px; color: var(--rev-note-muted); }
+.rev-btn[data-count]:not([data-count=""])::before { content: attr(data-count); position: absolute; right: -2px; top: -2px; padding: 0 4px; border-radius: 7px; background: var(--rev-pin); color: var(--rev-pin-ink); font: 700 10px/14px system-ui; }
+
+/* TOC badge: the number comes from data-n; the entry reserves room so the badge never wraps to its own line */
+.rev-toc-badge, .rev-toc-link-badge { padding-right: 28px; position: relative; }
+.rev-toc-badge::after, .rev-toc-link-badge::after {
+  content: attr(data-n); position: absolute; right: 4px; top: 50%; transform: translateY(-50%); margin-left: 0; min-width: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--rev-pin); color: var(--rev-pin-ink); font: 700 10px/16px system-ui, sans-serif; text-align: center; vertical-align: middle;
+}
+
+/* Toast */
+.rev-toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+  padding: 8px 14px; border-radius: 10px; background: var(--rev-ui-ink); color: var(--rev-ui-bg);
+  box-shadow: var(--rev-shadow); z-index: calc(var(--rev-z) + 5); opacity: 0; pointer-events: none; transition: opacity 120ms linear;
+}
+.rev-toast[data-on] { opacity: 1; pointer-events: auto; }
+.rev-toast button { background: transparent; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+@keyframes rev-pin-drop { from { transform: scale(.9) rotate(-45deg); opacity: 0; } to { transform: rotate(-45deg); opacity: 1; } }
+@keyframes rev-pin-pulse { 0%, 100% { transform: scale(1) rotate(-45deg); } 50% { transform: scale(1.08) rotate(-45deg); } }
+@keyframes rev-note-open { from { transform: scale(.2) rotate(-6deg); opacity: 0; } to { transform: rotate(var(--rev-rot, -1.2deg)); opacity: 1; } }
+@keyframes rev-note-saved { from { opacity: 1; } to { opacity: 0; } }
+@keyframes rev-pulse-outline { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rev-pin, .rev-ghost, .rev-note, .rev-panel, .rev-hi, .rev-toast, .rev-tip {
+    animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important;
+  }
+  .rev-panel { transition-property: opacity; }
+  .rev-note[data-hiding], .rev-note[data-removing] { transform: rotate(var(--rev-rot, -1.2deg)); }
+}
+
+/* Armed click-to-pin: crosshair cursor */
+html[data-rev-armed] body { cursor: crosshair; }
+
+/* The layer ignores the pointer; pins and post-its take it back */
+.rev-pin, .rev-note { pointer-events: auto; }
+/* While the pin list is open the page gives it room instead of sitting under it. */
+html[data-rev-mode="on"][data-rev-panel] body { margin-right: 320px; }

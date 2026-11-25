@@ -113,9 +113,10 @@ This is the core of the mode. The page works only if a reader who skims still ge
    - `analogy`: only where the idea is abstract, taken from the reader's daily life (count: see Text
      length limits; more than the cap triggers `idea-analogy-cap`). An analogy explains a concept.
      It never adds facts, numbers or claims about the real system.
-5. Pick the visual by idea type. The checker counts only `stats`, `ba`, `chips`, `svg`/`svg_file`
+5. Pick the visual by idea type. The checker counts only `stats`, `ba`, `chips`, `svg`/`svg_file`/`swimlane`
    (a figure), `analogy` and `table`. `note` and `done` are supporting blocks and do not count.
-   The step-level `analogy` field counts as that step's visual.
+   The step-level `analogy` field counts as that step's visual. `references/visuals.md` lists each
+   chart and table shape by the question it answers; read it before you draw.
 
    | Idea type | Block |
    |---|---|
@@ -125,6 +126,7 @@ This is the core of the mode. The page works only if a reader who skims still ge
    | Alternatives (two or more options) | `table` (Option, Effect) or `ba` with `"kind": "options"`. Never `chips`. |
    | Numbers that exist in the source | `stats` (never invent a number) |
    | Mechanism with moving parts | `svg_file` (you draw one SVG file) |
+   | Who does what, with gates and loop-backs | `swimlane` (drawn from data) |
    | Open risk or warning | `note` with `tone: warn` |
    | Finished-when list | `done` |
    | List of rules or conditions | `table` with columns Rule and Effect |
@@ -169,6 +171,25 @@ Run this checklist before you build. Fix the spec for any line that fails.
 - Every unknown that affects the decision becomes a question or a named owner.
 - A field with no source value is left out. The engine does not default `when`.
 - Every chart box is an action or event, and the motive sits in the opening.
+- The decision line, the decision step's outcomes and any quoted stakeholder answer about scope agree.
+  If a stakeholder approves "the first page or two, then a review", the decision cannot be the whole roadmap.
+- Every risk sits next to its fix. Word risks so a boss reads them calmly ("items that need human review").
+- Name the category before the example ("simple CRUD pages, such as Holiday"), and say what each example proves.
+- A number you were not given (a release for login, an owner for production) is a question for the
+  requester before you build, not a guess. Ask it in the same turn as the first draft.
+
+### Edit rounds
+
+The reader often asks for many rounds of changes. Each round is a version they may want back.
+
+- `walk-build.py` copies every build to `_versions/<page>-<yyyymmdd-hhmmss>.html` and `.walk.json`
+  next to the page. Point the reader at an older copy when they ask "what did it look like before".
+- Keep the version in the file name and title. Rename to the next version only when the reader says so.
+- When a fact changes everywhere (a release number, an owner), add the old wording to `stale_terms`.
+  The build stops while that wording is still in the spec or in any svg file the spec uses.
+- While a review agent runs on the page, queue new edits and apply them after it reports. Edits made
+  during the review make its line citations stale.
+- Never publish the page (an Artifact link, a share) until the reader asks for it.
 
 ## Draw the mechanism
 
@@ -202,10 +223,10 @@ Starter to copy and edit (the router forks to two boxes, each branch labeled, on
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" role="img"
   aria-label="A request goes to the router, which sends it to the old page or the new page, depending on the switch.">
   <defs>
-    <marker id="fig1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+    <marker id="fig1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">
       <path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/>
     </marker>
-    <marker id="fig1-arrow-hi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+    <marker id="fig1-arrow-hi" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">
       <path d="M0 0L10 5L0 10z" style="fill:var(--hi)"/>
     </marker>
   </defs>
@@ -276,6 +297,8 @@ The file is JSON, pure ASCII. Create it with a file-write tool, never a shell he
 | `idea` | One-sentence idea shown in the hero. | `"Phase 0 builds the road, not the houses."` |
 | `hero_visual` | One picture of the idea in the hero. See Hero picture. | `{"svg_file": "hero.svg", "caption": "Road first, houses later."}` |
 | `hero_links` | Up to 5 hero svg element ids that jump to a step on click. | `{"hv-switch": "s8"}` |
+| `flow_visual` | Your own picture of the plan (a release roadmap) leads the flow section. The clickable step chart folds under it as "Step map", and Back links unfold it. Same file rules as `hero_visual`, with a viewBox width of 600-760. | `{"svg_file": "roadmap.svg", "caption": "Read each row left to right."}` |
+| `stale_terms` | Old wording that must be gone. The build stops while any term is still in the spec or its svg files. | `["until 7.40", "login in 7.40"]` |
 | `decision` | Today's ask. Shown in the hero and the opening. | `"Approve phase 0."` |
 | `subtitle` | Line under the title. | `"PROJ-824 - the plan, step by step."` |
 | `eyebrow` | Small label above the title. | `"Walk-through - PROJ-824"` |
@@ -325,7 +348,8 @@ Category ids are `a`, `b`, `c`, `d`: `a` teal (measure, prepare), `b` copper (bu
 | `h3` | Small heading inside a step. | `{"h3": "Final today"}` |
 | `table` | Comparison table. Cells may hold links. | `{"table": {"head": ["Question", "Why"], "rows": [["[4 Stack](#q4)", "Used for years."]]}}` |
 | `chips` | Sequence with arrows. Chips and arrows mean "then", so never list alternatives here. | `{"chips": ["Plan", "Build", "Test"]}` |
-| `note` | Callout. Tone `info`, `warn`, `ok`, `change`. | `{"note": {"tone": "warn", "title": "Open risk", "text": "The log may be late."}}` |
+| `note` | Callout. Tone `info`, `warn`, `ok`, `change`, or `a`, `b`, `c` for one color per speaker (keep each speaker's tone on every step). | `{"note": {"tone": "warn", "title": "Open risk", "text": "The log may be late."}}` |
+| `swimlane` | Who-does-what chart built from data: `lanes` (2-8 names), `steps` (2-30, each `lane` index from 0 and `text`), and a `label` for screen readers. A step may set `gate` (thick red outline), `back` (number of an earlier step, draws a dashed loop-back arrow), `back_label`, `hi` (the one main step, yellow outline) and `optional`. Optional `bands` (`from`, `to`, `label`) bracket steps on the left, and `caption` goes under it. | `{"swimlane": {"label": "Who builds one feature", "lanes": ["PM", "Dev", "QA"], "steps": [{"lane": 0, "text": "Pick the feature"}, {"lane": 1, "text": "Implementation", "hi": true}, {"lane": 2, "text": "QA test", "gate": true, "back": 2, "back_label": "bug"}]}}` |
 | `analogy` | Analogy box inside the blocks. | `{"analogy": "Like a road before houses."}` |
 | `svg_file` | One SVG file next to the spec. ASCII, one `<svg>` only. | `{"svg_file": {"file": "flow.svg", "caption": "How a click is routed."}}` |
 | `svg` | Same, with the SVG inline. | `{"svg": {"svg": "<svg ...></svg>", "caption": "..."}}` |
@@ -383,6 +407,9 @@ When walk-check fails:
 | Content | `opening-40-110-words`, `chart-text-no-overlap`, `lead-takeaway-short`, `no-placeholder-text`, glossary, semicolons, stray paragraphs, a lead per step | yes |
 | Chart | box per step, diamond, legend, scroll box | yes |
 | Navigation | menu, name match, Back/Previous/Next, links | yes |
-| Answers | why, Other, note, comments, Respond, floating button | yes |
-| Look and Motion | `unique-ids`, ASCII, theme, type tokens, focus rings, fonts, reduced motion, animation library | yes |
-| Idea | `idea-claim-names`, `idea-lead-is-claim`, `idea-lead-not-name`, `idea-takeaway-not-echo`, `idea-analogy-cap`, `idea-flow-lead`, `idea-mechanism-svg`, `idea-hero-visual`, `hero-text-size`, `svg-font-tokens`, `svg-emphasis`, takeaway, check, glossary hovers, visual coverage, text length rules | no |
+| Answers | why, Other, note, comments, `answers-saved` (picks and typed text survive a reload), Respond, floating button | yes |
+| Look and Motion | `unique-ids`, ASCII, theme, type tokens, `table-zebra`, focus rings, fonts, reduced motion, animation library | yes |
+| Idea | `idea-claim-names`, `idea-lead-is-claim`, `idea-lead-not-name`, `idea-takeaway-not-echo`, `idea-analogy-cap`, `idea-flow-lead`, `idea-mechanism-svg`, `idea-hero-visual`, `hero-text-size`, `svg-font-tokens`, `svg-emphasis`, `svg-text-fits`, `svg-marker-units`, takeaway, check, glossary hovers, visual coverage, text length rules | no |
+
+The builder also refuses an svg whose path data cannot draw (for example "M12748V1014", where a
+missing space leaves M one number), and a spec whose `stale_terms` still appear.
